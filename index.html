@@ -137,6 +137,7 @@
 
   .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:10px;}
   .order-card.received{border-left-color:#4a9d6e;opacity:0.85;}
+  .order-card.missing-info{border-left-color:#c0392b;background:#fef7f6;}
   .order-card .info .job{font-weight:700;font-size:14px;margin-bottom:2px;}
   .order-card .info .material{font-size:13px;color:var(--ink);margin-bottom:4px;}
   .order-card .info .meta{font-size:11.5px;color:var(--muted);}
@@ -144,6 +145,7 @@
   .order-card .right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
   .order-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;background:#fbe9cf;color:#8a5a12;letter-spacing:0.3px;}
   .order-badge.received{background:#dcf0e3;color:#1f6b41;}
+  .order-badge.missing-info{background:#fbe0de;color:#a53125;}
   .order-card .del-link{font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
   .ord-filter-btn.solid{background:var(--ink);color:#fff;}
   .seg-group{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;height:38px;}
@@ -162,6 +164,8 @@
   .fc-job-row .btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%;}
 
   .kanban-col{background:#eceef3;border-radius:10px;min-width:230px;max-width:230px;flex:none;padding:10px;transition:outline 0.1s;}
+  #productionBoard{cursor:grab;}
+  #productionBoard.panning{cursor:grabbing;user-select:none;}
   .board-scroll-btn{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid var(--line-strong);box-shadow:0 2px 10px rgba(0,0,0,0.18);font-size:20px;font-weight:700;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;color:var(--ink);line-height:1;padding:0;}
   .board-scroll-btn:hover{background:var(--page);}
   .board-scroll-left{left:-4px;}
@@ -179,18 +183,18 @@
   .kanban-card .meta{color:var(--muted);font-size:10.5px;line-height:1.5;font-weight:600;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
-  .kanban-move-select{width:100%;font-size:10.5px;padding:5px 6px;margin-top:8px;border-radius:7px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);}
-  .kanban-move-select:hover{border-color:#5b8def;}
-  .kanban-card-date{margin-top:7px;}
-  .kanban-card-date input{border-radius:7px;border:1px solid var(--line-strong);}
-  .kanban-card-date.date-overdue input{background:#fbe0de;border-color:#e3a8a2;color:#a53125;font-weight:700;}
-  .kanban-card-date.date-soon input{background:#fbe9cf;border-color:#e8caa0;color:#8a5a12;font-weight:700;}
+  .kanban-date-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;border:1px solid var(--line-strong);background:var(--page);color:var(--muted);transition:background 0.12s;white-space:nowrap;}
+  .kanban-date-btn:hover{background:#eaf1fe;border-color:#c6d9fb;color:#2f6fed;}
   .kanban-archive-btn{margin-top:9px;font-size:10.5px;font-weight:700;color:#1f7a4d;cursor:pointer;text-align:center;background:#e3f3ea;border-radius:7px;padding:5px 0;transition:background 0.12s;}
   .kanban-archive-btn:hover{background:#d1ecdd;}
   .kanban-machine-divider{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;padding:9px 11px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);background:#fff;border-radius:8px;border-left:3px solid var(--line-strong);box-shadow:0 1px 2px rgba(0,0,0,0.06);position:relative;}
+  .kanban-divider-dropzone{height:14px;margin:-6px 0 8px;border-radius:6px;transition:height 0.12s,background 0.12s;}
+  .kanban-divider-dropzone.dragover{height:38px;background:#eaf1fe;border:2px dashed #5b8def;}
   .kanban-machine-divider .kanban-col-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);}
   .kanban-machine-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;color:#999;font-size:11px;border:1px dashed #ccc;border-radius:8px;padding:1px 6px;}
 
+  .cal-month-block{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--line);}
+  .cal-month-block:last-child{border-bottom:none;}
   .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
   .cal-header h3{margin:0;font-size:15px;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
@@ -593,6 +597,20 @@
 
     </div>
   </div>
+
+  <div class="card">
+    <div class="card-head"><div class="title">📦 Υλικά προς Παραγγελία</div><button class="btn" onclick="toggleMaterialsSummary()">Σύνοψη Υλικών</button></div>
+    <div id="materialsSummaryPanel" style="display:none;">
+      <div class="card-body">
+        <div class="empty-note" style="margin-bottom:8px;">Συγκεντρωτικά φύλλα ανά χαρτί, από όλες τις γραμμές Flat Work / Βιβλιοδεσίας παρακάτω. Επίλεξε ποια θες να γίνουν εκκρεμείς παραγγελίες — θα χρειαστεί να συμπληρώσεις προμηθευτή/λεπτομέρειες εκεί.</div>
+        <div id="materialsSummaryList"></div>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
+        </div>
+        <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
   </div>
 
   <div id="viewTicketForm" style="display:none;">
@@ -615,7 +633,7 @@
           <div class="field" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" style="font-size:18px;font-weight:800;"></div>
         </div>
         <div class="fieldgrid c5">
-          <div class="field"><label>Deadline</label><input id="tkDeadline"></div>
+          <div class="field"><label>Deadline (Ημερομηνία Παράδοσης)</label><input id="tkDeadline" type="date"></div>
           <div class="field"><label>Είδος</label><input id="tkEidos"></div>
           <div class="field"><label>Σχήμα</label><input id="tkSchema"></div>
           <div class="field"><label>Σελίδες εσωτ.</label><input id="tkSelides" type="number"></div>
@@ -782,11 +800,12 @@
         </div>
       </div>
       <div class="card-body">
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <button class="btn ord-filter-btn solid" data-filter="all" onclick="setOrdersFilter('all')">Όλες</button>
           <button class="btn ord-filter-btn" data-filter="pending" onclick="setOrdersFilter('pending')">Εκκρεμείς</button>
           <button class="btn ord-filter-btn" data-filter="received" onclick="setOrdersFilter('received')">Παραλήφθηκαν</button>
           <input id="ordSearch" placeholder="Αναζήτηση δουλειάς / υλικού..." style="flex:1;min-width:200px;" oninput="refreshOrdersList()">
+          <button class="btn" style="color:#c0392b;border-color:#c0392b;display:none;" id="ordersBulkDeleteBtn" onclick="deleteSelectedOrders()">🗑 Διαγραφή Επιλεγμένων (<span id="ordersSelectedCount">0</span>)</button>
         </div>
         <div id="ordersList"></div>
       </div>
@@ -2317,6 +2336,16 @@ function fmtDate(iso){
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
+function fmtDateShort(iso){
+  if(!iso) return '';
+  const parts = iso.split('-');
+  if(parts.length!==3) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const m = parseInt(parts[1],10)-1;
+  const d = parseInt(parts[2],10);
+  return `${months[m]} ${d}`;
+}
+
 function addDays(iso, days){
   if(!iso) return '';
   const d = new Date(iso + 'T00:00:00');
@@ -2586,6 +2615,103 @@ function computeAutoThicknessPerUnit(){
     mm += ((p.g / PAPER_BULK_DENSITY) / 1000) * pages;
   });
   return mm;
+}
+
+// ===== Υλικά προς Παραγγελία (materials summary → draft orders) =====
+function computeMaterialsSummary(){
+  const baseQty = num(document.getElementById('hdrQty').value);
+  const byPaper = {};
+
+  flatRows.forEach(r=>{
+    if(!r.paperName) return;
+    const qty = num(r.qty) || baseQty;
+    const pps = num(r.piecesPerSheet);
+    const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
+    const totalSheets = sheets + num(r.xtra);
+    if(totalSheets<=0) return;
+    byPaper[r.paperName] = (byPaper[r.paperName]||0) + totalSheets;
+  });
+
+  bookRows.forEach(r=>{
+    if(!r.paperName) return;
+    const pages = num(r.pages), pps = num(r.pagesPerSheet);
+    const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
+    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
+    const totalSheets = sheets + num(r.xtra) * signatures;
+    if(totalSheets<=0) return;
+    byPaper[r.paperName] = (byPaper[r.paperName]||0) + totalSheets;
+  });
+
+  return byPaper;
+}
+
+function toggleMaterialsSummary(){
+  const panel = document.getElementById('materialsSummaryPanel');
+  const opening = panel.style.display==='none';
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening) renderMaterialsSummary();
+}
+
+function renderMaterialsSummary(){
+  const listEl = document.getElementById('materialsSummaryList');
+  const summary = computeMaterialsSummary();
+  const papers = Object.keys(summary);
+  if(papers.length===0){
+    listEl.innerHTML = '<div class="empty-note">Δεν βρέθηκαν γραμμές με επιλεγμένο χαρτί ακόμα.</div>';
+    return;
+  }
+  listEl.innerHTML = `
+    <table>
+      <thead><tr><th style="width:30px;"></th><th>Χαρτί</th><th style="text-align:right;">Φύλλα</th></tr></thead>
+      <tbody>${papers.map((p,i)=>`
+        <tr>
+          <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(p)}" data-sheets="${summary[p]}" checked></td>
+          <td>${esc(p)}</td>
+          <td style="text-align:right;font-weight:700;">${summary[p].toLocaleString('el-GR')}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+async function createOrdersFromSummary(){
+  const statusEl = document.getElementById('materialsSummaryStatus');
+  const checks = document.querySelectorAll('.materials-summary-check:checked');
+  if(checks.length===0){ statusEl.textContent = 'Επίλεξε τουλάχιστον ένα χαρτί.'; return; }
+
+  if(!currentOfferId) await saveOffer(); // need a saved offer to remember this against
+  if(!currentOfferId){ statusEl.textContent = 'Σφάλμα αποθήκευσης προσφοράς — δοκίμασε ξανά.'; return; }
+
+  const client = document.getElementById('fClient').value;
+  const title = document.getElementById('fTitle').value;
+  const job = [client, title].filter(Boolean).join(' — ');
+
+  try{
+    const record = await jbGetRecord();
+    const offer = record.offers[currentOfferId];
+
+    if(offer && offer.materialsOrdered){
+      const proceed = confirm('Έχεις ήδη δημιουργήσει παραγγελίες υλικών από αυτή την προσφορά (ακόμα κι αν ήταν σε προηγούμενη επίσκεψη).\n\nΑν συνεχίσεις, θα δημιουργηθούν ΞΑΝΑ (πιθανό διπλότυπο).\n\nΘέλεις σίγουρα να συνεχίσεις;');
+      if(!proceed) return;
+    }
+
+    let count = 0;
+    checks.forEach(cb=>{
+      const paper = cb.getAttribute('data-paper');
+      const sheets = num(cb.getAttribute('data-sheets'));
+      const id = 'ord' + Date.now() + '_' + (count++);
+      record.orders[id] = {
+        date: todayISO(), job, material: paper, sheets, supplier: '', notes: 'Αυτόματα από προσφορά — συμπλήρωσε προμηθευτή',
+        status: 'pending', receivedDate: ''
+      };
+    });
+    if(record.offers[currentOfferId]) record.offers[currentOfferId].materialsOrdered = true;
+    await jbPutRecord(record);
+    statusEl.textContent = `Δημιουργήθηκαν ${count} εκκρεμείς παραγγελίες ✓ — πήγαινε στην καρτέλα "Παραγγελίες Υλικών" για να συμπληρώσεις προμηθευτή.`;
+  }catch(e){
+    console.error('Create orders from summary error:', e);
+    statusEl.textContent = 'Σφάλμα: ' + e.message;
+  }
 }
 
 function recalcWeightThickness(){
@@ -3070,7 +3196,7 @@ async function saveOffer(){
     const computedTotal = grandTotalValue();
     const total = manualTotal > 0 ? manualTotal : computedTotal;
 
-    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, forecastId: existing.forecastId || null };
+    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false };
     if(data.client && data.client.trim() && !record.clients.includes(data.client.trim())){
       record.clients.push(data.client.trim());
       record.clients.sort((a,b)=>a.localeCompare(b,'el'));
@@ -3444,10 +3570,10 @@ function collectTicket(){
   };
 }
 
-function applyTicketData(d){
+function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkInfo').value = d.info||'';
   document.getElementById('tkQty').value = d.qty||'';
-  document.getElementById('tkDeadline').value = d.deadline||'';
+  document.getElementById('tkDeadline').value = topLevelDeadline || d.deadline || '';
   document.getElementById('tkEidos').value = d.eidos||'';
   document.getElementById('tkSchema').value = d.schema||'';
   document.getElementById('tkSelides').value = d.selides||'';
@@ -3575,7 +3701,7 @@ async function saveTicket(){
     const savedAt = new Date().toISOString();
     const record = await jbGetRecord();
     const existing = record.tickets[id] || {};
-    record.tickets[id] = { ...existing, label, date: data.deadline || '', savedAt, data };
+    record.tickets[id] = { ...existing, label, date: data.deadline || '', savedAt, data, deadlineDate: data.deadline || '' };
     await jbPutRecord(record);
     currentTicketId = id;
     await refreshTicketList();
@@ -3592,7 +3718,7 @@ async function loadTicket(id, locked){
     const record = await jbGetRecord();
     const t = record.tickets[id];
     if(!t){ statusMsg('Δεν βρέθηκε'); return; }
-    applyTicketData(t.data);
+    applyTicketData(t.data, t.deadlineDate);
     currentTicketId = id;
     switchView('ticketform');
     if(locked) lockTicketForm(); else unlockTicketForm();
@@ -3709,7 +3835,7 @@ function printTicket(){
         </div>
       </div>
       <div class="op-infogrid" style="grid-template-columns:1fr 1fr;">
-        <div class="row"><span class="l">Deadline</span><span class="v">${v('tkDeadline')}</span></div>
+        <div class="row"><span class="l">Deadline</span><span class="v">${esc(fmtDate(v('tkDeadline')))}</span></div>
         <div class="row"><span class="l">Είδος</span><span class="v">${v('tkEidos')}</span></div>
       </div>
       <div class="op-infogrid" style="grid-template-columns:1fr 1fr 1fr;">
@@ -3753,7 +3879,7 @@ function convertOfferToTicket(){
   const title = document.getElementById('fTitle').value;
   document.getElementById('tkInfo').value = [client, title].filter(Boolean).join(' — ');
   document.getElementById('tkQty').value = document.getElementById('hdrQty').value;
-  document.getElementById('tkDeadline').value = document.getElementById('fDeadline').value;
+  document.getElementById('tkDeadline').value = ''; // real calendar date — set separately, not the same as the offer's "χρόνος παράδοσης" estimate
   document.getElementById('tkEidos').value = document.getElementById('fType').value;
   document.getElementById('tkSchema').value = document.getElementById('fSchemaClosed').value;
   document.getElementById('tkSelides').value = document.getElementById('fPagesIn').value;
@@ -3795,7 +3921,9 @@ function convertOfferToTicket(){
   }));
   if(tkProcRows.length===0) addTkProcRow();
 
-  document.getElementById('tkNotes').value = document.getElementById('fNotes').value;
+  const deliveryEstimate = document.getElementById('fDeadline').value.trim();
+  const offerNotes = document.getElementById('fNotes').value;
+  document.getElementById('tkNotes').value = (deliveryEstimate ? 'Χρόνος παράδοσης (από προσφορά): ' + deliveryEstimate + (offerNotes ? '\n\n' : '') : '') + offerNotes;
   recalcTicketPackaging();
 
   currentTicketId = null;
@@ -3967,6 +4095,77 @@ async function updateOrderSheets(id, value){
   }
 }
 
+async function updateOrderSupplier(id, value){
+  try{
+    const record = await jbGetRecord();
+    if(record.orders[id]) record.orders[id].supplier = value;
+    await jbPutRecord(record);
+    if(value.trim()) await addSupplierToList(value.trim());
+    statusMsg('Ενημερώθηκε ο προμηθευτής ✓');
+    refreshOrdersList();
+  }catch(e){
+    console.error('Update supplier error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+function onOrderSelectChange(){
+  const checked = document.querySelectorAll('.order-select-check:checked');
+  const btn = document.getElementById('ordersBulkDeleteBtn');
+  document.getElementById('ordersSelectedCount').textContent = checked.length;
+  btn.style.display = checked.length>0 ? 'inline-flex' : 'none';
+}
+
+async function deleteSelectedOrders(){
+  const checked = Array.from(document.querySelectorAll('.order-select-check:checked'));
+  if(checked.length===0) return;
+  const ids = checked.map(cb=>cb.getAttribute('data-order-id'));
+  if(!confirm(`Διαγραφή ${ids.length} επιλεγμένων παραγγελιών;\n\nΑυτή η ενέργεια δεν αναιρείται.`)) return;
+
+  try{
+    const record = await jbGetRecord();
+    // If any selected orders were already received and added stock, offer one
+    // combined question instead of asking separately for each.
+    const stockLinkedTotal = {};
+    ids.forEach(id=>{
+      const o = record.orders[id];
+      if(!o) return;
+      const sheets = num(o.sheets);
+      if(o.status==='received' && o.material && paperByName[o.material] && sheets>0){
+        stockLinkedTotal[o.material] = (stockLinkedTotal[o.material]||0) + sheets;
+      }
+    });
+    let alsoRemoveStock = false;
+    const stockEntries = Object.entries(stockLinkedTotal);
+    if(stockEntries.length>0){
+      const summary = stockEntries.map(([m,s])=>`${m}: ${s} φύλλα`).join(', ');
+      alsoRemoveStock = confirm(`Κάποιες από αυτές τις παραγγελίες είχαν ήδη παραληφθεί και πρόσθεσαν απόθεμα (${summary}).\n\nΝα αφαιρεθούν αυτά τα φύλλα και από την Αποθήκη;`);
+    }
+
+    ids.forEach(id=>{
+      const o = record.orders[id];
+      if(!o) return;
+      if(alsoRemoveStock){
+        const sheets = num(o.sheets);
+        if(o.status==='received' && o.material && paperByName[o.material] && sheets>0){
+          if(record.stock[o.material]) record.stock[o.material].qty = Math.max(0, record.stock[o.material].qty - sheets);
+          record.stockLog = record.stockLog || [];
+          record.stockLog.unshift({ id:'stk'+Date.now()+Math.random().toString(36).slice(2,6), paper:o.material, type:'remove', qty:sheets, unit:'φύλλα', note:'Μαζική διαγραφή παραγγελιών', date:new Date().toISOString() });
+        }
+      }
+      delete record.orders[id];
+    });
+    if(alsoRemoveStock) record.stockLog = record.stockLog.slice(0,200);
+
+    await jbPutRecord(record);
+    statusMsg(`Διαγράφηκαν ${ids.length} παραγγελίες ✓`);
+    refreshOrdersList();
+  }catch(e){
+    console.error('Bulk delete orders error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function deleteOrder(id){
   try{
     const record = await jbGetRecord();
@@ -4001,6 +4200,8 @@ async function deleteOrder(id){
 
 async function refreshOrdersList(){
   const el = document.getElementById('ordersList');
+  document.getElementById('ordersBulkDeleteBtn').style.display = 'none';
+  document.getElementById('ordersSelectedCount').textContent = '0';
   const key = getJbKey(), bin = getJbBin();
   if(!key || !bin){
     el.innerHTML = '<div class="empty-note">Σύνδεσε πρώτα τη βάση (καρτέλα "Αποθηκευμένες Προσφορές") για να αποθηκεύονται μόνιμα οι παραγγελίες.</div>';
@@ -4017,7 +4218,12 @@ async function refreshOrdersList(){
     jobOptionsEl.innerHTML = jobOptions.map(name=>`<option value="${esc(name)}"></option>`).join('');
 
     let list = Object.entries(record.orders).map(([id, o]) => ({ id, ...o }));
-    list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    list.sort((a,b) => {
+      const aMissing = a.status!=='received' && !a.supplier;
+      const bMissing = b.status!=='received' && !b.supplier;
+      if(aMissing !== bMissing) return aMissing ? -1 : 1; // missing-info orders always first
+      return (b.date||'').localeCompare(a.date||'');
+    });
 
     if(ordersFilter!=='all'){
       list = list.filter(o => o.status === ordersFilter);
@@ -4034,21 +4240,29 @@ async function refreshOrdersList(){
     }
     list.forEach(o=>{
       const received = o.status === 'received';
+      const missingInfo = !received && !o.supplier;
       const div = document.createElement('div');
-      div.className = 'order-card' + (received ? ' received' : '');
+      div.className = 'order-card' + (received ? ' received' : '') + (missingInfo ? ' missing-info' : '');
       div.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;">
+        <input type="checkbox" class="order-select-check" data-order-id="${o.id}" onchange="onOrderSelectChange()" style="margin-top:4px;flex:none;width:16px;height:16px;">
         <div class="info">
           <div class="job">${esc(o.job || '(χωρίς έργο)')}</div>
           <div class="material">${esc(o.material)}</div>
-          <div class="meta">Παραγγέλθηκε: <b>${esc(fmtDate(o.date))}</b>${o.supplier ? ' &nbsp; Προμηθευτής: <b>'+esc(o.supplier)+'</b>' : ''}${received ? ' &nbsp; Παραλήφθηκε: <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</div>
+          <div class="meta">Παραγγέλθηκε: <b>${esc(fmtDate(o.date))}</b>${received ? ' &nbsp; Παραλήφθηκε: <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</div>
+          <div class="meta" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
+            <span>Προμηθευτής:</span>
+            <input list="supplierOptions" value="${esc(o.supplier||'')}" placeholder="-- συμπλήρωσε --" style="width:180px;font-size:12px;padding:3px 6px;${missingInfo?'border-color:#c0392b;':''}" onchange="updateOrderSupplier('${o.id}', this.value)">
+          </div>
           <div class="meta" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
             <span>Φύλλα:</span>
             <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:80px;font-size:12px;padding:3px 6px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρουν τα φύλλα που ήρθαν, διόρθωσέ το εδώ">
           </div>
           ${o.notes ? `<div class="meta" style="margin-top:4px;">${esc(o.notes)}</div>` : ''}
         </div>
+        </div>
         <div class="right">
-          <span class="order-badge${received?' received':''}">${received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : 'ΕΚΚΡΕΜΕΙ'}</span>
+          <span class="order-badge${received?' received':''}${missingInfo?' missing-info':''}">${received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : (missingInfo ? '⚠ Λείπουν Στοιχεία' : 'ΕΚΚΡΕΜΕΙ')}</span>
           ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')">Παραλήφθηκε</button>`}
           <button class="del-link" onclick="deleteOrder('${o.id}')">Διαγραφή</button>
         </div>
@@ -4591,7 +4805,11 @@ async function refreshProductionBoard(){
             const [, srcStage, dividerId] = data.split(':');
             if(dividerId===entry.id) return; // dropped on itself
             const draggedEl = boardEl.querySelector(`.kanban-machine-divider[data-divider-id="${dividerId}"]`);
-            if(draggedEl && draggedEl!==el) el.parentNode.insertBefore(draggedEl, el);
+            const draggedDropzone = draggedEl && draggedEl.nextElementSibling && draggedEl.nextElementSibling.classList.contains('kanban-divider-dropzone') ? draggedEl.nextElementSibling : null;
+            if(draggedEl && draggedEl!==el){
+              el.parentNode.insertBefore(draggedEl, el);
+              if(draggedDropzone) el.parentNode.insertBefore(draggedDropzone, el); // keep its drop-zone paired right after it
+            }
             await moveDividerToPosition(srcStage, dividerId, stage, entry, true);
           } else {
             const id = data.startsWith('card:') ? data.slice(5) : data;
@@ -4603,7 +4821,7 @@ async function refreshProductionBoard(){
         });
       }
 
-      order.forEach(entry=>{
+      order.forEach((entry, entryIdx)=>{
         if(entry.type==='divider'){
           const div = document.createElement('div');
           div.className = 'kanban-machine-divider';
@@ -4618,6 +4836,27 @@ async function refreshProductionBoard(){
           div.addEventListener('dragend', ()=>{ div.style.opacity='1'; });
           makeDropTarget(div, entry);
           cardsEl.appendChild(div);
+
+          // A generous "drop into this machine's group" strip right below the
+          // divider — much bigger and easier to hit than the divider bar
+          // itself, especially useful when the group has no cards yet.
+          const nextEntry = order[entryIdx+1];
+          const dropZone = document.createElement('div');
+          dropZone.className = 'kanban-divider-dropzone';
+          dropZone.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('dragover'); });
+          dropZone.addEventListener('dragleave', ()=>{ dropZone.classList.remove('dragover'); });
+          dropZone.addEventListener('drop', async e=>{
+            e.preventDefault(); e.stopPropagation();
+            dropZone.classList.remove('dragover');
+            const data = e.dataTransfer.getData('text/plain');
+            if(!data || data.startsWith('divider:')) return; // only cards land in here
+            const id = data.startsWith('card:') ? data.slice(5) : data;
+            const draggedEl = boardEl.querySelector(`.kanban-card[data-id="${id}"]`);
+            if(draggedEl) cardsEl.insertBefore(draggedEl, dropZone.nextSibling);
+            updateColumnCounts();
+            await moveCardToPosition(id, stage, nextEntry || null, true);
+          });
+          cardsEl.appendChild(dropZone);
         } else {
           const t = tickets.find(x=>x.id===entry.id);
           if(!t) return;
@@ -4635,39 +4874,28 @@ async function refreshProductionBoard(){
           for(let i=order.indexOf(entry)-1; i>=0; i--){
             if(order[i].type==='divider'){ currentDividerId = order[i].id; break; }
           }
-          const today = todayISO();
-          const dateClass = t.deadlineDate && t.deadlineDate < today ? 'date-overdue' : (t.deadlineDate && t.deadlineDate <= new Date(Date.now()+7*86400000).toISOString().slice(0,10) ? 'date-soon' : '');
           card.innerHTML = `
             <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
               ${labelsHtml}
-              <span class="kanban-label-btn">🏷️</span>
+              <span class="kanban-label-btn" title="Ετικέτες">🏷️</span>
+              <span class="kanban-date-btn" title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
+              <span class="kanban-label-btn kanban-move-btn" title="Μετακίνηση σε άλλο στάδιο">↦</span>
             </div>
             <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
             <div class="meta">${metaBits.join(' · ')}</div>
-            <select class="kanban-move-select">
-              ${destinationOptionsHtml(stage, currentDividerId)}
-            </select>
-            <div class="kanban-card-date ${dateClass}">
-              <input type="date" value="${esc(t.deadlineDate||'')}" style="font-size:11px;padding:4px 6px;width:100%;" title="Ημερομηνία παράδοσης">
-            </div>
             ${stage===stages[stages.length-1] ? `<div class="kanban-archive-btn">✓ Αρχειοθέτηση</div>` : ''}
           `;
-          card.addEventListener('click', (e)=>{ if(e.target.closest('.kanban-card-labels, .kanban-card-date, .kanban-move-select, .kanban-archive-btn')) return; loadTicket(t.id, true); });
+          card.addEventListener('click', (e)=>{ if(e.target.closest('.kanban-card-labels, .kanban-archive-btn')) return; loadTicket(t.id, true); });
           card.addEventListener('dragstart', e=>{
             e.dataTransfer.setData('text/plain', `card:${t.id}`);
             setTimeout(()=>card.style.opacity='0.4', 0);
           });
           card.addEventListener('dragend', ()=>{ card.style.opacity='1'; });
-          card.querySelector('.kanban-label-btn').addEventListener('click', (e)=>{ toggleLabelPopover(t.id, e.target); });
-          card.querySelector('.kanban-card-date input').addEventListener('change', (e)=>{ setTicketDeadlineDate(t.id, e.target.value); });
+          card.querySelector('.kanban-label-btn:not(.kanban-move-btn)').addEventListener('click', (e)=>{ toggleLabelPopover(t.id, e.currentTarget); });
+          card.querySelector('.kanban-date-btn').addEventListener('click', (e)=>{ toggleDatePopover(t.id, e.currentTarget, t.deadlineDate); });
+          card.querySelector('.kanban-move-btn').addEventListener('click', (e)=>{ toggleMovePopover(t.id, e.currentTarget, stage, currentDividerId); });
           const archiveBtn = card.querySelector('.kanban-archive-btn');
           if(archiveBtn) archiveBtn.addEventListener('click', (e)=>{ e.stopPropagation(); archiveTicket(t.id); });
-          const moveSelect = card.querySelector('.kanban-move-select');
-          moveSelect.addEventListener('click', e=>e.stopPropagation());
-          moveSelect.addEventListener('change', e=>{
-            const [destStage, destDividerId] = e.target.value.split('|');
-            moveCardTo(t.id, destStage, destDividerId || null);
-          });
           makeDropTarget(card, entry);
           cardsEl.appendChild(card);
         }
@@ -4684,7 +4912,11 @@ async function refreshProductionBoard(){
         if(data.startsWith('divider:')){
           const [, srcStage, dividerId] = data.split(':');
           const draggedEl = boardEl.querySelector(`.kanban-machine-divider[data-divider-id="${dividerId}"]`);
-          if(draggedEl) cardsEl.appendChild(draggedEl);
+          const draggedDropzone = draggedEl && draggedEl.nextElementSibling && draggedEl.nextElementSibling.classList.contains('kanban-divider-dropzone') ? draggedEl.nextElementSibling : null;
+          if(draggedEl){
+            cardsEl.appendChild(draggedEl);
+            if(draggedDropzone) cardsEl.appendChild(draggedDropzone); // keep its drop-zone paired right after it
+          }
           await moveDividerToPosition(srcStage, dividerId, stage, null, true);
         } else {
           const id = data.startsWith('card:') ? data.slice(5) : data;
@@ -4949,22 +5181,111 @@ async function setTicketDeadlineDate(id, value){
 
 async function handleCalendarDrop(e, dateStr){
   e.preventDefault();
-  e.currentTarget.classList.remove('dragover');
+  const dayEl = e.currentTarget;
+  dayEl.classList.remove('dragover');
   const id = e.dataTransfer.getData('text/plain');
   if(!id) return;
+  const chip = document.querySelector(`.cal-chip[data-ticket-id="${id}"]`);
+  if(chip) dayEl.appendChild(chip); // instant visual move, no waiting for the save or a full rebuild
   await setTicketDeadlineDate(id, dateStr);
   statusMsg('Ενημερώθηκε η ημερομηνία παράδοσης ✓');
-  renderProductionCalendar();
 }
 
 function closeLabelPopover(){
-  const pop = document.getElementById('labelPopover');
-  if(pop) pop.remove();
-  document.removeEventListener('click', closeLabelPopoverOnClickOutside);
+  closeAllKanbanPopovers();
 }
+function closeAllKanbanPopovers(){
+  ['labelPopover','datePopover','movePopover'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.remove();
+  });
+  document.removeEventListener('click', closeKanbanPopoversOnClickOutside);
+}
+function closeKanbanPopoversOnClickOutside(e){
+  const openPop = document.getElementById('labelPopover') || document.getElementById('datePopover') || document.getElementById('movePopover');
+  if(openPop && !openPop.contains(e.target)) closeAllKanbanPopovers();
+}
+
+async function toggleDatePopover(ticketId, anchorEl, currentDate){
+  const already = document.getElementById('datePopover');
+  closeAllKanbanPopovers();
+  if(already) return; // clicking the same button again just closes it
+
+  const pop = document.createElement('div');
+  pop.id = 'datePopover';
+  pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:10px;z-index:2000;min-width:170px;';
+  const rect = anchorEl.getBoundingClientRect();
+  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  pop.style.left = (rect.left + window.scrollX) + 'px';
+  pop.innerHTML = `
+    <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;">Ημερομηνία παράδοσης</label>
+    <input type="date" id="kanbanDateInput" value="${esc(currentDate||'')}" style="width:100%;font-size:12.5px;padding:5px 6px;">
+    ${currentDate ? `<button class="btn" id="kanbanDateClearBtn" style="width:100%;font-size:11px;padding:5px;margin-top:6px;">Καθαρισμός</button>` : ''}
+  `;
+  document.body.appendChild(pop);
+  const input = pop.querySelector('#kanbanDateInput');
+  input.addEventListener('change', ()=>{
+    setTicketDeadlineDate(ticketId, input.value);
+    anchorEl.textContent = input.value ? fmtDateShort(input.value) : 'Ημ/νία';
+    closeAllKanbanPopovers();
+  });
+  const clearBtn = pop.querySelector('#kanbanDateClearBtn');
+  if(clearBtn) clearBtn.addEventListener('click', ()=>{
+    setTicketDeadlineDate(ticketId, '');
+    anchorEl.textContent = 'Ημ/νία';
+    closeAllKanbanPopovers();
+  });
+  setTimeout(()=>{ document.addEventListener('click', closeKanbanPopoversOnClickOutside); }, 0);
+}
+
+async function toggleMovePopover(ticketId, anchorEl, currentStage, currentDividerId){
+  const already = document.getElementById('movePopover');
+  closeAllKanbanPopovers();
+  if(already) return;
+
+  try{
+    const record = await jbGetRecord();
+    const stages = record.productionStages || [];
+    const columnOrder = record.columnOrder || {};
+
+    const pop = document.createElement('div');
+    pop.id = 'movePopover';
+    pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:8px;z-index:2000;min-width:210px;max-height:280px;overflow-y:auto;';
+    const rect = anchorEl.getBoundingClientRect();
+    pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    pop.style.left = (rect.left + window.scrollX) + 'px';
+
+    let html = '';
+    stages.forEach(stage=>{
+      const dividers = (columnOrder[stage]||[]).filter(i=>i.type==='divider');
+      const topSelected = stage===currentStage && !currentDividerId;
+      html += `<div class="gs-result${topSelected?' kanban-move-current':''}" data-stage="${esc(stage)}" data-divider="" style="padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px;${topSelected?'background:var(--page);font-weight:700;':''}">${esc(stage)} — αρχή στήλης</div>`;
+      dividers.forEach(d=>{
+        const sel = stage===currentStage && currentDividerId===d.id;
+        html += `<div class="gs-result${sel?' kanban-move-current':''}" data-stage="${esc(stage)}" data-divider="${esc(d.id)}" style="padding:6px 8px 6px 18px;border-radius:5px;cursor:pointer;font-size:12px;${sel?'background:var(--page);font-weight:700;':''}">↳ ${esc(d.name)}</div>`;
+      });
+    });
+    pop.innerHTML = html;
+    document.body.appendChild(pop);
+    pop.querySelectorAll('[data-stage]').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const destStage = row.getAttribute('data-stage');
+        const destDividerId = row.getAttribute('data-divider') || null;
+        moveCardTo(ticketId, destStage, destDividerId);
+        closeAllKanbanPopovers();
+      });
+      row.addEventListener('mouseenter', ()=>{ if(!row.classList.contains('kanban-move-current')) row.style.background = 'var(--page)'; });
+      row.addEventListener('mouseleave', ()=>{ if(!row.classList.contains('kanban-move-current')) row.style.background = ''; });
+    });
+    setTimeout(()=>{ document.addEventListener('click', closeKanbanPopoversOnClickOutside); }, 0);
+  }catch(e){
+    console.error('Move popover error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 function closeLabelPopoverOnClickOutside(e){
-  const pop = document.getElementById('labelPopover');
-  if(pop && !pop.contains(e.target)) closeLabelPopover();
+  closeKanbanPopoversOnClickOutside(e);
 }
 
 async function toggleLabelPopover(ticketId, anchorEl){
@@ -5046,9 +5367,6 @@ async function addNewLabel(ticketId){
 
 // ===== Production calendar (deadline dates) =====
 let productionView = 'board';
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth(); // 0-indexed
-
 function scrollProductionBoard(direction){
   const board = document.getElementById('productionBoard');
   const colWidth = 244; // kanban column width (230px) + gap (14px)
@@ -5065,13 +5383,6 @@ function setProductionView(v){
   if(v==='calendar') renderProductionCalendar();
 }
 
-function calShiftMonth(delta){
-  calMonth += delta;
-  if(calMonth<0){ calMonth=11; calYear--; }
-  if(calMonth>11){ calMonth=0; calYear++; }
-  renderProductionCalendar();
-}
-
 async function renderProductionCalendar(targetId, readOnly){
   const el = document.getElementById(targetId || 'productionCalendar');
   const key = getJbKey(), bin = getJbBin();
@@ -5085,16 +5396,8 @@ async function renderProductionCalendar(targetId, readOnly){
 
     const monthNames = ['Ιανουάριος','Φεβρουάριος','Μάρτιος','Απρίλιος','Μάιος','Ιούνιος','Ιούλιος','Αύγουστος','Σεπτέμβριος','Οκτώβριος','Νοέμβριος','Δεκέμβριος'];
     const dayLabels = ['Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ','Κυρ'];
-
-    const year = readOnly ? new Date().getFullYear() : calYear;
-    const month = readOnly ? new Date().getMonth() : calMonth;
     const todayStr = todayISO();
-
-    const firstOfMonth = new Date(year, month, 1);
-    let startWeekday = firstOfMonth.getDay(); // 0=Sun
-    startWeekday = (startWeekday+6)%7; // convert to Mon=0
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const now = new Date();
 
     const byDate = {};
     tickets.forEach(t=>{
@@ -5102,53 +5405,78 @@ async function renderProductionCalendar(targetId, readOnly){
       byDate[t.deadlineDate].push(t);
     });
 
-    let cells = '';
-    for(let i=0;i<startWeekday;i++){
-      const dnum = daysInPrevMonth - startWeekday + i + 1;
-      cells += `<div class="cal-day other-month"><div class="daynum">${dnum}</div></div>`;
-    }
-    for(let d=1; d<=daysInMonth; d++){
-      const pad = n=>String(n).padStart(2,'0');
-      const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
-      const jobs = byDate[dateStr] || [];
-      const chips = jobs.map(t=>{
-        const info = t.data||{};
-        return `<span class="cal-chip" ${readOnly?'':'draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\''+t.id+'\')"'} onclick="loadTicket('${t.id}', true)">${esc(info.info || t.label || '')}</span>`;
-      }).join('');
-      const todayClass = dateStr===todayStr ? ' is-today' : '';
-      cells += readOnly
-        ? `<div class="cal-day${todayClass}"><div class="daynum">${d}</div>${chips}</div>`
-        : `<div class="cal-day${todayClass}" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleCalendarDrop(event,'${dateStr}')"><div class="daynum">${d}</div>${chips}</div>`;
-    }
-    const totalCells = startWeekday + daysInMonth;
-    const trailing = (7 - (totalCells % 7)) % 7;
-    for(let i=1;i<=trailing;i++){
-      cells += `<div class="cal-day other-month"><div class="daynum">${i}</div></div>`;
-    }
+    function renderMonthGrid(year, month, isCurrent){
+      const firstOfMonth = new Date(year, month, 1);
+      let startWeekday = firstOfMonth.getDay(); // 0=Sun
+      startWeekday = (startWeekday+6)%7; // convert to Mon=0
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    const headerHtml = readOnly
-      ? `<div class="cal-header"><h3>${monthNames[month]} ${year}</h3></div>`
-      : `<div class="cal-header">
-          <button class="btn" onclick="calShiftMonth(-1)">← Προηγ.</button>
-          <h3>${monthNames[month]} ${year}</h3>
-          <button class="btn" onclick="calShiftMonth(1)">Επόμ. →</button>
-        </div>`;
-
-    el.innerHTML = `
-      <div class="card">
-        <div class="card-body">
-          ${headerHtml}
+      let cells = '';
+      for(let i=0;i<startWeekday;i++){
+        const dnum = daysInPrevMonth - startWeekday + i + 1;
+        cells += `<div class="cal-day other-month"><div class="daynum">${dnum}</div></div>`;
+      }
+      for(let d=1; d<=daysInMonth; d++){
+        const pad = n=>String(n).padStart(2,'0');
+        const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+        const jobs = byDate[dateStr] || [];
+        const chips = jobs.map(t=>{
+          const info = t.data||{};
+          return `<span class="cal-chip" data-ticket-id="${t.id}" ${readOnly?'':'draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\''+t.id+'\')"'} onclick="loadTicket('${t.id}', true)">${esc(info.info || t.label || '')}</span>`;
+        }).join('');
+        const todayClass = dateStr===todayStr ? ' is-today' : '';
+        cells += readOnly
+          ? `<div class="cal-day${todayClass}" data-date="${dateStr}"><div class="daynum">${d}</div>${chips}</div>`
+          : `<div class="cal-day${todayClass}" data-date="${dateStr}" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleCalendarDrop(event,'${dateStr}')"><div class="daynum">${d}</div>${chips}</div>`;
+      }
+      const totalCells = startWeekday + daysInMonth;
+      const trailing = (7 - (totalCells % 7)) % 7;
+      for(let i=1;i<=trailing;i++){
+        cells += `<div class="cal-day other-month"><div class="daynum">${i}</div></div>`;
+      }
+      return `
+        <div class="cal-month-block" ${isCurrent?'id="calCurrentMonth"':''}>
+          <div class="cal-header"><h3>${monthNames[month]} ${year}</h3></div>
           <div class="cal-grid">
             ${dayLabels.map(d=>`<div class="cal-daylabel">${d}</div>`).join('')}
             ${cells}
           </div>
         </div>
+      `;
+    }
+
+    if(readOnly){
+      el.innerHTML = `<div class="card"><div class="card-body">${renderMonthGrid(now.getFullYear(), now.getMonth(), true)}</div></div>`;
+      return;
+    }
+
+    // Continuous scroll: one month back through five months ahead, all rendered
+    // together — no "next month" clicking needed to browse the near future.
+    let blocks = '';
+    for(let offset=-1; offset<=5; offset++){
+      const d = new Date(now.getFullYear(), now.getMonth()+offset, 1);
+      blocks += renderMonthGrid(d.getFullYear(), d.getMonth(), offset===0);
+    }
+
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-head"><div class="title">Ημερολόγιο Παράδοσης</div><button class="btn" onclick="scrollCalendarToToday()">Σήμερα</button></div>
+        <div class="card-body" id="calScrollContainer" style="max-height:75vh;overflow-y:auto;">
+          ${blocks}
+        </div>
       </div>
     `;
+    scrollCalendarToToday();
   }catch(e){
     console.error('Calendar error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
   }
+}
+
+function scrollCalendarToToday(){
+  const target = document.getElementById('calCurrentMonth');
+  if(target) target.scrollIntoView({block:'start'});
 }
 
 // ===== Production Time analytics =====
@@ -6259,6 +6587,32 @@ async function refreshStockLogList(){
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
   }
 }
+
+(function setupProductionBoardPan(){
+  const board = document.getElementById('productionBoard');
+  let isPanning = false;
+  let startX = 0;
+  let scrollStart = 0;
+  board.addEventListener('mousedown', (e)=>{
+    // Only pan when the mousedown lands on the board's own empty background —
+    // not on a column, card, button, or anything else living inside it.
+    if(e.target !== board) return;
+    isPanning = true;
+    board.classList.add('panning');
+    startX = e.pageX;
+    scrollStart = board.scrollLeft;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(!isPanning) return;
+    const dx = e.pageX - startX;
+    board.scrollLeft = scrollStart - dx;
+  });
+  window.addEventListener('mouseup', ()=>{
+    isPanning = false;
+    board.classList.remove('panning');
+  });
+})();
 
 switchView('home');
 updateGrand();
