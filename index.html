@@ -163,7 +163,7 @@
   .fc-job-row .amount{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .fc-job-row .btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%;}
 
-  .kanban-col{background:#eceef3;border-radius:10px;min-width:230px;max-width:230px;flex:none;padding:10px;transition:outline 0.1s;}
+  .kanban-col{background:#eceef3;border-radius:10px;min-width:230px;max-width:230px;flex:none;padding:10px;transition:outline 0.1s;display:flex;flex-direction:column;max-height:75vh;}
   #productionBoard{cursor:grab;}
   #productionBoard.panning{cursor:grabbing;user-select:none;}
   .board-scroll-btn{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid var(--line-strong);box-shadow:0 2px 10px rgba(0,0,0,0.18);font-size:20px;font-weight:700;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;color:var(--ink);line-height:1;padding:0;}
@@ -171,11 +171,11 @@
   .board-scroll-left{left:-4px;}
   .board-scroll-right{right:-4px;}
   .kanban-col.dragover{outline:2px dashed #5b8def;outline-offset:-2px;}
-  .kanban-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px;color:#555;padding:0 2px;}
+  .kanban-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px;color:#555;padding:0 2px;flex:none;}
   .kanban-col-head .count{background:#fff;border-radius:10px;padding:1px 8px;font-size:11px;color:var(--muted);font-weight:600;}
   .kanban-col-del{cursor:pointer;color:#999;font-size:14px;padding:0 2px;}
   .kanban-col-del:hover{color:#c0392b;}
-  .kanban-cards{min-height:40px;}
+  .kanban-cards{min-height:40px;overflow-y:auto;flex:1;padding-right:3px;}
   .kanban-card{background:#fff;border-radius:11px;padding:12px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.09);cursor:grab;font-size:12px;border-left:4px solid #5b8def;transition:box-shadow 0.15s ease,transform 0.15s ease;}
   .kanban-card:hover{box-shadow:0 6px 16px rgba(0,0,0,0.13);transform:translateY(-2px);}
   .kanban-card:active{cursor:grabbing;transform:translateY(0);}
@@ -356,7 +356,7 @@
 
   <div id="viewForm">
   <div class="topbar">
-    <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#a53125;background:#fbe0de;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Μη αποθηκευμένες αλλαγές</span></h1>
+    <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
       <button class="btn" onclick="recalcAll()">Υπολογισμός</button>
       <button class="btn" onclick="generatePdfOffer()">📄 PDF Προσφοράς</button>
@@ -571,43 +571,34 @@
   <div id="extraTotals"></div>
 
   <div class="card">
-    <div class="card-head"><div class="title">⚖️ Βάρος & Πάχος Τεμαχίου</div><button class="btn" onclick="recalcWeightThickness()">Υπολογισμός</button></div>
-    <div class="card-body">
-
-      <div class="pk-section pk-manual">
-        <div class="fieldgrid c4">
-          <div class="field"><label>Έξτρα βάρος/τεμάχιο (g)</label><input id="pkExtraWeight" type="number" step="0.1" placeholder="π.χ. κόλλα, χαρτόνι" oninput="recalcWeightThickness()"></div>
-          <div class="field"><label>Έξτρα πάχος/τεμάχιο (mm)</label><input id="pkExtraThickness" type="number" step="0.1" placeholder="π.χ. σκληρό κάλυμμα" oninput="recalcWeightThickness()"></div>
+    <div class="card-head"><div class="title">📦 Υλικά προς Παραγγελία</div><button class="btn" onclick="toggleMaterialsSummary()">Σύνοψη Υλικών</button></div>
+    <div id="materialsSummaryPanel" style="display:none;">
+      <div class="card-body">
+        <div class="empty-note" style="margin-bottom:8px;">Συγκεντρωτικά φύλλα ανά χαρτί, από όλες τις γραμμές Flat Work / Βιβλιοδεσίας παρακάτω — προσάρμοσε τη στήλη "Ποσότητα Παραγγελίας" αν χρειάζεται. Επίλεξε ποια θες να γίνουν εκκρεμείς παραγγελίες — θα χρειαστεί να συμπληρώσεις προμηθευτή/λεπτομέρειες εκεί.</div>
+        <div id="materialsSummaryList"></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
+          <button class="btn" onclick="emailMaterialsOrder()">📧 Αποστολή Email Παραγγελίας</button>
         </div>
-        <div class="empty-note" style="margin-top:2px;">Το αυτόματο βάρος/πάχος υπολογίζεται από τα γραμμάρια (gsm) των χαρτιών — τα "Έξτρα" πεδία εδώ πάνω προσθέτουν ό,τι δεν καλύπτει το χαρτί (κόλλα, σκληρό κάλυμμα, χαρτόνι κ.λπ.). Χρήσιμα για εκτίμηση κόστους αποστολής στην προσφορά — τα στοιχεία συσκευασίας (κουτιά/παλέτες/ετικέτες) βρίσκονται πλέον στο Job Ticket.</div>
+        <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
       </div>
-
-      <div class="pk-section pk-auto">
-        <div class="pk-section-title">⚙️ Υπολογίζονται αυτόματα</div>
-        <div class="fieldgrid c4">
-          <div class="field"><label>Βάρος/τεμάχιο αυτόματο (g)</label><input id="pkAutoWeight" type="number" readonly></div>
-          <div class="field"><label>Βάρος τεμαχίου σύνολο (g)</label><input id="pkUnitWeight" type="number" readonly style="font-weight:700;"></div>
-          <div class="field"><label>Πάχος/τεμάχιο αυτόματο (mm)</label><input id="pkAutoThickness" type="number" readonly><div class="empty-note" id="pkAutoThicknessCm" style="margin-top:2px;"></div></div>
-          <div class="field"><label>Πάχος/τεμάχιο σύνολο (mm)</label><input id="pkPieceThickness" readonly style="font-weight:700;"><div class="empty-note" id="pkPieceThicknessCm" style="margin-top:2px;"></div></div>
-        </div>
-        <div class="fieldgrid c4">
-          <div class="field"><label>Συνολικό βάρος (kg)</label><input id="pkTotalWeight" readonly style="font-weight:700;"></div>
-        </div>
-      </div>
-
     </div>
   </div>
 
   <div class="card">
-    <div class="card-head"><div class="title">📦 Υλικά προς Παραγγελία</div><button class="btn" onclick="toggleMaterialsSummary()">Σύνοψη Υλικών</button></div>
-    <div id="materialsSummaryPanel" style="display:none;">
-      <div class="card-body">
-        <div class="empty-note" style="margin-bottom:8px;">Συγκεντρωτικά φύλλα ανά χαρτί, από όλες τις γραμμές Flat Work / Βιβλιοδεσίας παρακάτω. Επίλεξε ποια θες να γίνουν εκκρεμείς παραγγελίες — θα χρειαστεί να συμπληρώσεις προμηθευτή/λεπτομέρειες εκεί.</div>
-        <div id="materialsSummaryList"></div>
-        <div style="display:flex;gap:10px;margin-top:10px;">
-          <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
-        </div>
-        <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
+    <div class="card-head"><div class="title">⚖️ Βάρος & Πάχος Τεμαχίου</div><button class="btn" onclick="recalcWeightThickness()">Υπολογισμός</button></div>
+    <div class="card-body" style="padding-top:14px;padding-bottom:14px;">
+      <div class="fieldgrid c5">
+        <div class="field"><label>Έξτρα βάρος (g)</label><input id="pkExtraWeight" type="number" step="0.1" placeholder="κόλλα, χαρτόνι" oninput="recalcWeightThickness()"></div>
+        <div class="field"><label>Έξτρα πάχος (mm)</label><input id="pkExtraThickness" type="number" step="0.1" placeholder="σκληρό κάλυμμα" oninput="recalcWeightThickness()"></div>
+        <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="pkUnitWeight" type="number" readonly style="font-weight:700;"></div>
+        <div class="field"><label>Πάχος/τεμάχιο (mm)</label><input id="pkPieceThickness" readonly style="font-weight:700;"><div class="empty-note" id="pkPieceThicknessCm" style="margin-top:1px;font-size:10px;"></div></div>
+        <div class="field"><label>Συνολικό βάρος (kg)</label><input id="pkTotalWeight" readonly style="font-weight:700;"></div>
+      </div>
+      <div style="display:none;">
+        <input id="pkAutoWeight" type="number" readonly>
+        <input id="pkAutoThickness" type="number" readonly>
+        <div id="pkAutoThicknessCm"></div>
       </div>
     </div>
   </div>
@@ -615,7 +606,7 @@
 
   <div id="viewTicketForm" style="display:none;">
     <div class="topbar" style="margin-bottom:16px;">
-      <div><span id="ticketDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#a53125;background:#fbe0de;padding:5px 9px;border-radius:10px;">● Μη αποθηκευμένες αλλαγές</span></div>
+      <div><span id="ticketDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:5px 9px;border-radius:10px;">● Αποθήκευση...</span></div>
       <div class="actions">
         <button class="btn" onclick="printTicket()">🖨 Εκτύπωση / PDF</button>
         <button class="btn solid" onclick="saveTicket()">Αποθήκευση Ticket</button>
@@ -686,43 +677,47 @@
 
     <div class="card">
       <div class="card-head"><div class="title">📦 Συσκευασία</div><button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button></div>
-      <div class="card-body">
+      <div class="card-body" style="padding-top:14px;padding-bottom:14px;">
         <div class="pk-section pk-manual">
           <div class="fieldgrid c4">
-            <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από την προσφορά, ή γράψ' το εδώ" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Έξτρα βάρος/τεμάχιο (g)</label><input id="tkExtraWeight" type="number" step="0.1" placeholder="π.χ. κόλλα, χαρτόνι" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Πάχος/τεμάχιο (mm)</label><input id="tkUnitThickness" type="number" step="0.01" placeholder="από την προσφορά, ή γράψ' το εδώ" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Έξτρα πάχος/τεμάχιο (mm)</label><input id="tkExtraThickness" type="number" step="0.1" placeholder="π.χ. σκληρό κάλυμμα" oninput="recalcTicketPackaging()"></div>
-          </div>
-          <div class="fieldgrid c4">
-            <div class="field"><label>Σχήμα Κλειστό (τελικό μέγεθος)</label><input id="tkSchemaClosed" placeholder="π.χ. 15x21" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγεθος Κουτιού (ΜxΠxΥ cm)</label>
+            <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Πάχος/τεμάχιο (mm)</label><input id="tkUnitThickness" type="number" step="0.01" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Σχήμα Κλειστό</label><input id="tkSchemaClosed" placeholder="π.χ. 15x21" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Μέγεθος Κουτιού (ΜxΠxΥ)</label>
               <div style="display:flex;gap:6px;">
-                <input id="tkBoxSize" list="boxSizeOptions" placeholder="π.χ. 40*30*25" style="flex:1;" oninput="recalcTicketPackaging()">
+                <input id="tkBoxSize" list="boxSizeOptions" placeholder="40*30*25" style="flex:1;" oninput="recalcTicketPackaging()">
                 <button class="btn" style="padding:6px 10px;font-size:12px;flex:none;" onclick="saveBoxSize()" title="Αποθήκευση αυτού του μεγέθους στη λίστα">+</button>
               </div>
               <datalist id="boxSizeOptions"></datalist>
-              <a href="javascript:void(0)" onclick="toggleBoxSizeManager()" id="boxSizeManagerToggle" style="font-size:11px;color:var(--muted);margin-top:2px;">Διαχείριση αποθηκευμένων μεγεθών</a>
-              <div id="boxSizeManager" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px;"></div>
             </div>
           </div>
-          <div class="fieldgrid c4">
-            <div class="field"><label>Μέγιστο βάρος κουτιού (kg)</label><input id="tkBoxMaxWeight" type="number" step="0.1" placeholder="π.χ. 15" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγιστα τεμάχια/κουτί (προαιρετικό)</label><input id="tkBoxMaxPieces" type="number" placeholder="αφησέ κενό αν βάλεις διαστάσεις" oninput="recalcTicketPackaging()"></div>
+          <div class="fieldgrid c4" style="margin-top:8px;">
+            <div class="field"><label>Μέγιστο βάρος κουτιού (kg)</label><input id="tkBoxMaxWeight" type="number" step="0.1" value="15" oninput="recalcTicketPackaging()"></div>
             <div class="field"><label>Βάρος κενού κουτιού (kg)</label><input id="tkBoxTare" type="number" step="0.1" value="0.3" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγιστα κουτιά/παλέτα</label><input id="tkPalletMaxBoxes" type="number" placeholder="π.χ. 40" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Μέγιστα κουτιά/παλέτα</label><input id="tkPalletMaxBoxes" type="number" value="32" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Μέγιστο βάρος παλέτας (kg)</label><input id="tkPalletMaxWeight" type="number" step="1" value="500" oninput="recalcTicketPackaging()"></div>
           </div>
-          <div class="fieldgrid c4">
-            <div class="field"><label>Μέγιστο βάρος παλέτας (kg)</label><input id="tkPalletMaxWeight" type="number" step="1" placeholder="π.χ. 400" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Βάρος κενής παλέτας (kg)</label><input id="tkPalletTare" type="number" step="1" value="20" oninput="recalcTicketPackaging()"></div>
+          <div class="fieldgrid c4" style="margin-top:8px;">
+            <div class="field"><label>Βάρος κενής παλέτας (kg)</label><input id="tkPalletTare" type="number" step="1" value="10" oninput="recalcTicketPackaging()"></div>
           </div>
+
+          <a href="javascript:void(0)" onclick="toggleTicketPackagingMore()" id="tkPackagingMoreToggle" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">+ Περισσότερες επιλογές (έξτρα βάρος/πάχος, μέγιστα τεμάχια/κουτί)</a>
+          <div id="tkPackagingMorePanel" style="display:none;margin-top:8px;">
+            <div class="fieldgrid c4">
+              <div class="field"><label>Έξτρα βάρος (g)</label><input id="tkExtraWeight" type="number" step="0.1" placeholder="κόλλα, χαρτόνι" oninput="recalcTicketPackaging()"></div>
+              <div class="field"><label>Έξτρα πάχος (mm)</label><input id="tkExtraThickness" type="number" step="0.1" placeholder="σκληρό κάλυμμα" oninput="recalcTicketPackaging()"></div>
+              <div class="field"><label>Μέγιστα τεμάχια/κουτί</label><input id="tkBoxMaxPieces" type="number" placeholder="ή βάλε διαστάσεις" oninput="recalcTicketPackaging()"></div>
+            </div>
+          </div>
+
+          <a href="javascript:void(0)" onclick="toggleBoxSizeManager()" id="boxSizeManagerToggle" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">Διαχείριση αποθηκευμένων μεγεθών</a>
+          <div id="boxSizeManager" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px;"></div>
         </div>
 
-        <div class="pk-section pk-auto">
-          <div class="pk-section-title">⚙️ Υπολογίζονται αυτόματα</div>
+        <div class="pk-section pk-auto" style="margin-top:8px;">
           <div class="fieldgrid c4">
             <div class="field"><label>Βάρος/τεμάχιο σύνολο (g)</label><input id="tkTotalUnitWeight" readonly style="font-weight:700;"></div>
-            <div class="field"><label>Πάχος/τεμάχιο σύνολο (mm)</label><input id="tkTotalUnitThickness" readonly style="font-weight:700;"><div class="empty-note" id="tkTotalUnitThicknessCm" style="margin-top:2px;"></div></div>
+            <div class="field"><label>Πάχος/τεμάχιο σύνολο (mm)</label><input id="tkTotalUnitThickness" readonly style="font-weight:700;"><div class="empty-note" id="tkTotalUnitThicknessCm" style="margin-top:1px;font-size:10px;"></div></div>
             <div class="field"><label>Τεμάχια/κουτί</label><input id="tkPiecesPerBox" readonly style="font-weight:700;"></div>
             <div class="field"><label>Κουτιά/παλέτα</label><input id="tkBoxesPerPallet" readonly style="font-weight:700;"></div>
           </div>
@@ -1459,6 +1454,14 @@ function toggleBoxSizeManager(){
   if(opening) renderBoxSizeManager();
 }
 
+function toggleTicketPackagingMore(){
+  const panel = document.getElementById('tkPackagingMorePanel');
+  const link = document.getElementById('tkPackagingMoreToggle');
+  const opening = panel.style.display==='none';
+  panel.style.display = opening ? 'block' : 'none';
+  link.textContent = opening ? '− Λιγότερες επιλογές' : '+ Περισσότερες επιλογές (έξτρα βάρος/πάχος, μέγιστα τεμάχια/κουτί)';
+}
+
 async function deleteBoxSize(size){
   try{
     const record = await jbGetRecord();
@@ -1920,6 +1923,33 @@ function openEmptyImpositionModal(title, message){
   document.getElementById('impoOverlay').classList.add('show');
 }
 
+function simulateFabricFit(id, keepModalOpen){
+  currentImpoRowId = id;
+  currentImpoKind = 'fabric';
+  document.getElementById('impoSignatureGroup').style.display = 'none';
+  const r = fabricRows.find(x=>x.id===id);
+  const rollWidth = num(r.rollWidth), patternW = num(r.patternW), patternL = num(r.patternL);
+  const title = 'Μοντάζ — Ύφασμα/Ρολό — ' + (r.material||'');
+  if(!(rollWidth>0)){
+    openEmptyImpositionModal(title, 'Συμπλήρωσε πρώτα το πλάτος ρολού σε αυτή τη γραμμή.');
+    return;
+  }
+  if(!(patternW>0) || !(patternL>0)){
+    openEmptyImpositionModal(title, 'Συμπλήρωσε τις διαστάσεις μοτίβου (Π x Υ) σε αυτή τη γραμμή.');
+    return;
+  }
+  // Reference unit is "πλάτος ρολού × 1 τρέχον μέτρο" (100cm) — how many
+  // patterns fit per running metre of the roll, not per fixed sheet size.
+  const margins = getModalMargins();
+  const orientation = document.getElementById('impoOrientation').value;
+  const layout = bestFitLayout(rollWidth, 100, patternW, patternL, margins, orientation);
+  if(layout.count<=0){
+    openEmptyImpositionModal(title, 'Το μοτίβο δεν χωράει ούτε μία φορά στο πλάτος του ρολού.');
+    return;
+  }
+  showImpositionModal(layout, { title, countLabel: 'Μοτίβα ανά τρέχον μέτρο' });
+}
+
 function simulateFlatFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'flat';
@@ -2155,7 +2185,7 @@ function renderFabric(){
       <td><input type="number" value="${r.patternW}" oninput="fabricRows.find(x=>x.id===${r.id}).patternW=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" value="${r.patternL}" oninput="fabricRows.find(x=>x.id===${r.id}).patternL=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${r.qty}" oninput="fabricRows.find(x=>x.id===${r.id}).qty=this.value;recalcFabricRow(${r.id})"></td>
-      <td><div class="auto c-across">0</div></td>
+      <td style="display:flex;gap:2px;align-items:center;"><div class="auto c-across">0</div><button title="Προσομοίωση χωρητικότητας πλάτους ρολού" onclick="simulateFabricFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
       <td><div class="auto c-meters">0</div></td>
       <td><input type="number" step="0.01" value="${r.xtraMeters}" oninput="fabricRows.find(x=>x.id===${r.id}).xtraMeters=this.value;recalcFabricRow(${r.id})"></td>
       <td><div class="auto c-totalmeters">0</div></td>
@@ -2662,22 +2692,33 @@ function renderMaterialsSummary(){
   }
   listEl.innerHTML = `
     <table>
-      <thead><tr><th style="width:30px;"></th><th>Χαρτί</th><th style="text-align:right;">Φύλλα</th></tr></thead>
+      <thead><tr><th style="width:30px;"></th><th>Χαρτί</th><th style="text-align:right;">Υπολογισμένα</th><th style="text-align:right;width:110px;">Ποσότητα Παραγγελίας</th></tr></thead>
       <tbody>${papers.map((p,i)=>`
         <tr>
-          <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(p)}" data-sheets="${summary[p]}" checked></td>
+          <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(p)}" checked></td>
           <td>${esc(p)}</td>
-          <td style="text-align:right;font-weight:700;">${summary[p].toLocaleString('el-GR')}</td>
+          <td style="text-align:right;color:var(--muted);">${summary[p].toLocaleString('el-GR')}</td>
+          <td style="text-align:right;"><input type="number" min="0" class="materials-summary-qty" data-paper="${esc(p)}" value="${summary[p]}" style="width:95px;text-align:right;font-weight:700;padding:4px 6px;"></td>
         </tr>
       `).join('')}</tbody>
     </table>
   `;
 }
 
+function getSelectedMaterialsForOrder(){
+  const checks = document.querySelectorAll('.materials-summary-check:checked');
+  return Array.from(checks).map(cb=>{
+    const paper = cb.getAttribute('data-paper');
+    const qtyInput = document.querySelector(`.materials-summary-qty[data-paper="${CSS.escape(paper)}"]`);
+    const qty = qtyInput ? num(qtyInput.value) : 0;
+    return { paper, qty };
+  }).filter(m=>m.qty>0);
+}
+
 async function createOrdersFromSummary(){
   const statusEl = document.getElementById('materialsSummaryStatus');
-  const checks = document.querySelectorAll('.materials-summary-check:checked');
-  if(checks.length===0){ statusEl.textContent = 'Επίλεξε τουλάχιστον ένα χαρτί.'; return; }
+  const selected = getSelectedMaterialsForOrder();
+  if(selected.length===0){ statusEl.textContent = 'Επίλεξε τουλάχιστον ένα χαρτί με ποσότητα μεγαλύτερη από 0.'; return; }
 
   if(!currentOfferId) await saveOffer(); // need a saved offer to remember this against
   if(!currentOfferId){ statusEl.textContent = 'Σφάλμα αποθήκευσης προσφοράς — δοκίμασε ξανά.'; return; }
@@ -2696,12 +2737,10 @@ async function createOrdersFromSummary(){
     }
 
     let count = 0;
-    checks.forEach(cb=>{
-      const paper = cb.getAttribute('data-paper');
-      const sheets = num(cb.getAttribute('data-sheets'));
+    selected.forEach(({paper, qty})=>{
       const id = 'ord' + Date.now() + '_' + (count++);
       record.orders[id] = {
-        date: todayISO(), job, material: paper, sheets, supplier: '', notes: 'Αυτόματα από προσφορά — συμπλήρωσε προμηθευτή',
+        date: todayISO(), job, material: paper, sheets: qty, supplier: '', notes: 'Αυτόματα από προσφορά — συμπλήρωσε προμηθευτή',
         status: 'pending', receivedDate: ''
       };
     });
@@ -2712,6 +2751,27 @@ async function createOrdersFromSummary(){
     console.error('Create orders from summary error:', e);
     statusEl.textContent = 'Σφάλμα: ' + e.message;
   }
+}
+
+function emailMaterialsOrder(){
+  const statusEl = document.getElementById('materialsSummaryStatus');
+  const selected = getSelectedMaterialsForOrder();
+  if(selected.length===0){ statusEl.textContent = 'Επίλεξε τουλάχιστον ένα χαρτί με ποσότητα μεγαλύτερη από 0.'; return; }
+
+  const subject = `Παραγγελία Υλικών`;
+  const lines = [
+    `Καλησπέρα,`, ``,
+    `Θα θέλαμε να παραγγείλουμε τα παρακάτω υλικά:`, ``
+  ];
+  selected.forEach(({paper, qty})=>{
+    lines.push(`- ${paper}: ${qty.toLocaleString('el-GR')} φύλλα`);
+  });
+  lines.push('', 'Ευχαριστούμε,');
+  const body = lines.join('\n');
+
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoUrl;
+  statusEl.textContent = 'Άνοιξε το πρόγραμμα email σου με την παραγγελία έτοιμη ✓ — συμπλήρωσε τον παραλήπτη και πάτα αποστολή.';
 }
 
 function recalcWeightThickness(){
@@ -3590,12 +3650,12 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkExtraThickness').value = d.tkExtraThickness||'';
   document.getElementById('tkSchemaClosed').value = d.tkSchemaClosed||'';
   document.getElementById('tkBoxSize').value = d.tkBoxSize || ((d.tkBoxL && d.tkBoxW && d.tkBoxH) ? `${d.tkBoxL}*${d.tkBoxW}*${d.tkBoxH}` : '');
-  document.getElementById('tkBoxMaxWeight').value = d.tkBoxMaxWeight||'';
+  document.getElementById('tkBoxMaxWeight').value = d.tkBoxMaxWeight!=null && d.tkBoxMaxWeight!=='' ? d.tkBoxMaxWeight : 15;
   document.getElementById('tkBoxMaxPieces').value = d.tkBoxMaxPieces||'';
   document.getElementById('tkBoxTare').value = d.tkBoxTare!=null ? d.tkBoxTare : 0.3;
-  document.getElementById('tkPalletMaxBoxes').value = d.tkPalletMaxBoxes||'';
-  document.getElementById('tkPalletMaxWeight').value = d.tkPalletMaxWeight||'';
-  document.getElementById('tkPalletTare').value = d.tkPalletTare!=null ? d.tkPalletTare : 20;
+  document.getElementById('tkPalletMaxBoxes').value = d.tkPalletMaxBoxes!=null && d.tkPalletMaxBoxes!=='' ? d.tkPalletMaxBoxes : 32;
+  document.getElementById('tkPalletMaxWeight').value = d.tkPalletMaxWeight!=null && d.tkPalletMaxWeight!=='' ? d.tkPalletMaxWeight : 500;
+  document.getElementById('tkPalletTare').value = d.tkPalletTare!=null ? d.tkPalletTare : 10;
   document.getElementById('tkPalletAddress').value = d.tkPalletAddress||'';
   recalcTicketPackaging();
   ticketAttachments = d.attachments || [];
@@ -3679,12 +3739,12 @@ function newTicket(){
   document.getElementById('tkExtraThickness').value = '';
   document.getElementById('tkSchemaClosed').value = '';
   document.getElementById('tkBoxSize').value = boxSizesCache.length>0 ? boxSizesCache[0] : '';
-  document.getElementById('tkBoxMaxWeight').value = '';
+  document.getElementById('tkBoxMaxWeight').value = 15;
   document.getElementById('tkBoxMaxPieces').value = '';
   document.getElementById('tkBoxTare').value = 0.3;
-  document.getElementById('tkPalletMaxBoxes').value = '';
-  document.getElementById('tkPalletMaxWeight').value = '';
-  document.getElementById('tkPalletTare').value = 20;
+  document.getElementById('tkPalletMaxBoxes').value = 32;
+  document.getElementById('tkPalletMaxWeight').value = 500;
+  document.getElementById('tkPalletTare').value = 10;
   document.getElementById('tkPalletAddress').value = '';
   ticketAttachments = [];
   renderTicketAttachments();
@@ -3921,9 +3981,7 @@ function convertOfferToTicket(){
   }));
   if(tkProcRows.length===0) addTkProcRow();
 
-  const deliveryEstimate = document.getElementById('fDeadline').value.trim();
-  const offerNotes = document.getElementById('fNotes').value;
-  document.getElementById('tkNotes').value = (deliveryEstimate ? 'Χρόνος παράδοσης (από προσφορά): ' + deliveryEstimate + (offerNotes ? '\n\n' : '') : '') + offerNotes;
+  document.getElementById('tkNotes').value = document.getElementById('fNotes').value;
   recalcTicketPackaging();
 
   currentTicketId = null;
@@ -5781,22 +5839,33 @@ if(procCategories.length===0){ buildDefaultProcCategories(); renderProc(); }
 let offerDirty = false;
 let ticketDirty = false;
 
+let offerAutoSaveTimer = null;
+let ticketAutoSaveTimer = null;
+
 function markOfferDirty(){
-  if(offerDirty) return;
-  offerDirty = true;
-  document.getElementById('offerDirtyBadge').style.display = 'inline';
+  if(!offerDirty){
+    offerDirty = true;
+    document.getElementById('offerDirtyBadge').style.display = 'inline';
+  }
+  clearTimeout(offerAutoSaveTimer);
+  offerAutoSaveTimer = setTimeout(()=>{ if(offerDirty) saveOffer(); }, 1500);
 }
 function markOfferClean(){
   offerDirty = false;
+  clearTimeout(offerAutoSaveTimer);
   document.getElementById('offerDirtyBadge').style.display = 'none';
 }
 function markTicketDirty(){
-  if(ticketDirty) return;
-  ticketDirty = true;
-  document.getElementById('ticketDirtyBadge').style.display = 'inline';
+  if(!ticketDirty){
+    ticketDirty = true;
+    document.getElementById('ticketDirtyBadge').style.display = 'inline';
+  }
+  clearTimeout(ticketAutoSaveTimer);
+  ticketAutoSaveTimer = setTimeout(()=>{ if(ticketDirty) saveTicket(); }, 1500);
 }
 function markTicketClean(){
   ticketDirty = false;
+  clearTimeout(ticketAutoSaveTimer);
   document.getElementById('ticketDirtyBadge').style.display = 'none';
 }
 
