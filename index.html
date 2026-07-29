@@ -135,17 +135,46 @@
   .ticket-item .meta .sub{color:var(--muted);font-size:12px;font-weight:400;margin-top:2px;}
   .ticket-item .btns{display:flex;gap:8px;align-items:center;}
 
-  .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:10px;}
+  .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:6px;}
   .order-card.received{border-left-color:#4a9d6e;opacity:0.85;}
   .order-card.missing-info{border-left-color:#c0392b;background:#fef7f6;}
-  .order-card .info .job{font-weight:700;font-size:14px;margin-bottom:2px;}
-  .order-card .info .material{font-size:13px;color:var(--ink);margin-bottom:4px;}
-  .order-card .info .meta{font-size:11.5px;color:var(--muted);}
+  .order-card .info .job{font-weight:700;font-size:13px;}
+  .order-card .info .material{font-size:12px;font-weight:700;color:var(--ink);}
+  .order-card .info .meta{font-size:11px;color:var(--muted);}
   .order-card .info .meta b{color:var(--ink);font-weight:600;}
-  .order-card .right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .order-card .right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
   .order-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;background:#fbe9cf;color:#8a5a12;letter-spacing:0.3px;}
   .order-badge.received{background:#dcf0e3;color:#1f6b41;}
   .order-badge.missing-info{background:#fbe0de;color:#a53125;}
+
+  .pt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .pt-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .pt-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+  .pt-task-name{font-weight:700;font-size:14px;color:var(--ink);}
+  .pt-task-meta{font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .pt-total-time{font-size:19px;font-weight:800;color:var(--ink);text-align:right;white-space:nowrap;}
+  .pt-total-label{font-size:9.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;}
+  .pt-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--page);margin-bottom:6px;}
+  .pt-bar-mr{background:#7ea6dd;height:100%;}
+  .pt-bar-prod{background:#4a9d6e;height:100%;}
+  .pt-bar-legend{display:flex;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap;margin-bottom:12px;}
+  .pt-bar-legend b{color:var(--ink);}
+  .pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+  .pt-dot-mr{background:#7ea6dd;}
+  .pt-dot-prod{background:#4a9d6e;}
+  .pt-stats{display:flex;gap:10px;align-items:center;padding-top:10px;border-top:1px solid var(--line);flex-wrap:wrap;}
+  .pt-stat{text-align:center;flex:none;}
+  .pt-stat-val{font-size:15px;font-weight:700;color:var(--ink);}
+  .pt-stat-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;}
+  .pt-stat-badge{flex:1;text-align:right;margin-left:auto;}
+  .pt-badge{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:12px;white-space:nowrap;}
+  .pt-badge.pt-slow{background:#fbe0de;color:#a53125;}
+  .pt-badge.pt-fast{background:#dcf0e3;color:#1f6b41;}
+  .pt-badge.pt-ontrack{background:#fbe9cf;color:#8a5a12;}
+  .pt-badge.pt-none{background:var(--page);color:var(--muted);}
+
+  .machine-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .machine-card-head{display:flex;justify-content:space-between;align-items:center;font-size:14px;}
   .order-card .del-link{font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
   .ord-filter-btn.solid{background:var(--ink);color:#fff;}
   .seg-group{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;height:38px;}
@@ -281,6 +310,7 @@
   .impo-margin-field label{display:block;font-size:9.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
   .impo-margin-field input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line-strong);border-radius:5px;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -358,8 +388,8 @@
   <div class="topbar">
     <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
-      <button class="btn" onclick="recalcAll()">Υπολογισμός</button>
       <button class="btn" onclick="generatePdfOffer()">📄 PDF Προσφοράς</button>
+      <button class="btn" onclick="downloadOfferPdf()">⬇ Κατέβασμα PDF</button>
       <button class="btn" onclick="convertOfferToTicket()">🎫 Μετατροπή σε Job Ticket</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">⏳ Εκκρεμεί</button>
       <button class="btn" onclick="createAlternateVersion()">📑 Νέα Έκδοση (εναλλακτικό χαρτί)</button>
@@ -525,12 +555,12 @@
       <table>
         <thead>
           <tr>
-            <th style="width:16%">Υλικό</th>
+            <th style="width:17%">Υλικό</th>
             <th style="width:9%">Πλάτος Ρολού (cm)</th>
             <th style="width:9%">Πλάτος Αναπτ. (cm)</th>
             <th style="width:9%">Μήκος Αναπτ. (cm)</th>
             <th style="width:8%">Ποσότητα</th>
-            <th style="width:8%">Θέσεις/Πλάτος</th>
+            <th style="width:7%">Θέσεις/Πλάτος</th>
             <th style="width:8%">Μέτρα</th>
             <th style="width:8%">Έξτρα μέτρα</th>
             <th style="width:8%">Συν. Μέτρα</th>
@@ -564,7 +594,7 @@
     <div class="totcard"><div class="lbl">Σύνολο Χαρτιών</div><div class="val" id="sumMaterials">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Σύνολο Εκτύπωσης</div><div class="val" id="sumPrinting">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Σύνολο Επεξεργασιών</div><div class="val" id="sumProc">0,00 €</div></div>
-    <div class="totcard"><div class="lbl">Συνολικό Σύνολο</div><div class="val" id="sumGrand">0,00 €</div></div>
+    <div class="totcard"><div class="lbl">Συνολικό Κόστος</div><div class="val" id="sumGrand">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" id="fManualTotal" type="number" step="0.01" placeholder="π.χ. 3100"></div>
   </div>
 
@@ -1059,6 +1089,17 @@
 
   <div id="viewSettings" style="display:none;">
     <div class="card">
+      <div class="card-head"><div class="title">🏭 Διαχείριση Μηχανών</div></div>
+      <div class="card-body">
+        <div class="empty-note" style="margin-bottom:10px;">Οι μηχανές εδώ χρησιμοποιούνται για κοστολόγηση στο "Production Time" — ανεξάρτητα από τα διαχωριστικά στον πίνακα Παραγωγής. Δεν χρειάζεται κάθε μηχανή να έχει και διαχωριστικό κάπου, και το να διαγράψεις ένα διαχωριστικό δεν αφαιρεί πια τη μηχανή από εδώ.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input id="newMachineInput" placeholder="π.χ. Xerox 1" style="flex:1;" onkeydown="if(event.key==='Enter') addMachineFromSettings()">
+          <button class="btn solid" onclick="addMachineFromSettings()">+ Προσθήκη</button>
+        </div>
+        <div id="machinesManagerList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-head"><div class="title">🏢 Στοιχεία Εταιρείας</div></div>
       <div class="card-body">
         <div class="field"><label>Όνομα Εταιρείας</label><input id="companyNameInput" placeholder="π.χ. Future Format - Fine Printing Since 1980" oninput="onCompanyInfoChange()"></div>
@@ -1372,6 +1413,110 @@ async function loadBoxSizes(){
     refreshBoxSizeOptions();
   }catch(e){
     // no connection yet — silently keep whatever is cached locally
+  }
+}
+
+async function refreshMachinesManagerList(){
+  const el = document.getElementById('machinesManagerList');
+  const key = getJbKey(), bin = getJbBin();
+  if(!key || !bin){
+    el.innerHTML = '<div class="empty-note">Σύνδεσε πρώτα τη βάση (καρτέλα "Προσφορές").</div>';
+    return;
+  }
+  try{
+    const record = await jbGetRecord();
+    const machines = record.machines || [];
+    const details = record.machineDetails || {};
+    if(machines.length===0){
+      el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει ακόμα καμία μηχανή.</div>';
+      return;
+    }
+    const speedUnits = ['Φύλλα','Τεμάχια','Μέτρα'];
+    el.innerHTML = machines.map(m=>{
+      const d = details[m] || {};
+      const operators = num(d.operators) || 1;
+      const laborRate = num(d.laborRate);
+      const machineRate = num(d.machineRate);
+      const hourlyCost = operators*laborRate + machineRate;
+      const mEsc = esc(m).replace(/'/g,"\\'");
+      return `
+        <div class="machine-card">
+          <div class="machine-card-head">
+            <b>${esc(m)}</b>
+            <span onclick="deleteMachineFromSettings('${mEsc}')" title="Διαγραφή μηχανής" style="cursor:pointer;color:#c0392b;font-weight:700;">×</span>
+          </div>
+          <div class="fieldgrid c2" style="margin-top:8px;">
+            <div class="field"><label>Αριθμός χειριστών</label><input type="number" min="0" step="1" value="${d.operators||''}" placeholder="1" onchange="updateMachineDetail('${mEsc}','operators',this.value)"></div>
+            <div class="field"><label>Κόστος εργατοώρας (€)</label><input type="number" min="0" step="0.01" value="${d.laborRate||''}" placeholder="0" onchange="updateMachineDetail('${mEsc}','laborRate',this.value)"></div>
+            <div class="field"><label>Κόστος μηχανοώρας (€)</label><input type="number" min="0" step="0.01" value="${d.machineRate||''}" placeholder="0" onchange="updateMachineDetail('${mEsc}','machineRate',this.value)"></div>
+            <div class="field"><label>Μονάδα Ταχύτητας</label>
+              <select onchange="updateMachineDetail('${mEsc}','speedUnit',this.value)">
+                ${speedUnits.map(u=>`<option value="${u}" ${((d.speedUnit||'Φύλλα')===u)?'selected':''}>${u}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-top:8px;"><label>Ταχύτητα (ανά ώρα)</label><input type="number" min="0" step="1" value="${d.speed||''}" placeholder="π.χ. 1000" onchange="updateMachineDetail('${mEsc}','speed',this.value)"></div>
+          <div class="empty-note" style="margin-top:8px;">Υπολογιζόμενο κόστος/ώρα: <b style="color:var(--ink);">${hourlyCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>${(d.operators||d.laborRate||d.machineRate) ? ` (${operators} × ${laborRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€ + ${machineRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€)` : ' — συμπλήρωσε τα στοιχεία πάνω'}</div>
+        </div>
+      `;
+    }).join('');
+  }catch(e){
+    console.error('Machines list error:', e);
+    el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function updateMachineDetail(name, field, value){
+  try{
+    const record = await jbGetRecord();
+    if(!record.machineDetails) record.machineDetails = {};
+    if(!record.machineDetails[name]) record.machineDetails[name] = {};
+    record.machineDetails[name][field] = field==='speedUnit' ? value : num(value);
+    // Keep the simple machineRates[name] (used by existing Production Time cost
+    // calc) in sync, auto-computed from operators/labor/machine cost.
+    const d = record.machineDetails[name];
+    const operators = num(d.operators) || 1;
+    if(!record.machineRates) record.machineRates = {};
+    record.machineRates[name] = operators*num(d.laborRate) + num(d.machineRate);
+    await jbPutRecord(record);
+    refreshMachinesManagerList();
+  }catch(e){
+    console.error('Update machine detail error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function addMachineFromSettings(){
+  const input = document.getElementById('newMachineInput');
+  const name = input.value.trim();
+  if(!name) return;
+  try{
+    const record = await jbGetRecord();
+    if(!record.machines) record.machines = [];
+    if(!record.machines.includes(name)) record.machines.push(name);
+    await jbPutRecord(record);
+    input.value = '';
+    refreshMachinesManagerList();
+    statusMsg('Προστέθηκε η μηχανή ✓');
+  }catch(e){
+    console.error('Add machine error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function deleteMachineFromSettings(name){
+  if(!confirm(`Διαγραφή της μηχανής "${name}";\n\nΑν την είχες αναθέσει σε εργασίες στο Production Time, θα χρειαστεί να τις αναθέσεις ξανά αλλού.`)) return;
+  try{
+    const record = await jbGetRecord();
+    if(record.machines) record.machines = record.machines.filter(m=>m!==name);
+    if(record.machineRates) delete record.machineRates[name];
+    if(record.machineDetails) delete record.machineDetails[name];
+    await jbPutRecord(record);
+    refreshMachinesManagerList();
+    statusMsg('Διαγράφηκε η μηχανή ✓');
+  }catch(e){
+    console.error('Delete machine error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
   }
 }
 
@@ -1734,6 +1879,69 @@ function recalcBookRow(id){
   tr.querySelector('.c-printcost').textContent = fmt(printCost);
   tr.querySelector('.c-total').textContent = fmt(total);
   recalcBookTotal();
+  refreshAutoFoldTasks();
+}
+
+// Folding/sewing quantity logic: we always fold in units of 16, 12, 8, or 4
+// pages. If one printed sheet holds more pages than that, it's really several
+// fold-units side by side (e.g. 32 pages/sheet = two 16-page signatures), so
+// each physical sheet needs to be folded/sewn that many times.
+function foldMultiplierForPagesPerSheet(pps){
+  const bases = [16,12,8,4];
+  for(const b of bases){
+    if(pps>0 && pps % b === 0) return pps / b;
+  }
+  return 1;
+}
+
+function computeBookFoldQuantity(){
+  const baseQty = num(document.getElementById('hdrQty').value);
+  let total = 0;
+  bookRows.forEach(r=>{
+    const pages = num(r.pages), pps = num(r.pagesPerSheet);
+    if(!(pps>0) || !(pages>0)) return;
+    const sheets = ceilSafe((baseQty*pages)/pps);
+    const signatures = ceilSafe(pages/pps);
+    const totalSheets = sheets + num(r.xtra) * signatures;
+    total += totalSheets * foldMultiplierForPagesPerSheet(pps);
+  });
+  return total;
+}
+
+function isFoldOrSewTaskName(name){
+  const n = (name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return n.includes('διπλ') || n.includes('κλωστ');
+}
+
+function refreshAutoFoldTasks(){
+  const qty = computeBookFoldQuantity();
+  if(!(qty>0)) return;
+  procCategories.forEach(cat=>{
+    cat.tasks.forEach(t=>{
+      if(t.foldAuto!==false && isFoldOrSewTaskName(t.name)){
+        t.qty = qty;
+        t.foldAuto = true;
+      }
+    });
+  });
+  renderProc();
+}
+
+function onProcTaskNameInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  t.name = value;
+  if(isFoldOrSewTaskName(value) && !t.qty){
+    const qty = computeBookFoldQuantity();
+    if(qty>0){ t.qty = qty; t.foldAuto = true; renderProc(); return; }
+  }
+  recalcProcTask(catId, taskId);
+}
+
+function onProcTaskQtyInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  t.qty = value;
+  t.foldAuto = false; // user is manually overriding — stop auto-updating this task
+  recalcProcTask(catId, taskId);
 }
 
 function recalcBookTotal(){
@@ -2185,7 +2393,7 @@ function renderFabric(){
       <td><input type="number" value="${r.patternW}" oninput="fabricRows.find(x=>x.id===${r.id}).patternW=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" value="${r.patternL}" oninput="fabricRows.find(x=>x.id===${r.id}).patternL=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${r.qty}" oninput="fabricRows.find(x=>x.id===${r.id}).qty=this.value;recalcFabricRow(${r.id})"></td>
-      <td style="display:flex;gap:2px;align-items:center;"><div class="auto c-across">0</div><button title="Προσομοίωση χωρητικότητας πλάτους ρολού" onclick="simulateFabricFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
+      <td style="display:flex;align-items:center;justify-content:space-between;"><div class="auto c-across">0</div><button title="Προσομοίωση χωρητικότητας πλάτους ρολού" onclick="simulateFabricFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
       <td><div class="auto c-meters">0</div></td>
       <td><input type="number" step="0.01" value="${r.xtraMeters}" oninput="fabricRows.find(x=>x.id===${r.id}).xtraMeters=this.value;recalcFabricRow(${r.id})"></td>
       <td><div class="auto c-totalmeters">0</div></td>
@@ -2305,8 +2513,8 @@ function renderProc(){
     cat.tasks.forEach(t=>{
       rowsHtml += `
         <tr data-task-id="${t.id}">
-          <td><input value="${t.name}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).name=this.value"></td>
-          <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).qty=this.value;recalcProcTask(${cat.id},${t.id})"></td>
+          <td><input value="${t.name}" oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)"></td>
+          <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="onProcTaskQtyInput(${cat.id},${t.id},this.value)" title="${t.foldAuto ? 'Αυτόματο από τα φύλλα βιβλίου (δίπλωμα/κλωστορραφή) — άλλαξέ το ελεύθερα.' : ''}" style="${t.foldAuto ? 'border-color:#7ea6dd;' : ''}"></td>
           <td><input type="number" value="${t.speed}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).speed=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td><input type="number" step="0.01" value="${t.rate}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).rate=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td><div class="auto c-cost">0,00 €</div></td>
@@ -2385,7 +2593,7 @@ function addDays(iso, days){
   return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
 }
 
-function generatePdfOffer(){
+function buildOfferPrintHtml(){
   updateGrand();
   const v = id => esc(document.getElementById(id).value);
   const qty = num(document.getElementById('hdrQty').value);
@@ -2502,10 +2710,36 @@ function generatePdfOffer(){
   `;
   document.getElementById('ticketPrintView').innerHTML = '';
   document.getElementById('offerPrintView').innerHTML = html;
+}
+
+function generatePdfOffer(){
+  buildOfferPrintHtml();
   const prevTitle = document.title;
   document.title = (document.getElementById('fClient').value || 'Προσφορά');
   window.print();
   setTimeout(()=>{ document.title = prevTitle; }, 1000);
+}
+
+async function downloadOfferPdf(){
+  const statusEl = document.getElementById('saveStatus');
+  buildOfferPrintHtml();
+  const el = document.getElementById('offerPrintView');
+  const filename = (document.getElementById('fClient').value || 'Προσφορά').replace(/[^\p{L}\p{N}\-_ ]/gu,'').trim() || 'Προσφορά';
+  el.style.display = 'block'; // html2canvas needs the element actually rendered, not display:none
+  try{
+    await html2pdf().set({
+      margin: 0,
+      filename: filename + '.pdf',
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
+    }).from(el).save();
+    statusMsg('Κατέβηκε το PDF ✓');
+  }catch(e){
+    console.error('Download PDF error:', e);
+    statusMsg('Σφάλμα PDF: ' + e.message);
+  }finally{
+    el.style.display = 'none';
+  }
 }
 
 function recalcProcTask(catId, taskId){
@@ -2650,7 +2884,7 @@ function computeAutoThicknessPerUnit(){
 // ===== Υλικά προς Παραγγελία (materials summary → draft orders) =====
 function computeMaterialsSummary(){
   const baseQty = num(document.getElementById('hdrQty').value);
-  const byPaper = {};
+  const byMaterial = {};
 
   flatRows.forEach(r=>{
     if(!r.paperName) return;
@@ -2659,7 +2893,8 @@ function computeMaterialsSummary(){
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const totalSheets = sheets + num(r.xtra);
     if(totalSheets<=0) return;
-    byPaper[r.paperName] = (byPaper[r.paperName]||0) + totalSheets;
+    if(!byMaterial[r.paperName]) byMaterial[r.paperName] = {qty:0, unit:'φύλλα'};
+    byMaterial[r.paperName].qty += totalSheets;
   });
 
   bookRows.forEach(r=>{
@@ -2669,10 +2904,19 @@ function computeMaterialsSummary(){
     const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
     const totalSheets = sheets + num(r.xtra) * signatures;
     if(totalSheets<=0) return;
-    byPaper[r.paperName] = (byPaper[r.paperName]||0) + totalSheets;
+    if(!byMaterial[r.paperName]) byMaterial[r.paperName] = {qty:0, unit:'φύλλα'};
+    byMaterial[r.paperName].qty += totalSheets;
   });
 
-  return byPaper;
+  fabricRows.forEach(r=>{
+    if(!r.material) return;
+    const totalMeters = fabricCalc(r, baseQty).totalMeters;
+    if(!(totalMeters>0)) return;
+    if(!byMaterial[r.material]) byMaterial[r.material] = {qty:0, unit:'μέτρα'};
+    byMaterial[r.material].qty += totalMeters;
+  });
+
+  return byMaterial;
 }
 
 function toggleMaterialsSummary(){
@@ -2685,22 +2929,25 @@ function toggleMaterialsSummary(){
 function renderMaterialsSummary(){
   const listEl = document.getElementById('materialsSummaryList');
   const summary = computeMaterialsSummary();
-  const papers = Object.keys(summary);
-  if(papers.length===0){
-    listEl.innerHTML = '<div class="empty-note">Δεν βρέθηκαν γραμμές με επιλεγμένο χαρτί ακόμα.</div>';
+  const materials = Object.keys(summary);
+  if(materials.length===0){
+    listEl.innerHTML = '<div class="empty-note">Δεν βρέθηκαν γραμμές με επιλεγμένο χαρτί/ύφασμα ακόμα.</div>';
     return;
   }
   listEl.innerHTML = `
     <table>
-      <thead><tr><th style="width:30px;"></th><th>Χαρτί</th><th style="text-align:right;">Υπολογισμένα</th><th style="text-align:right;width:110px;">Ποσότητα Παραγγελίας</th></tr></thead>
-      <tbody>${papers.map((p,i)=>`
+      <thead><tr><th style="width:30px;"></th><th>Υλικό</th><th style="text-align:right;">Υπολογισμένα</th><th style="text-align:right;width:110px;">Ποσότητα Παραγγελίας</th></tr></thead>
+      <tbody>${materials.map((m,i)=>{
+        const entry = summary[m];
+        const displayQty = entry.unit==='μέτρα' ? Math.round(entry.qty*100)/100 : entry.qty;
+        return `
         <tr>
-          <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(p)}" checked></td>
-          <td>${esc(p)}</td>
-          <td style="text-align:right;color:var(--muted);">${summary[p].toLocaleString('el-GR')}</td>
-          <td style="text-align:right;"><input type="number" min="0" class="materials-summary-qty" data-paper="${esc(p)}" value="${summary[p]}" style="width:95px;text-align:right;font-weight:700;padding:4px 6px;"></td>
+          <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(m)}" checked></td>
+          <td>${esc(m)}</td>
+          <td style="text-align:right;color:var(--muted);">${displayQty.toLocaleString('el-GR')} ${esc(entry.unit)}</td>
+          <td style="text-align:right;"><input type="number" min="0" step="${entry.unit==='μέτρα'?'0.01':'1'}" class="materials-summary-qty" data-paper="${esc(m)}" data-unit="${esc(entry.unit)}" value="${displayQty}" style="width:95px;text-align:right;font-weight:700;padding:4px 6px;"></td>
         </tr>
-      `).join('')}</tbody>
+      `;}).join('')}</tbody>
     </table>
   `;
 }
@@ -2711,7 +2958,8 @@ function getSelectedMaterialsForOrder(){
     const paper = cb.getAttribute('data-paper');
     const qtyInput = document.querySelector(`.materials-summary-qty[data-paper="${CSS.escape(paper)}"]`);
     const qty = qtyInput ? num(qtyInput.value) : 0;
-    return { paper, qty };
+    const unit = qtyInput ? (qtyInput.getAttribute('data-unit') || 'φύλλα') : 'φύλλα';
+    return { paper, qty, unit };
   }).filter(m=>m.qty>0);
 }
 
@@ -2737,10 +2985,10 @@ async function createOrdersFromSummary(){
     }
 
     let count = 0;
-    selected.forEach(({paper, qty})=>{
+    selected.forEach(({paper, qty, unit})=>{
       const id = 'ord' + Date.now() + '_' + (count++);
       record.orders[id] = {
-        date: todayISO(), job, material: paper, sheets: qty, supplier: '', notes: 'Αυτόματα από προσφορά — συμπλήρωσε προμηθευτή',
+        date: todayISO(), job, material: paper, sheets: qty, supplier: '', notes: `Αυτόματα από προσφορά (${unit}) — συμπλήρωσε προμηθευτή`,
         status: 'pending', receivedDate: ''
       };
     });
@@ -2763,8 +3011,8 @@ function emailMaterialsOrder(){
     `Καλησπέρα,`, ``,
     `Θα θέλαμε να παραγγείλουμε τα παρακάτω υλικά:`, ``
   ];
-  selected.forEach(({paper, qty})=>{
-    lines.push(`- ${paper}: ${qty.toLocaleString('el-GR')} φύλλα`);
+  selected.forEach(({paper, qty, unit})=>{
+    lines.push(`- ${paper}: ${qty.toLocaleString('el-GR')} ${unit}`);
   });
   lines.push('', 'Ευχαριστούμε,');
   const body = lines.join('\n');
@@ -3093,6 +3341,7 @@ function switchView(view){
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
   if(view==='clients') refreshClientsList();
+  if(view==='settings') refreshMachinesManagerList();
 }
 
 function getJbKey(){ return document.getElementById('jbKey').value.trim(); }
@@ -4303,20 +4552,15 @@ async function refreshOrdersList(){
       div.className = 'order-card' + (received ? ' received' : '') + (missingInfo ? ' missing-info' : '');
       div.innerHTML = `
         <div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;">
-        <input type="checkbox" class="order-select-check" data-order-id="${o.id}" onchange="onOrderSelectChange()" style="margin-top:4px;flex:none;width:16px;height:16px;">
+        <input type="checkbox" class="order-select-check" data-order-id="${o.id}" onchange="onOrderSelectChange()" style="flex:none;width:15px;height:15px;">
         <div class="info">
-          <div class="job">${esc(o.job || '(χωρίς έργο)')}</div>
-          <div class="material">${esc(o.material)}</div>
-          <div class="meta">Παραγγέλθηκε: <b>${esc(fmtDate(o.date))}</b>${received ? ' &nbsp; Παραλήφθηκε: <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</div>
-          <div class="meta" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-            <span>Προμηθευτής:</span>
-            <input list="supplierOptions" value="${esc(o.supplier||'')}" placeholder="-- συμπλήρωσε --" style="width:180px;font-size:12px;padding:3px 6px;${missingInfo?'border-color:#c0392b;':''}" onchange="updateOrderSupplier('${o.id}', this.value)">
+          <div class="job">${esc(o.job || '(χωρίς έργο)')} <span class="material">— ${esc(o.material)}</span></div>
+          <div class="meta" style="margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+            <span><b>${esc(fmtDate(o.date))}</b>${received ? ' → <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</span>
+            <span style="display:flex;align-items:center;gap:4px;">Προμ.: <input list="supplierOptions" value="${esc(o.supplier||'')}" placeholder="-- συμπλήρωσε --" style="width:150px;font-size:11.5px;padding:2px 5px;${missingInfo?'border-color:#c0392b;':''}" onchange="updateOrderSupplier('${o.id}', this.value)"></span>
+            <span style="display:flex;align-items:center;gap:4px;">Φύλλα: <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:65px;font-size:11.5px;padding:2px 5px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρουν τα φύλλα που ήρθαν, διόρθωσέ το εδώ"></span>
           </div>
-          <div class="meta" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-            <span>Φύλλα:</span>
-            <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:80px;font-size:12px;padding:3px 6px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρουν τα φύλλα που ήρθαν, διόρθωσέ το εδώ">
-          </div>
-          ${o.notes ? `<div class="meta" style="margin-top:4px;">${esc(o.notes)}</div>` : ''}
+          ${o.notes ? `<div class="meta" style="margin-top:3px;font-size:10.5px;">${esc(o.notes)}</div>` : ''}
         </div>
         </div>
         <div class="right">
@@ -5015,20 +5259,13 @@ async function addColumnDivider(stage){
 async function deleteColumnDivider(stage, dividerId){
   try{
     const record = await jbGetRecord();
-    let removedName = null;
     if(record.columnOrder && record.columnOrder[stage]){
-      const removed = record.columnOrder[stage].find(item => item.type==='divider' && item.id===dividerId);
-      if(removed) removedName = removed.name;
       record.columnOrder[stage] = record.columnOrder[stage].filter(item => !(item.type==='divider' && item.id===dividerId));
     }
-    // If no divider anywhere still uses this name, remove it from the machines list too (and its rate).
-    if(removedName){
-      const stillUsed = Object.values(record.columnOrder || {}).some(list => list.some(item => item.type==='divider' && item.name===removedName));
-      if(!stillUsed && record.machines){
-        record.machines = record.machines.filter(m => m !== removedName);
-        if(record.machineRates) delete record.machineRates[removedName];
-      }
-    }
+    // Note: deleting a divider only removes it from this column — it no longer
+    // touches the machines list, since machines are now managed independently
+    // (Ρυθμίσεις → Διαχείριση Μηχανών) and are used for cost tracking even
+    // without a matching Kanban divider anywhere.
     await jbPutRecord(record);
     refreshProductionBoard();
   }catch(e){
@@ -5658,17 +5895,17 @@ async function refreshProdTimeList(){
     const machines = record.machines || [];
     const machineRates = record.machineRates || {};
     const taskMachineMap = record.taskMachineMap || {};
+    const machineDetails = record.machineDetails || {};
     if(groups.length===0){
       el.innerHTML = '<div class="empty-note">Δεν υπάρχουν ακόμα καταγεγραμμένοι χρόνοι. Χρησιμοποίησε τα χρονόμετρα Make Ready/Production στα Job Tickets.</div>';
       return;
     }
-    const rows = groups.map(g=>{
+    const cards = groups.map(g=>{
       const mrAvg = g.mrCount ? g.mrTotal/g.mrCount : 0;
       const prodAvg = g.prodCount ? g.prodTotal/g.prodCount : 0;
       const totalAvg = mrAvg + prodAvg;
       const mrPct = totalAvg>0 ? Math.round(mrAvg/totalAvg*100) : 0;
       const prodPct = totalAvg>0 ? 100-mrPct : 0;
-      const rangeStr = pair => pair.min===null ? '—' : (pair.min===pair.max ? formatDuration(pair.min) : `${formatDuration(pair.min)}–${formatDuration(pair.max)}`);
       const throughput = g.prodTotal>0 ? (g.qtyTotal / (g.prodTotal/3600)) : 0;
 
       const assignedMachine = taskMachineMap[g.name.toUpperCase()] || '';
@@ -5676,50 +5913,58 @@ async function refreshProdTimeList(){
       const avgCost = rate>0 ? (totalAvg/3600)*rate : null;
 
       const estAvg = g.estCount ? g.estTotal/g.estCount : 0;
-      let comparisonHtml = '—';
+      let comparisonBadge = `<span class="pt-badge pt-none">Χωρίς εκτίμηση προσφοράς</span>`;
       if(estAvg>0 && prodAvg>0){
         const diffPct = ((prodAvg-estAvg)/estAvg*100);
-        const sign = diffPct>=0 ? '+' : '';
-        const color = diffPct>15 ? '#c0392b' : (diffPct<-15 ? '#4a9d6e' : 'var(--ink)');
-        comparisonHtml = `Εκτ: ${formatDuration(estAvg)}<div style="color:${color};font-weight:700;">${sign}${diffPct.toFixed(0)}%</div>`;
+        if(diffPct>15) comparisonBadge = `<span class="pt-badge pt-slow">⚠ ${diffPct.toFixed(0)}% πιο αργά από εκτίμηση (${formatDuration(estAvg)})</span>`;
+        else if(diffPct<-15) comparisonBadge = `<span class="pt-badge pt-fast">✓ ${Math.abs(diffPct).toFixed(0)}% πιο γρήγορα από εκτίμηση (${formatDuration(estAvg)})</span>`;
+        else comparisonBadge = `<span class="pt-badge pt-ontrack">≈ Κοντά στην εκτίμηση (${formatDuration(estAvg)})</span>`;
       }
 
       const machineSelect = `
         <select style="font-size:10.5px;padding:2px 3px;" onchange="setTaskMachine('${esc(g.name.toUpperCase())}', this.value)">
-          <option value="">—</option>
+          <option value="">— μηχανή —</option>
           ${machines.map(m=>`<option value="${esc(m)}" ${assignedMachine===m?'selected':''}>${esc(m)}</option>`).join('')}
         </select>
       `;
 
+      let speedBadge = '';
+      const md = assignedMachine ? machineDetails[assignedMachine] : null;
+      if(md && num(md.speed)>0 && throughput>0){
+        const ratedSpeed = num(md.speed);
+        const effPct = Math.round(throughput/ratedSpeed*100);
+        const effClass = effPct>=90 ? 'pt-fast' : (effPct<70 ? 'pt-slow' : 'pt-ontrack');
+        speedBadge = `<span class="pt-badge ${effClass}" title="Ονομαστική ταχύτητα μηχανής: ${ratedSpeed.toLocaleString('el-GR')} ${esc(md.speedUnit||'')}/ώρα">${effPct}% της ονομαστικής ταχύτητας μηχανής</span>`;
+      }
+
       return `
-        <tr>
-          <td>${esc(g.name)}</td>
-          <td style="text-align:center;">${g.count}</td>
-          <td style="text-align:center;">${machineSelect}</td>
-          <td style="text-align:center;">${formatDuration(mrAvg)}<div style="font-size:9.5px;color:var(--muted);">${rangeStr({min:g.mrMin,max:g.mrMax})}</div></td>
-          <td style="text-align:center;">${formatDuration(prodAvg)}<div style="font-size:9.5px;color:var(--muted);">${rangeStr({min:g.prodMin,max:g.prodMax})}</div></td>
-          <td style="text-align:center;font-size:10.5px;">${comparisonHtml}</td>
-          <td style="text-align:center;">${totalAvg>0 ? `${mrPct}% / ${prodPct}%` : '—'}</td>
-          <td style="text-align:center;">${throughput>0 ? throughput.toLocaleString('el-GR',{maximumFractionDigits:0}) + ' τεμ/ώρα' : '—'}</td>
-          <td style="text-align:center;font-weight:700;">${avgCost!==null ? avgCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—'}</td>
-        </tr>
+        <div class="pt-card">
+          <div class="pt-card-head">
+            <div>
+              <div class="pt-task-name">${esc(g.name)}</div>
+              <div class="pt-task-meta">${g.count} καταγραφές &nbsp; ${machineSelect}</div>
+            </div>
+            <div class="pt-total-time">${formatDuration(totalAvg)}<div class="pt-total-label">Μ.Ο. συνολικός χρόνος</div></div>
+          </div>
+          ${totalAvg>0 ? `
+          <div class="pt-bar" title="Make Ready ${mrPct}% / Production ${prodPct}%">
+            <div class="pt-bar-mr" style="width:${mrPct}%;"></div>
+            <div class="pt-bar-prod" style="width:${prodPct}%;"></div>
+          </div>
+          <div class="pt-bar-legend">
+            <span><span class="pt-dot pt-dot-mr"></span>Make Ready: <b>${formatDuration(mrAvg)}</b> (${mrPct}%)</span>
+            <span><span class="pt-dot pt-dot-prod"></span>Production: <b>${formatDuration(prodAvg)}</b> (${prodPct}%)</span>
+          </div>` : ''}
+          <div class="pt-stats">
+            <div class="pt-stat"><div class="pt-stat-val">${throughput>0 ? throughput.toLocaleString('el-GR',{maximumFractionDigits:0}) : '—'}</div><div class="pt-stat-label">τεμάχια/ώρα</div></div>
+            <div class="pt-stat"><div class="pt-stat-val">${avgCost!==null ? avgCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—'}</div><div class="pt-stat-label">κόστος/φορά</div></div>
+            <div class="pt-stat pt-stat-badge">${comparisonBadge}</div>
+          </div>
+          ${speedBadge ? `<div style="margin-top:8px;text-align:right;">${speedBadge}</div>` : ''}
+        </div>
       `;
     }).join('');
-    el.innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Εργασία</th><th style="text-align:center;">Καταγραφές</th>
-          <th style="text-align:center;">Μηχανή</th>
-          <th style="text-align:center;">Μ.Ο. Make Ready<br><span style="font-weight:400;font-size:9.5px;">(εύρος)</span></th>
-          <th style="text-align:center;">Μ.Ο. Production<br><span style="font-weight:400;font-size:9.5px;">(εύρος)</span></th>
-          <th style="text-align:center;">vs Εκτίμηση Προσφοράς</th>
-          <th style="text-align:center;">MR% / Prod%</th>
-          <th style="text-align:center;">Ρυθμός (τεμ/ώρα)</th>
-          <th style="text-align:center;">Κόστος/φορά</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
+    el.innerHTML = `<div class="pt-grid">${cards}</div>`;
   }catch(e){
     console.error('Prod time list error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
