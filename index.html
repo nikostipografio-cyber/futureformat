@@ -314,7 +314,7 @@
   .impo-margin-field input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line-strong);border-radius:5px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--page);">
@@ -1116,6 +1116,22 @@
       </div>
     </div>
     <div class="card">
+      <div class="card-head"><div class="title">🔐 Δικαιώματα Χρηστών</div><button class="btn" onclick="toggleUserRolesCard(this)" id="userRolesToggleBtn">Εμφάνιση</button></div>
+      <div id="userRolesBody" style="display:none;">
+      <div class="card-body">
+        <div class="empty-note" style="margin-bottom:10px;">Ελέγχει ποιοι βλέπουν τις καρτέλες "Προσφορές" και "Forecasting" (τζίρος/κόστος) — τα υπόλοιπα (Job Tickets, Παραγωγή, Αποθήκη κ.λπ.) παραμένουν κοινά σε όλους τους συνδεδεμένους χρήστες.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <input id="newRoleEmail" placeholder="email χρήστη" style="flex:1;min-width:180px;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;"><input type="checkbox" id="newRoleOffers" style="width:auto;"> Προσφορές</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;"><input type="checkbox" id="newRoleForecast" style="width:auto;"> Forecasting</label>
+          <button class="btn solid" onclick="saveUserRole()">Αποθήκευση</button>
+        </div>
+        <div id="userRolesList"></div>
+        <div class="empty-note" id="userRolesStatus" style="margin-top:8px;"></div>
+      </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-head"><div class="title">💽 Διαθέσιμος Χώρος</div><button class="btn" onclick="refreshStorageUsage()">Ανανέωση</button></div>
       <div class="card-body">
         <div id="storageUsageInfo" class="empty-note">Πάτα "Ανανέωση" για να δεις το τρέχον μέγεθος των δεδομένων σου.</div>
@@ -1466,6 +1482,83 @@ function formatBytes(bytes){
   if(bytes < 1024) return bytes + ' B';
   if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
   return (bytes/(1024*1024)).toFixed(2) + ' MB';
+}
+
+function toggleUserRolesCard(btn){
+  const el = document.getElementById('userRolesBody');
+  const opening = el.style.display==='none';
+  el.style.display = opening ? 'block' : 'none';
+  btn.textContent = opening ? 'Απόκρυψη' : 'Εμφάνιση';
+  if(opening) refreshUserRolesList();
+}
+
+async function refreshUserRolesList(){
+  const el = document.getElementById('userRolesList');
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url){ el.innerHTML = ''; return; }
+  try{
+    const token = await getAuthToken();
+    const res = await fetch(`${url}/rest/v1/user_roles?select=*`, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if(rows.length===0){ el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει ακόμα κανέναν.</div>'; return; }
+    el.innerHTML = rows.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);">
+        <div style="flex:1;font-weight:600;font-size:12.5px;">${esc(r.email)}</div>
+        <div style="font-size:11.5px;color:${r.can_view_offers?'#1f6b41':'var(--muted)'};">${r.can_view_offers?'✓':'—'} Προσφορές</div>
+        <div style="font-size:11.5px;color:${r.can_view_forecast?'#1f6b41':'var(--muted)'};">${r.can_view_forecast?'✓':'—'} Forecasting</div>
+        <button class="del-link" onclick="deleteUserRole('${esc(r.email).replace(/'/g,"\\'")}')">Διαγραφή</button>
+      </div>
+    `).join('');
+  }catch(e){
+    console.error('User roles list error:', e);
+    el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function saveUserRole(){
+  const statusEl = document.getElementById('userRolesStatus');
+  const email = document.getElementById('newRoleEmail').value.trim();
+  if(!email){ statusEl.textContent = 'Βάλε ένα email.'; return; }
+  const canOffers = document.getElementById('newRoleOffers').checked;
+  const canForecast = document.getElementById('newRoleForecast').checked;
+  const key = getJbKey(), url = getJbBin();
+  try{
+    const token = await getAuthToken();
+    const res = await fetch(`${url}/rest/v1/user_roles`, {
+      method: 'POST',
+      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ email, can_view_offers: canOffers, can_view_forecast: canForecast })
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    document.getElementById('newRoleEmail').value = '';
+    document.getElementById('newRoleOffers').checked = false;
+    document.getElementById('newRoleForecast').checked = false;
+    statusEl.textContent = 'Αποθηκεύτηκε ✓';
+    refreshUserRolesList();
+  }catch(e){
+    console.error('Save user role error:', e);
+    statusEl.textContent = 'Σφάλμα: ' + e.message;
+  }
+}
+
+async function deleteUserRole(email){
+  if(!confirm(`Αφαίρεση δικαιωμάτων για "${email}";`)) return;
+  const key = getJbKey(), url = getJbBin();
+  try{
+    const token = await getAuthToken();
+    const res = await fetch(`${url}/rest/v1/user_roles?email=eq.${encodeURIComponent(email)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    refreshUserRolesList();
+  }catch(e){
+    console.error('Delete user role error:', e);
+    document.getElementById('userRolesStatus').textContent = 'Σφάλμα: ' + e.message;
+  }
 }
 
 async function refreshStorageUsage(){
@@ -3638,13 +3731,17 @@ async function jbGetRecord(){
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
-  const res = await fetch(`${url}/rest/v1/app_data?id=eq.1&select=record`, {
+  // Fetch every row/slice the current user's RLS allows — restricted slices
+  // (offers, forecast) simply won't come back at all if unauthorized, and we
+  // merge whatever we DO get into one combined object, exactly like before.
+  const res = await fetch(`${url}/rest/v1/app_data?select=record`, {
     headers: { 'apikey': key, 'Authorization': `Bearer ${token}` },
     cache: 'no-store'
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const rows = await res.json();
-  const record = (rows[0] && rows[0].record) || {};
+  let record = {};
+  rows.forEach(row => { if(row && row.record) record = Object.assign({}, record, row.record); });
   if(!record.offers) record.offers = {};
   if(!record.tickets) record.tickets = {};
   if(!record.clients) record.clients = [];
@@ -3670,12 +3767,32 @@ async function jbPutRecord(record){
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
-  const res = await fetch(`${url}/rest/v1/app_data?id=eq.1`, {
-    method: 'PATCH',
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ record, updated_at: new Date().toISOString() })
+  const headers = { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  const now = new Date().toISOString();
+
+  const mainSlice = Object.assign({}, record);
+  delete mainSlice.offers;
+  delete mainSlice.forecast;
+
+  const mainRes = await fetch(`${url}/rest/v1/app_data?id=eq.1`, {
+    method: 'PATCH', headers, body: JSON.stringify({ record: mainSlice, updated_at: now })
   });
-  if(!res.ok) throw new Error('HTTP ' + res.status);
+  if(!mainRes.ok) throw new Error('HTTP ' + mainRes.status);
+
+  // Offers/forecast slices are best-effort: a user without permission simply
+  // can't write here (RLS silently accepts-but-affects-nothing), which is the
+  // correct behaviour — they never see this data in the app anyway.
+  try{
+    await fetch(`${url}/rest/v1/app_data?id=eq.2`, {
+      method: 'PATCH', headers, body: JSON.stringify({ record: { offers: record.offers || {} }, updated_at: now })
+    });
+  }catch(e){ /* restricted or offline — ignore */ }
+  try{
+    await fetch(`${url}/rest/v1/app_data?id=eq.3`, {
+      method: 'PATCH', headers, body: JSON.stringify({ record: { forecast: record.forecast || {} }, updated_at: now })
+    });
+  }catch(e){ /* restricted or offline — ignore */ }
+
   return true;
 }
 
@@ -5256,13 +5373,19 @@ document.getElementById('jbBin').value = savedJbBin;
 let supabaseAuthClient = null;
 
 async function initAuthAndApp(){
-  supabaseAuthClient = window.supabase.createClient(getJbBin(), getJbKey());
-  const { data: { session } } = await supabaseAuthClient.auth.getSession();
-  if(session){
-    showAppAfterLogin();
-  } else {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  if(!window.supabase){
+    document.getElementById('loginStatus').textContent = 'Σφάλμα φόρτωσης — έλεγξε τη σύνδεση internet και ανανέωσε τη σελίδα (F5).';
+    return;
+  }
+  try{
+    supabaseAuthClient = window.supabase.createClient(getJbBin(), getJbKey());
+    const { data: { session } } = await supabaseAuthClient.auth.getSession();
+    if(session) showAppAfterLogin();
+  }catch(e){
+    console.error('Auth init error:', e);
+    document.getElementById('loginStatus').textContent = 'Σφάλμα σύνδεσης: ' + e.message;
   }
 }
 
@@ -5270,10 +5393,32 @@ function showAppAfterLogin(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = '';
   loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo();
+  checkUserPermissions();
   supabaseAuthClient.auth.getUser().then(({data})=>{
     const el = document.getElementById('currentUserEmail');
     if(el && data && data.user) el.textContent = 'Συνδεδεμένος/η ως: ' + data.user.email;
   });
+}
+
+async function checkUserPermissions(){
+  try{
+    const { data: { user } } = await supabaseAuthClient.auth.getUser();
+    if(!user) return;
+    const key = getJbKey(), url = getJbBin();
+    const token = await getAuthToken();
+    const res = await fetch(`${url}/rest/v1/user_roles?email=eq.${encodeURIComponent(user.email)}&select=can_view_offers,can_view_forecast`, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+    });
+    if(!res.ok) return; // don't lock people out if this check itself fails — RLS on the data itself is the real boundary
+    const rows = await res.json();
+    // No row for this email = no explicit grant = no access, matching how the RLS policies actually behave.
+    const perms = rows[0] || { can_view_offers: false, can_view_forecast: false };
+    const navList = document.getElementById('navList'), navForecast = document.getElementById('navForecast');
+    if(!perms.can_view_offers) navList.style.display = 'none';
+    if(!perms.can_view_forecast) navForecast.style.display = 'none';
+  }catch(e){
+    console.error('Permission check error:', e);
+  }
 }
 
 async function submitLogin(){
@@ -5281,6 +5426,7 @@ async function submitLogin(){
   const password = document.getElementById('loginPassword').value;
   const statusEl = document.getElementById('loginStatus');
   if(!email || !password){ statusEl.textContent = 'Συμπλήρωσε email και κωδικό.'; return; }
+  if(!supabaseAuthClient){ statusEl.textContent = 'Η σύνδεση δεν φορτώθηκε σωστά — ανανέωσε τη σελίδα (F5) και δοκίμασε ξανά.'; return; }
   statusEl.textContent = 'Σύνδεση...';
   try{
     const { error } = await supabaseAuthClient.auth.signInWithPassword({ email, password });
