@@ -5379,8 +5379,11 @@ async function refreshForecastList(){
 const DEFAULT_SUPABASE_URL = 'https://aedxejiijbsapiyadkba.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlZHhlamlpamJzYXBpeWFka2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzOTEwMDQsImV4cCI6MjEwMDk2NzAwNH0.xTeBjkj0f97aq4bdr__FGcGQQcAo7B4233g69fQFvdM';
 
-const savedJbKey = localStorage.getItem('offer_jb_key') || DEFAULT_SUPABASE_KEY;
-const savedJbBin = localStorage.getItem('offer_jb_bin') || DEFAULT_SUPABASE_URL;
+const storedJbBin = (localStorage.getItem('offer_jb_bin')||'').trim();
+// Old installs may still have JSONBin-era values saved (a bin ID, not a URL) —
+// those are no longer valid, so fall back to the real Supabase URL instead.
+const savedJbBin = /^https?:\/\//.test(storedJbBin) ? storedJbBin : DEFAULT_SUPABASE_URL;
+const savedJbKey = (localStorage.getItem('offer_jb_key')||'').trim() || DEFAULT_SUPABASE_KEY;
 document.getElementById('jbKey').value = savedJbKey;
 document.getElementById('jbBin').value = savedJbBin;
 
