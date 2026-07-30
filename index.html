@@ -203,16 +203,18 @@
   .board-scroll-left{left:-4px;}
   .board-scroll-right{right:-4px;}
   .kanban-col.dragover{outline:2px dashed #5b8def;outline-offset:-2px;}
-  .kanban-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px;color:#555;padding:0 2px;flex:none;}
+  .kanban-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px;color:#555;padding:0 2px;flex:none;border-radius:6px;transition:background 0.1s ease;}
+  .kanban-col-head.dragover{background:#dbe7fd;}
+  .kanban-col-dragging{opacity:0.45;}
   .kanban-col-head .count{background:#fff;border-radius:10px;padding:1px 8px;font-size:11px;color:var(--muted);font-weight:600;}
   .kanban-col-del{cursor:pointer;color:#999;font-size:14px;padding:0 2px;}
   .kanban-col-del:hover{color:#c0392b;}
   .kanban-cards{min-height:40px;overflow-y:auto;flex:1;padding-right:3px;}
-  .kanban-card{background:#fff;border-radius:11px;padding:12px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.09);cursor:grab;font-size:12px;border-left:4px solid #5b8def;transition:box-shadow 0.15s ease,transform 0.15s ease;}
+  .kanban-card{background:#fff;border-radius:9px;padding:8px 10px;margin-bottom:7px;box-shadow:0 1px 3px rgba(0,0,0,0.09);cursor:grab;font-size:11px;transition:box-shadow 0.15s ease,transform 0.15s ease;}
   .kanban-card:hover{box-shadow:0 6px 16px rgba(0,0,0,0.13);transform:translateY(-2px);}
   .kanban-card:active{cursor:grabbing;transform:translateY(0);}
-  .kanban-card .name{font-weight:700;margin-bottom:5px;color:var(--ink);font-size:12.5px;line-height:1.35;}
-  .kanban-card .meta{color:var(--muted);font-size:10.5px;line-height:1.5;font-weight:600;letter-spacing:0.2px;}
+  .kanban-card .name{font-weight:500;margin-bottom:3px;color:var(--ink);font-size:11px;line-height:1.3;}
+  .kanban-card .meta{color:var(--muted);font-size:10px;line-height:1.4;font-weight:500;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
   .kanban-date-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;border:1px solid var(--line-strong);background:var(--page);color:var(--muted);transition:background 0.12s;white-space:nowrap;}
@@ -786,7 +788,15 @@
 
   <div id="viewTicketList" style="display:none;">
     <div class="card">
-      <div class="card-head"><div class="title">Αποθηκευμένα Job Tickets</div><button class="btn solid" onclick="newTicket();switchView('ticketform')">+ Νέο Ticket</button></div>
+      <div class="card-head"><div class="title">Αποθηκευμένα Job Tickets</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="ticketSearch" placeholder="Αναζήτηση..." style="max-width:200px;" oninput="refreshTicketList()">
+          <button class="btn" onclick="document.getElementById('trelloImportInput').click()">📋 Εισαγωγή από Trello</button>
+          <input type="file" id="trelloImportInput" accept=".json" style="display:none;" onchange="handleTrelloImportFile(this.files[0])">
+          <button class="btn solid" onclick="newTicket();switchView('ticketform')">+ Νέο Ticket</button>
+        </div>
+      </div>
+      <div class="empty-note" id="trelloImportStatus" style="padding:0 16px;"></div>
       <div class="card-body" id="ticketList"></div>
     </div>
   </div>
@@ -925,11 +935,17 @@
           <button class="btn ord-filter-btn solid" data-pview="board" onclick="setProductionView('board')">📋 Πίνακας</button>
           <button class="btn ord-filter-btn" data-pview="calendar" onclick="setProductionView('calendar')">📅 Ημερολόγιο</button>
           <button class="btn" onclick="addProductionStage()">+ Νέα Στήλη</button>
+          <button class="btn" id="bulkSelectToggleBtn" onclick="toggleBulkSelectMode()">☑ Πολλαπλή Επιλογή</button>
           <button class="btn" id="archiveToggleBtn" onclick="toggleArchiveView()">📦 Αρχειοθετημένα</button>
         </div>
       </div>
       <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά ολοκληρωθεί, πάτα "✓ Αρχειοθέτηση" πάνω στην κάρτα για να φύγει από τον πίνακα (τα στοιχεία της δεν χάνονται, μένουν διαθέσιμα εδώ).</div>
       <div class="card-body" id="archiveList" style="display:none;"></div>
+      <div id="bulkSelectBar" style="display:none;padding:10px 16px;border-top:1px solid var(--line);background:var(--page);align-items:center;gap:12px;">
+        <span id="bulkSelectCount" style="font-size:12.5px;font-weight:600;">0 επιλεγμένα</span>
+        <button class="btn solid" onclick="openBulkLabelPopover(event)">🏷 Ορισμός Label σε επιλεγμένα</button>
+        <button class="btn" onclick="clearBulkSelection()">Καθαρισμός επιλογής</button>
+      </div>
     </div>
     <div style="position:relative;">
       <button class="board-scroll-btn board-scroll-left" onclick="scrollProductionBoard(-1)" title="Μετακίνηση αριστερά">‹</button>
@@ -4445,6 +4461,68 @@ async function deleteTicket(id){
   }
 }
 
+async function handleTrelloImportFile(file){
+  const statusEl = document.getElementById('trelloImportStatus');
+  if(!file) return;
+  statusEl.textContent = 'Διάβασμα αρχείου...';
+  try{
+    const text = await file.text();
+    const board = JSON.parse(text);
+
+    // Only these production-related lists get imported — everything else (Prosfores,
+    // ΑΡΧΕΙΑ, JOB TICKET, WAIT FOR FILES, DONE, old archived duplicates, etc.) is skipped.
+    const targetListNames = ['ON HOLD','MAIN','ΜΟΝΤΑΖ','ΕΛΕΓΧΟΣ ΕΓΚΡΙΣΗ','CTP','ΕΚΤΥΠΩΣΗ OFFSET','ΒΙΒΛΙΟΔΕΣΙΑ','POSTPRESS','OUT SOURCE'];
+    const normalize = s => (s||'').toUpperCase().replace(/[-–—]/g,' ').replace(/\s+/g,' ').trim();
+    const targetNormalized = targetListNames.map(normalize);
+    const matchingListIds = new Set(
+      (board.lists||[])
+        .filter(l => !l.closed && targetNormalized.includes(normalize(l.name)))
+        .map(l => l.id)
+    );
+
+    const cards = (board.cards||[]).filter(c=>!c.closed && matchingListIds.has(c.idList));
+    if(cards.length===0){
+      statusEl.textContent = 'Δεν βρέθηκαν ενεργές κάρτες στις καθορισμένες στήλες παραγωγής.';
+      return;
+    }
+    if(!confirm(`Βρέθηκαν ${cards.length} ενεργές κάρτες στις στήλες παραγωγής (${targetListNames.join(', ')}). Θα δημιουργηθούν σαν Job Tickets, όλα στη στήλη "Νέο" της Παραγωγής, για να τα ταξινομήσεις εσύ μετά. Συνέχεια;`)) return;
+
+    statusEl.textContent = 'Εισαγωγή σε εξέλιξη...';
+    const record = await jbGetRecord();
+    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    let created = 0, skipped = 0;
+
+    cards.forEach(card=>{
+      const id = 'trello_' + card.id;
+      if(record.tickets[id]){ skipped++; return; } // already imported before — don't duplicate
+      const deadline = card.due ? card.due.slice(0,10) : '';
+      const data = {
+        info: card.name || '',
+        qty: '', deadline, eidos: '', schema: '', selides: '', selidesOut: '',
+        notes: card.desc || '',
+        paperRows: [], procRows: [],
+        tkUnitWeight:'', tkExtraWeight:'', tkUnitThickness:'', tkExtraThickness:'',
+        tkSchemaClosed:'', tkBoxSize:'', tkBoxMaxWeight:'', tkBoxMaxPieces:'', tkBoxTare:'',
+        tkPalletMaxBoxes:'', tkPalletMaxWeight:'', tkPalletTare:'', tkPalletAddress:'',
+        attachments: []
+      };
+      record.tickets[id] = {
+        label: card.name || 'Χωρίς τίτλο',
+        date: deadline, savedAt: new Date().toISOString(), deadlineDate: deadline,
+        stage: firstStage, data
+      };
+      created++;
+    });
+
+    await jbPutRecord(record);
+    await refreshTicketList();
+    statusEl.textContent = `Ολοκληρώθηκε ✓ — δημιουργήθηκαν ${created} νέα tickets${skipped>0 ? ' (' + skipped + ' παραλείφθηκαν, υπήρχαν ήδη από προηγούμενη εισαγωγή)' : ''}.`;
+  }catch(e){
+    console.error('Trello import error:', e);
+    statusEl.textContent = 'Σφάλμα εισαγωγής: ' + e.message;
+  }
+}
+
 async function refreshTicketList(){
   const el = document.getElementById('ticketList');
   const key = getJbKey(), bin = getJbBin();
@@ -4456,11 +4534,15 @@ async function refreshTicketList(){
     const record = await jbGetRecord();
     const stages = record.productionStages || [];
     const doneStage = stages[stages.length-1];
-    const list = Object.entries(record.tickets).map(([id, t]) => ({ id, ...t }));
+    const search = (document.getElementById('ticketSearch').value||'').toLowerCase().trim();
+    let list = Object.entries(record.tickets).map(([id, t]) => ({ id, ...t }));
+    if(search){
+      list = list.filter(t => (t.label||'').toLowerCase().includes(search) || ((t.data||{}).info||'').toLowerCase().includes(search));
+    }
     list.sort((a,b) => (b.savedAt||'').localeCompare(a.savedAt||''));
     el.innerHTML = '';
     if(list.length===0){
-      el.innerHTML = '<div class="empty-note">Δεν υπάρχουν αποθηκευμένα tickets ακόμα.</div>';
+      el.innerHTML = `<div class="empty-note">${search ? 'Δεν βρέθηκαν tickets για αυτή την αναζήτηση.' : 'Δεν υπάρχουν αποθηκευμένα tickets ακόμα.'}</div>`;
       return;
     }
     list.forEach(t=>{
@@ -5495,6 +5577,108 @@ function ensureColumnOrder(record, stage, cardsInStage){
   return record.columnOrder[stage];
 }
 
+async function reorderProductionStage(srcStage, targetStage){
+  try{
+    const record = await jbGetRecord();
+    const stages = record.productionStages;
+    const srcIdx = stages.indexOf(srcStage);
+    if(srcIdx===-1) return;
+    stages.splice(srcIdx, 1);
+    const targetIdx = stages.indexOf(targetStage);
+    stages.splice(targetIdx===-1 ? stages.length : targetIdx, 0, srcStage);
+    await jbPutRecord(record);
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Reorder stage error:', e);
+    statusMsg('Σφάλμα αναδιάταξης στήλης: ' + e.message);
+  }
+}
+
+let bulkSelectMode = false;
+let bulkSelectedIds = new Set();
+
+function toggleBulkSelectMode(){
+  bulkSelectMode = !bulkSelectMode;
+  if(!bulkSelectMode) bulkSelectedIds.clear();
+  document.getElementById('bulkSelectToggleBtn').classList.toggle('solid', bulkSelectMode);
+  document.getElementById('bulkSelectBar').style.display = bulkSelectMode ? 'flex' : 'none';
+  refreshProductionBoard();
+}
+
+function clearBulkSelection(){
+  bulkSelectedIds.clear();
+  refreshProductionBoard();
+}
+
+function updateBulkSelectUI(){
+  const n = bulkSelectedIds.size;
+  document.getElementById('bulkSelectCount').textContent = n + ' επιλεγμέν' + (n===1?'ο':'α');
+}
+
+async function openBulkLabelPopover(e){
+  if(bulkSelectedIds.size===0){ statusMsg('Επίλεξε πρώτα κάρτες.'); return; }
+  const anchorEl = e.currentTarget;
+  const existing = document.getElementById('bulkLabelPopover');
+  if(existing){ existing.remove(); document.removeEventListener('click', closeBulkLabelPopoverOnClickOutside); return; }
+  try{
+    const record = await jbGetRecord();
+    const labels = record.labels || [];
+    const pop = document.createElement('div');
+    pop.id = 'bulkLabelPopover';
+    pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:10px;z-index:2000;min-width:200px;';
+    const rect = anchorEl.getBoundingClientRect();
+    pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    pop.style.left = (rect.left + window.scrollX) + 'px';
+    pop.innerHTML = (labels.length ? labels.map(l => `
+      <div class="bulk-label-option" data-lbl="${esc(l.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;font-size:12px;border-radius:5px;">
+        <span style="width:10px;height:10px;border-radius:3px;background:${l.color};display:inline-block;flex:none;"></span>
+        <span>${esc(l.name)}</span>
+      </div>
+    `).join('') : '<div class="empty-note">Δεν υπάρχουν ετικέτες ακόμα — φτιάξε μία πρώτα από μια κάρτα.</div>');
+    document.body.appendChild(pop);
+    pop.querySelectorAll('.bulk-label-option').forEach(opt=>{
+      opt.addEventListener('mouseenter', ()=>{ opt.style.background = 'var(--page)'; });
+      opt.addEventListener('mouseleave', ()=>{ opt.style.background = ''; });
+      opt.addEventListener('click', ()=>{ applyLabelToSelected(opt.getAttribute('data-lbl')); pop.remove(); document.removeEventListener('click', closeBulkLabelPopoverOnClickOutside); });
+    });
+    setTimeout(()=>{ document.addEventListener('click', closeBulkLabelPopoverOnClickOutside); }, 0);
+  }catch(err){
+    console.error('Bulk label popover error:', err);
+  }
+}
+
+function closeBulkLabelPopoverOnClickOutside(e){
+  const pop = document.getElementById('bulkLabelPopover');
+  if(pop && !pop.contains(e.target) && !e.target.closest('#bulkSelectBar')){
+    pop.remove();
+    document.removeEventListener('click', closeBulkLabelPopoverOnClickOutside);
+  }
+}
+
+async function applyLabelToSelected(labelId){
+  try{
+    const record = await jbGetRecord();
+    let count = 0;
+    bulkSelectedIds.forEach(id=>{
+      const t = record.tickets[id];
+      if(!t) return;
+      if(!t.labels) t.labels = [];
+      if(!t.labels.includes(labelId)) t.labels.push(labelId);
+      count++;
+    });
+    await jbPutRecord(record);
+    statusMsg(`Η ετικέτα ορίστηκε σε ${count} κάρτες ✓`);
+    bulkSelectedIds.clear();
+    bulkSelectMode = false;
+    document.getElementById('bulkSelectToggleBtn').classList.remove('solid');
+    document.getElementById('bulkSelectBar').style.display = 'none';
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Apply bulk label error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function refreshProductionBoard(){
   const boardEl = document.getElementById('productionBoard');
   const key = getJbKey(), bin = getJbBin();
@@ -5560,6 +5744,26 @@ async function refreshProductionBoard(){
       `;
       boardEl.appendChild(col);
       const cardsEl = col.querySelector('.kanban-cards');
+      const headEl = col.querySelector('.kanban-col-head');
+      headEl.style.cursor = 'grab';
+      headEl.draggable = true;
+      headEl.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/plain', 'column:' + stage);
+        e.dataTransfer.effectAllowed = 'move';
+        col.classList.add('kanban-col-dragging');
+      });
+      headEl.addEventListener('dragend', ()=>{ col.classList.remove('kanban-col-dragging'); });
+      headEl.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; headEl.classList.add('dragover'); });
+      headEl.addEventListener('dragleave', ()=>{ headEl.classList.remove('dragover'); });
+      headEl.addEventListener('drop', async e=>{
+        e.preventDefault(); e.stopPropagation();
+        headEl.classList.remove('dragover');
+        const data = e.dataTransfer.getData('text/plain');
+        if(!data || !data.startsWith('column:')) return;
+        const srcStage = data.slice(7);
+        if(srcStage===stage) return;
+        await reorderProductionStage(srcStage, stage);
+      });
 
       function updateColumnCounts(){
         boardEl.querySelectorAll('.kanban-col').forEach(colEl=>{
@@ -5652,6 +5856,7 @@ async function refreshProductionBoard(){
           }
           card.innerHTML = `
             <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
+              <input type="checkbox" class="kanban-bulk-checkbox" data-id="${t.id}" ${bulkSelectedIds.has(t.id)?'checked':''} style="display:${bulkSelectMode?'inline-block':'none'};margin-right:2px;">
               ${labelsHtml}
               <span class="kanban-label-btn" title="Ετικέτες">🏷️</span>
               <span class="kanban-date-btn" title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
@@ -5661,7 +5866,15 @@ async function refreshProductionBoard(){
             <div class="meta">${metaBits.join(' · ')}</div>
             ${stage===stages[stages.length-1] ? `<div class="kanban-archive-btn">✓ Αρχειοθέτηση</div>` : ''}
           `;
-          card.addEventListener('click', (e)=>{ if(e.target.closest('.kanban-card-labels, .kanban-archive-btn')) return; loadTicket(t.id, true); });
+          card.addEventListener('click', (e)=>{
+            if(e.target.closest('.kanban-card-labels, .kanban-archive-btn') && !e.target.classList.contains('kanban-bulk-checkbox')) return;
+            if(bulkSelectMode){
+              if(bulkSelectedIds.has(t.id)) bulkSelectedIds.delete(t.id); else bulkSelectedIds.add(t.id);
+              updateBulkSelectUI();
+              return;
+            }
+            loadTicket(t.id, true);
+          });
           card.addEventListener('dragstart', e=>{
             e.dataTransfer.setData('text/plain', `card:${t.id}`);
             setTimeout(()=>card.style.opacity='0.4', 0);
@@ -6073,20 +6286,33 @@ async function toggleLabelPopover(ticketId, anchorEl){
     pop.style.left = (rect.left + window.scrollX) + 'px';
 
     pop.innerHTML = labels.map(l => `
-      <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;font-size:12px;">
-        <input type="checkbox" ${assigned.includes(l.id)?'checked':''} data-lbl="${esc(l.id)}">
-        <span style="width:10px;height:10px;border-radius:3px;background:${l.color};display:inline-block;flex:none;"></span>
-        <span>${esc(l.name)}</span>
-      </label>
+      <div style="display:flex;align-items:center;gap:6px;padding:4px;font-size:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0;">
+          <input type="checkbox" ${assigned.includes(l.id)?'checked':''} data-lbl="${esc(l.id)}">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(l.name)}</span>
+        </label>
+        <input type="color" value="${l.color}" data-lbl-color="${esc(l.id)}" style="width:22px;height:22px;padding:0;border:none;cursor:pointer;flex:none;" title="Αλλαγή χρώματος">
+        <button class="del-link" data-lbl-delete="${esc(l.id)}" style="flex:none;" title="Διαγραφή ετικέτας">×</button>
+      </div>
     `).join('') + `
       <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px;">
-        <input id="newLabelName" placeholder="Νέα ετικέτα..." style="width:100%;font-size:12px;padding:5px 6px;margin-bottom:5px;">
+        <div style="display:flex;gap:5px;margin-bottom:5px;">
+          <input id="newLabelName" placeholder="Νέα ετικέτα..." style="flex:1;font-size:12px;padding:5px 6px;">
+          <input type="color" id="newLabelColor" value="#5b8def" style="width:32px;padding:0;border:none;cursor:pointer;flex:none;" title="Χρώμα ετικέτας">
+        </div>
         <button class="btn" style="width:100%;font-size:11px;padding:5px;" id="addLabelBtn">+ Προσθήκη</button>
       </div>
     `;
     document.body.appendChild(pop);
     pop.querySelectorAll('input[type=checkbox]').forEach(cb=>{
       cb.addEventListener('change', ()=>{ toggleTicketLabel(ticketId, cb.getAttribute('data-lbl'), cb.checked); });
+    });
+    pop.querySelectorAll('input[data-lbl-color]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ updateLabelColor(inp.getAttribute('data-lbl-color'), inp.value); });
+      inp.addEventListener('change', ()=>{ toggleLabelPopover(ticketId, anchorEl); }); // refresh assigned card colors once picking is done
+    });
+    pop.querySelectorAll('button[data-lbl-delete]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ deleteLabelDefinition(btn.getAttribute('data-lbl-delete'), ticketId, anchorEl); });
     });
     pop.querySelector('#addLabelBtn').addEventListener('click', ()=>{ addNewLabel(ticketId); });
     setTimeout(()=>{ document.addEventListener('click', closeLabelPopoverOnClickOutside); }, 0);
@@ -6111,16 +6337,49 @@ async function toggleTicketLabel(ticketId, labelId, checked){
   }
 }
 
+async function updateLabelColor(labelId, color){
+  try{
+    const record = await jbGetRecord();
+    const lbl = (record.labels||[]).find(l=>l.id===labelId);
+    if(!lbl) return;
+    lbl.color = color;
+    await jbPutRecord(record);
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Update label color error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function deleteLabelDefinition(labelId, ticketId, anchorEl){
+  try{
+    const record = await jbGetRecord();
+    const lbl = (record.labels||[]).find(l=>l.id===labelId);
+    if(!lbl) return;
+    if(!confirm(`Διαγραφή της ετικέτας "${lbl.name}" εντελώς; Θα αφαιρεθεί από όλα τα tickets που την έχουν.`)) return;
+    record.labels = (record.labels||[]).filter(l=>l.id!==labelId);
+    Object.values(record.tickets).forEach(t=>{
+      if(t.labels) t.labels = t.labels.filter(id=>id!==labelId);
+    });
+    await jbPutRecord(record);
+    refreshProductionBoard();
+    if(ticketId && anchorEl) toggleLabelPopover(ticketId, anchorEl); // reopen refreshed
+  }catch(e){
+    console.error('Delete label error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function addNewLabel(ticketId){
   const nameField = document.getElementById('newLabelName');
+  const colorField = document.getElementById('newLabelColor');
   const name = nameField ? nameField.value.trim() : '';
   if(!name) return;
-  const palette = ['#e0a030','#4a9d6e','#5b8def','#c0392b','#8e44ad','#16a085','#d35400','#2c3e50'];
+  const color = (colorField && colorField.value) || '#5b8def';
   try{
     const record = await jbGetRecord();
     if(!record.labels) record.labels = [];
     const id = 'lbl' + Date.now();
-    const color = palette[record.labels.length % palette.length];
     record.labels.push({id, name, color});
     const t = record.tickets[ticketId];
     if(!t.labels) t.labels = [];
@@ -7182,6 +7441,23 @@ async function confirmClientsBulkImport(){
   }
 }
 
+async function deleteClient(name){
+  try{
+    const record = await jbGetRecord();
+    const offerCount = Object.values(record.offers||{}).filter(o=>(o.label||'').trim()===name).length;
+    const warning = offerCount>0
+      ? `Ο πελάτης "${name}" έχει ${offerCount} προσφορ${offerCount===1?'ά':'ές'} καταχωρημένη. Η διαγραφή αφαιρεί μόνο τον πελάτη από τη λίστα — οι προσφορές του ΔΕΝ διαγράφονται. Συνέχεια;`
+      : `Διαγραφή του πελάτη "${name}" από τη λίστα;`;
+    if(!confirm(warning)) return;
+    record.clients = (record.clients||[]).filter(c=>c!==name);
+    await jbPutRecord(record);
+    refreshClientsList();
+  }catch(e){
+    console.error('Delete client error:', e);
+    alert('Σφάλμα διαγραφής: ' + e.message);
+  }
+}
+
 async function refreshClientsList(){
   const el = document.getElementById('clientsList');
   const key = getJbKey(), bin = getJbBin();
@@ -7216,15 +7492,16 @@ async function refreshClientsList(){
 
     el.innerHTML = `
       <table class="offer-table">
-        <thead><tr><th>Πελάτης</th><th style="text-align:right;">Προσφορές</th><th style="text-align:right;">Εγκεκριμένες</th><th style="text-align:right;">Σύνολο Τζίρου</th></tr></thead>
+        <thead><tr><th>Πελάτης</th><th style="text-align:right;">Προσφορές</th><th style="text-align:right;">Εγκεκριμένες</th><th style="text-align:right;">Σύνολο Τζίρου</th><th></th></tr></thead>
         <tbody>${clients.map(c=>{
           const d = byClient[c];
           return `
-            <tr onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')" style="cursor:pointer;">
-              <td style="font-weight:600;">${esc(c)}</td>
-              <td style="text-align:right;">${d.count}</td>
-              <td style="text-align:right;">${d.approved}</td>
-              <td style="text-align:right;font-weight:700;">${d.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+            <tr>
+              <td style="font-weight:600;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</td>
+              <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.count}</td>
+              <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.approved}</td>
+              <td style="text-align:right;font-weight:700;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+              <td style="white-space:nowrap;"><button class="del-link" onclick="event.stopPropagation();deleteClient('${esc(c).replace(/'/g,"\\'")}')">Διαγραφή</button></td>
             </tr>
           `;
         }).join('')}</tbody>
