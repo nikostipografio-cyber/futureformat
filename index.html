@@ -1115,14 +1115,15 @@
         <div class="empty-note" id="currentUserEmail">Συνδεδεμένος/η</div>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="userRolesCard">
       <div class="card-head"><div class="title">🔐 Δικαιώματα Χρηστών</div><button class="btn" onclick="toggleUserRolesCard(this)" id="userRolesToggleBtn">Εμφάνιση</button></div>
       <div id="userRolesBody" style="display:none;">
       <div class="card-body">
-        <div class="empty-note" style="margin-bottom:10px;">Ελέγχει ποιοι βλέπουν τις καρτέλες "Προσφορές" και "Forecasting" (τζίρος/κόστος) — τα υπόλοιπα (Job Tickets, Παραγωγή, Αποθήκη κ.λπ.) παραμένουν κοινά σε όλους τους συνδεδεμένους χρήστες.</div>
+        <div class="empty-note" style="margin-bottom:10px;">Ελέγχει ποιοι βλέπουν τις καρτέλες "Προσφορές", "Αναφορές" και "Forecasting" (τζίρος/κόστος) — τα υπόλοιπα (Job Tickets, Παραγωγή, Αποθήκη κ.λπ.) παραμένουν κοινά σε όλους τους συνδεδεμένους χρήστες.</div>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <input id="newRoleEmail" placeholder="email χρήστη" style="flex:1;min-width:180px;">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;"><input type="checkbox" id="newRoleOffers" style="width:auto;"> Προσφορές</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;"><input type="checkbox" id="newRoleAdmin" style="width:auto;" onchange="onAdminShortcutChange()"> Admin</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;"><input type="checkbox" id="newRoleOffers" style="width:auto;"> Προσφορές/Αναφορές</label>
           <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;"><input type="checkbox" id="newRoleForecast" style="width:auto;"> Forecasting</label>
           <button class="btn solid" onclick="saveUserRole()">Αποθήκευση</button>
         </div>
@@ -1504,18 +1505,28 @@ async function refreshUserRolesList(){
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
     if(rows.length===0){ el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει ακόμα κανέναν.</div>'; return; }
-    el.innerHTML = rows.map(r=>`
+    el.innerHTML = rows.map(r=>{
+      const isAdmin = r.can_view_offers && r.can_view_forecast;
+      return `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);">
         <div style="flex:1;font-weight:600;font-size:12.5px;">${esc(r.email)}</div>
+        ${isAdmin ? '<div style="font-size:11.5px;font-weight:700;color:#8a5a12;">Admin</div>' : `
         <div style="font-size:11.5px;color:${r.can_view_offers?'#1f6b41':'var(--muted)'};">${r.can_view_offers?'✓':'—'} Προσφορές</div>
         <div style="font-size:11.5px;color:${r.can_view_forecast?'#1f6b41':'var(--muted)'};">${r.can_view_forecast?'✓':'—'} Forecasting</div>
+        `}
         <button class="del-link" onclick="deleteUserRole('${esc(r.email).replace(/'/g,"\\'")}')">Διαγραφή</button>
       </div>
-    `).join('');
+    `;}).join('');
   }catch(e){
     console.error('User roles list error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
   }
+}
+
+function onAdminShortcutChange(){
+  const isAdmin = document.getElementById('newRoleAdmin').checked;
+  document.getElementById('newRoleOffers').checked = isAdmin;
+  document.getElementById('newRoleForecast').checked = isAdmin;
 }
 
 async function saveUserRole(){
@@ -1534,6 +1545,7 @@ async function saveUserRole(){
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     document.getElementById('newRoleEmail').value = '';
+    document.getElementById('newRoleAdmin').checked = false;
     document.getElementById('newRoleOffers').checked = false;
     document.getElementById('newRoleForecast').checked = false;
     statusEl.textContent = 'Αποθηκεύτηκε ✓';
@@ -5413,9 +5425,16 @@ async function checkUserPermissions(){
     const rows = await res.json();
     // No row for this email = no explicit grant = no access, matching how the RLS policies actually behave.
     const perms = rows[0] || { can_view_offers: false, can_view_forecast: false };
-    const navList = document.getElementById('navList'), navForecast = document.getElementById('navForecast');
-    if(!perms.can_view_offers) navList.style.display = 'none';
+    const navList = document.getElementById('navList'), navForecast = document.getElementById('navForecast'), navReports = document.getElementById('navReports');
+    if(!perms.can_view_offers){
+      navList.style.display = 'none';
+      navReports.style.display = 'none'; // Reports' cost analysis draws from offers data — same permission
+    }
     if(!perms.can_view_forecast) navForecast.style.display = 'none';
+
+    const fullAccess = perms.can_view_offers && perms.can_view_forecast;
+    const userRolesCard = document.getElementById('userRolesCard');
+    if(userRolesCard) userRolesCard.style.display = fullAccess ? '' : 'none';
   }catch(e){
     console.error('Permission check error:', e);
   }
