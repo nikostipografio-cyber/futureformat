@@ -223,6 +223,7 @@
   .kanban-archive-btn{margin-top:9px;font-size:10.5px;font-weight:700;color:#1f7a4d;cursor:pointer;text-align:center;background:#e3f3ea;border-radius:7px;padding:5px 0;transition:background 0.12s;}
   .kanban-archive-btn:hover{background:#d1ecdd;}
   .kanban-machine-divider{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;padding:9px 11px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);background:#fff;border-radius:8px;border-left:3px solid var(--line-strong);box-shadow:0 1px 2px rgba(0,0,0,0.06);position:relative;}
+  .kanban-divider-color{width:14px;height:14px;padding:0;border:none;border-radius:50%;cursor:pointer;flex:none;}
   .kanban-divider-dropzone{height:14px;margin:-6px 0 8px;border-radius:6px;transition:height 0.12s,background 0.12s;}
   .kanban-divider-dropzone.dragover{height:38px;background:#eaf1fe;border:2px dashed #5b8def;}
   .kanban-machine-divider .kanban-col-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);}
@@ -244,9 +245,10 @@
 
   .offer-print{display:none;}
   @media print{
-    body{padding:0;background:#fff;}
+    body{padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
     .app-shell{display:none !important;}
     .offer-print{display:block !important;}
+    .offer-print *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
   }
   .op-page{max-width:800px;margin:0 auto;padding:34px;font-family:-apple-system,Segoe UI,Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:12.5px;line-height:1.5;}
   .op-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
@@ -326,6 +328,7 @@
     .fieldgrid.c3{grid-template-columns:repeat(2,1fr);}
     .totals{grid-template-columns:repeat(2,1fr) !important;}
     table{font-size:11.5px;}
+    .offer-print table{font-size:inherit;}
   }
 
   @media (max-width: 768px){
@@ -360,6 +363,7 @@
     .actions{flex-wrap:wrap;gap:6px;}
     .actions .btn{font-size:11px;padding:6px 9px;}
     table{display:block;overflow-x:auto;white-space:nowrap;}
+    .offer-print table{display:table;overflow-x:visible;white-space:normal;}
     .kanban-col{min-width:210px;}
     #productionBoard{gap:10px;}
     .board-scroll-btn{width:32px;height:32px;font-size:16px;}
@@ -508,8 +512,8 @@ function toggleMobileSidebar(forceClose){
       </div>
       <div class="fieldgrid c4">
         <div class="field"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()" style="font-weight:700;"></div>
-        <div class="field"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. Α5"></div>
-        <div class="field"><label>Σχήμα Ανοιχτό</label><input id="fSchemaOpen" placeholder="π.χ. Α4"></div>
+        <div class="field"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. 21*29"></div>
+        <div class="field"><label>Σχήμα Ανοιχτό</label><input id="fSchemaOpen" placeholder="π.χ. 42*29"></div>
         <div class="field"><label>Σελίδες</label><input id="fPages" placeholder="π.χ. 288+4"></div>
       </div>
       <div class="fieldgrid c4">
@@ -775,7 +779,13 @@ function toggleMobileSidebar(forceClose){
 
     <div class="card">
       <div class="card-head"><div class="title">Παρατηρήσεις</div></div>
-      <div class="card-body"><textarea id="tkNotes" rows="3"></textarea></div>
+      <div class="card-body">
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button type="button" class="btn" style="font-weight:800;padding:4px 10px;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold')" title="Έντονα">B</button>
+          <button type="button" class="btn" style="padding:4px 10px;background:#fff59d;" onmousedown="event.preventDefault()" onclick="toggleNotesHighlight()" title="Επισήμανση">🖊 Highlight</button>
+        </div>
+        <div id="tkNotes" contenteditable="true" style="min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -791,50 +801,49 @@ function toggleMobileSidebar(forceClose){
     </div>
 
     <div class="card">
-      <div class="card-head"><div class="title">📦 Συσκευασία</div><button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button></div>
+      <div class="card-head"><div class="title">📦 Συσκευασία</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="pkModeManualBtn" onclick="setPackagingMode('manual')">✍️ Χειροκίνητα</button>
+          <button class="btn" id="pkModeAutoBtn" onclick="setPackagingMode('auto')">🧮 Αυτόματος Υπολογισμός</button>
+          <button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button>
+        </div>
+      </div>
       <div class="card-body" style="padding-top:14px;padding-bottom:14px;">
-        <div class="pk-section pk-manual">
+        <div class="pk-section pk-manual" id="pkManualSection">
           <div class="fieldgrid c4">
-            <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Πάχος/τεμάχιο (mm)</label><input id="tkUnitThickness" type="number" step="0.01" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Σχήμα Κλειστό</label><input id="tkSchemaClosed" placeholder="π.χ. 15x21" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγεθος Κουτιού (ΜxΠxΥ)</label>
+            <div class="field pk-auto-only"><label>Πάχος/τεμάχιο (mm)</label><input id="tkUnitThickness" type="number" step="0.01" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field pk-auto-only"><label>Σχήμα Κλειστό</label><input id="tkSchemaClosed" placeholder="π.χ. 15x21" oninput="recalcTicketPackaging()"></div>
+            <div class="field pk-auto-only"><label>Μέγεθος Κουτιού (ΜxΠxΥ)</label>
               <div style="display:flex;gap:6px;">
                 <input id="tkBoxSize" list="boxSizeOptions" placeholder="40*30*25" style="flex:1;" oninput="recalcTicketPackaging()">
                 <button class="btn" style="padding:6px 10px;font-size:12px;flex:none;" onclick="saveBoxSize()" title="Αποθήκευση αυτού του μεγέθους στη λίστα">+</button>
               </div>
               <datalist id="boxSizeOptions"></datalist>
             </div>
+            <div class="field pk-auto-only"><label>Μέγιστο βάρος κουτιού (kg)</label><input id="tkBoxMaxWeight" type="number" step="0.1" value="15" oninput="recalcTicketPackaging()"></div>
           </div>
           <div class="fieldgrid c4" style="margin-top:8px;">
-            <div class="field"><label>Μέγιστο βάρος κουτιού (kg)</label><input id="tkBoxMaxWeight" type="number" step="0.1" value="15" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Βάρος κενού κουτιού (kg)</label><input id="tkBoxTare" type="number" step="0.1" value="0.3" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγιστα κουτιά/παλέτα</label><input id="tkPalletMaxBoxes" type="number" value="32" oninput="recalcTicketPackaging()"></div>
-            <div class="field"><label>Μέγιστο βάρος παλέτας (kg)</label><input id="tkPalletMaxWeight" type="number" step="1" value="500" oninput="recalcTicketPackaging()"></div>
-          </div>
-          <div class="fieldgrid c4" style="margin-top:8px;">
-            <div class="field"><label>Βάρος κενής παλέτας (kg)</label><input id="tkPalletTare" type="number" step="1" value="10" oninput="recalcTicketPackaging()"></div>
+            <div class="field pk-auto-only"><label>Μέγιστα κουτιά/παλέτα</label><input id="tkPalletMaxBoxes" type="number" value="32" oninput="recalcTicketPackaging()"></div>
+            <div class="field pk-auto-only"><label>Μέγιστο βάρος παλέτας (kg)</label><input id="tkPalletMaxWeight" type="number" step="1" value="500" oninput="recalcTicketPackaging()"></div>
           </div>
 
-          <a href="javascript:void(0)" onclick="toggleTicketPackagingMore()" id="tkPackagingMoreToggle" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">+ Περισσότερες επιλογές (έξτρα βάρος/πάχος, μέγιστα τεμάχια/κουτί)</a>
-          <div id="tkPackagingMorePanel" style="display:none;margin-top:8px;">
+          <a href="javascript:void(0)" onclick="toggleTicketPackagingMore()" id="tkPackagingMoreToggle" class="pk-auto-only" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">+ Περισσότερες επιλογές (έξτρα πάχος, μέγιστα τεμάχια/κουτί)</a>
+          <div id="tkPackagingMorePanel" class="pk-auto-only" style="display:none;margin-top:8px;">
             <div class="fieldgrid c4">
-              <div class="field"><label>Έξτρα βάρος (g)</label><input id="tkExtraWeight" type="number" step="0.1" placeholder="κόλλα, χαρτόνι" oninput="recalcTicketPackaging()"></div>
               <div class="field"><label>Έξτρα πάχος (mm)</label><input id="tkExtraThickness" type="number" step="0.1" placeholder="σκληρό κάλυμμα" oninput="recalcTicketPackaging()"></div>
               <div class="field"><label>Μέγιστα τεμάχια/κουτί</label><input id="tkBoxMaxPieces" type="number" placeholder="ή βάλε διαστάσεις" oninput="recalcTicketPackaging()"></div>
             </div>
           </div>
 
-          <a href="javascript:void(0)" onclick="toggleBoxSizeManager()" id="boxSizeManagerToggle" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">Διαχείριση αποθηκευμένων μεγεθών</a>
+          <a href="javascript:void(0)" onclick="toggleBoxSizeManager()" id="boxSizeManagerToggle" class="pk-auto-only" style="font-size:11px;color:var(--muted);display:block;margin-top:8px;">Διαχείριση αποθηκευμένων μεγεθών</a>
           <div id="boxSizeManager" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px;"></div>
         </div>
 
         <div class="pk-section pk-auto" style="margin-top:8px;">
           <div class="fieldgrid c4">
-            <div class="field"><label>Βάρος/τεμάχιο σύνολο (g)</label><input id="tkTotalUnitWeight" readonly style="font-weight:700;"></div>
-            <div class="field"><label>Πάχος/τεμάχιο σύνολο (mm)</label><input id="tkTotalUnitThickness" readonly style="font-weight:700;"><div class="empty-note" id="tkTotalUnitThicknessCm" style="margin-top:1px;font-size:10px;"></div></div>
-            <div class="field"><label>Τεμάχια/κουτί</label><input id="tkPiecesPerBox" readonly style="font-weight:700;"></div>
-            <div class="field"><label>Κουτιά/παλέτα</label><input id="tkBoxesPerPallet" readonly style="font-weight:700;"></div>
+            <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field"><label>Τεμάχια/κουτί</label><input id="tkPiecesPerBox" oninput="onManualPackagingInput()"></div>
+            <div class="field"><label>Κουτιά/παλέτα</label><input id="tkBoxesPerPallet" oninput="onManualPackagingInput()"></div>
           </div>
         </div>
 
@@ -843,6 +852,7 @@ function toggleMobileSidebar(forceClose){
           <div class="totcard"><div class="lbl">Σύνολο Παλετών</div><div class="val" id="tkTotalPallets">–</div></div>
           <div class="totcard"><div class="lbl">Βάρος/Παλέτα (τελευταία εξαιρείται)</div><div class="val" id="tkPalletWeight">–</div></div>
         </div>
+        <div class="field" style="margin-top:12px;"><label>Εναλλακτικό κείμενο ετικέτας κουτιού (αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkBoxLabelText" rows="2" placeholder="π.χ. αφήστε κενό για το κανονικό Πελάτης — Τίτλος Έργου"></textarea></div>
         <div class="field" style="margin-top:12px;"><label>Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkPalletAddress" rows="2" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea></div>
         <div style="display:flex;gap:10px;margin-top:12px;">
           <button class="btn" onclick="printBoxLabels()">🏷️ Εκτύπωση Ετικετών Κουτιών</button>
@@ -858,12 +868,9 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">Αποθηκευμένα Job Tickets</div>
         <div style="display:flex;gap:8px;align-items:center;">
           <input id="ticketSearch" placeholder="Αναζήτηση..." style="max-width:200px;" oninput="refreshTicketList()">
-          <button class="btn" onclick="document.getElementById('trelloImportInput').click()">📋 Εισαγωγή από Trello</button>
-          <input type="file" id="trelloImportInput" accept=".json" style="display:none;" onchange="handleTrelloImportFile(this.files[0])">
           <button class="btn solid" onclick="newTicket();switchView('ticketform')">+ Νέο Ticket</button>
         </div>
       </div>
-      <div class="empty-note" id="trelloImportStatus" style="padding:0 16px;"></div>
       <div class="card-body" id="ticketList"></div>
     </div>
   </div>
@@ -1879,7 +1886,7 @@ function toggleTicketPackagingMore(){
   const link = document.getElementById('tkPackagingMoreToggle');
   const opening = panel.style.display==='none';
   panel.style.display = opening ? 'block' : 'none';
-  link.textContent = opening ? '− Λιγότερες επιλογές' : '+ Περισσότερες επιλογές (έξτρα βάρος/πάχος, μέγιστα τεμάχια/κουτί)';
+  link.textContent = opening ? '− Λιγότερες επιλογές' : '+ Περισσότερες επιλογές (έξτρα πάχος, μέγιστα τεμάχια/κουτί)';
 }
 
 async function deleteBoxSize(size){
@@ -3428,16 +3435,37 @@ function recalcWeightThickness(){
   document.getElementById('pkPieceThicknessCm').textContent = thickness_mm>0 ? '= ' + (thickness_mm/10).toFixed(3) + ' cm' : '';
 }
 
+let ticketPackagingMode = 'auto';
+
+function setPackagingMode(mode){
+  ticketPackagingMode = mode;
+  document.getElementById('pkModeAutoBtn').classList.toggle('solid', mode==='auto');
+  document.getElementById('pkModeManualBtn').classList.toggle('solid', mode==='manual');
+  const piecesEl = document.getElementById('tkPiecesPerBox'), boxesEl = document.getElementById('tkBoxesPerPallet');
+  [piecesEl, boxesEl].forEach(el=>{
+    el.readOnly = (mode==='auto');
+    el.style.background = mode==='auto' ? 'var(--page)' : '#fff';
+    el.style.fontWeight = mode==='auto' ? '700' : '400';
+  });
+  document.getElementById('pkManualSection').style.display = (mode==='manual') ? 'none' : '';
+  if(mode==='manual') document.getElementById('tkPackagingMorePanel').style.display = 'none';
+  recalcTicketPackaging();
+}
+
+function onManualPackagingInput(){
+  if(ticketPackagingMode==='manual') recalcTicketPackaging();
+}
+
 function recalcTicketPackaging(){
   const baseWeight_g = num(document.getElementById('tkUnitWeight').value);
-  const extraWeight_g = num(document.getElementById('tkExtraWeight').value);
+  const extraWeight_g = 0; // field removed — extra weight no longer tracked separately
   const unitWeight_g = baseWeight_g + extraWeight_g;
   const qty = num(document.getElementById('tkQty').value);
   const unitWeight_kg = unitWeight_g/1000;
   const boxMaxWeight = num(document.getElementById('tkBoxMaxWeight').value);
   const boxMaxPieces = num(document.getElementById('tkBoxMaxPieces').value);
-  const boxTare = num(document.getElementById('tkBoxTare').value);
-  document.getElementById('tkTotalUnitWeight').value = unitWeight_g>0 ? unitWeight_g.toFixed(1) : '';
+  const boxTare = 0; // field removed — box tare weight no longer tracked
+  // (unitWeight_g total display removed — field no longer shown)
 
   // Dimensional capacity: how many pieces fit in one layer (like sheet imposition) ×
   // how many layers fit given the piece thickness.
@@ -3448,8 +3476,6 @@ function recalcTicketPackaging(){
   const baseThickness_mm = num(document.getElementById('tkUnitThickness').value);
   const extraThickness_mm = num(document.getElementById('tkExtraThickness').value);
   const thickness_mm = baseThickness_mm + extraThickness_mm;
-  document.getElementById('tkTotalUnitThickness').value = thickness_mm>0 ? thickness_mm.toFixed(2) : '';
-  document.getElementById('tkTotalUnitThicknessCm').textContent = thickness_mm>0 ? '= ' + (thickness_mm/10).toFixed(3) + ' cm' : '';
   const pieceDim = parseDimFromText(document.getElementById('tkSchemaClosed').value);
   let byDimensions = Infinity;
   if(boxL>0 && boxW>0 && pieceDim){
@@ -3459,30 +3485,40 @@ function recalcTicketPackaging(){
     if(perLayer>0) byDimensions = perLayer * layers;
   }
 
-  const byWeight = (boxMaxWeight>0 && unitWeight_kg>0) ? Math.floor((boxMaxWeight-boxTare)/unitWeight_kg) : Infinity;
-  const byCount = boxMaxPieces>0 ? boxMaxPieces : Infinity;
-  let piecesPerBox = Math.min(byWeight, byCount, byDimensions);
-  if(!isFinite(piecesPerBox) || piecesPerBox<1) piecesPerBox = qty>0 ? qty : 0;
+  let piecesPerBox;
+  if(ticketPackagingMode==='manual'){
+    piecesPerBox = num(document.getElementById('tkPiecesPerBox').value);
+  } else {
+    const byWeight = (boxMaxWeight>0 && unitWeight_kg>0) ? Math.floor((boxMaxWeight-boxTare)/unitWeight_kg) : Infinity;
+    const byCount = boxMaxPieces>0 ? boxMaxPieces : Infinity;
+    piecesPerBox = Math.min(byWeight, byCount, byDimensions);
+    if(!isFinite(piecesPerBox) || piecesPerBox<1) piecesPerBox = qty>0 ? qty : 0;
+    document.getElementById('tkPiecesPerBox').value = piecesPerBox>0 ? piecesPerBox : '';
+  }
 
   const totalBoxes = (piecesPerBox>0 && qty>0) ? Math.ceil(qty/piecesPerBox) : 0;
   const boxWeight_kg = boxTare + piecesPerBox*unitWeight_kg;
 
-  document.getElementById('tkPiecesPerBox').value = piecesPerBox>0 ? piecesPerBox : '';
   document.getElementById('tkTotalBoxes').textContent = totalBoxes>0 ? totalBoxes : '–';
 
   const palletMaxBoxes = num(document.getElementById('tkPalletMaxBoxes').value);
   const palletMaxWeight = num(document.getElementById('tkPalletMaxWeight').value);
-  const palletTare = num(document.getElementById('tkPalletTare').value);
+  const palletTare = 0; // field removed — pallet tare weight no longer tracked
 
-  const boxesByWeight = (palletMaxWeight>0 && boxWeight_kg>0) ? Math.floor((palletMaxWeight-palletTare)/boxWeight_kg) : Infinity;
-  const boxesByCount = palletMaxBoxes>0 ? palletMaxBoxes : Infinity;
-  let boxesPerPallet = Math.min(boxesByWeight, boxesByCount);
-  if(!isFinite(boxesPerPallet) || boxesPerPallet<1) boxesPerPallet = totalBoxes>0 ? totalBoxes : 0;
+  let boxesPerPallet;
+  if(ticketPackagingMode==='manual'){
+    boxesPerPallet = num(document.getElementById('tkBoxesPerPallet').value);
+  } else {
+    const boxesByWeight = (palletMaxWeight>0 && boxWeight_kg>0) ? Math.floor((palletMaxWeight-palletTare)/boxWeight_kg) : Infinity;
+    const boxesByCount = palletMaxBoxes>0 ? palletMaxBoxes : Infinity;
+    boxesPerPallet = Math.min(boxesByWeight, boxesByCount);
+    if(!isFinite(boxesPerPallet) || boxesPerPallet<1) boxesPerPallet = totalBoxes>0 ? totalBoxes : 0;
+    document.getElementById('tkBoxesPerPallet').value = boxesPerPallet>0 ? boxesPerPallet : '';
+  }
 
   const totalPallets = (boxesPerPallet>0 && totalBoxes>0) ? Math.ceil(totalBoxes/boxesPerPallet) : 0;
   const palletWeight_kg = palletTare + boxesPerPallet*boxWeight_kg;
 
-  document.getElementById('tkBoxesPerPallet').value = boxesPerPallet>0 ? boxesPerPallet : '';
   document.getElementById('tkTotalPallets').textContent = totalPallets>0 ? totalPallets : '–';
   document.getElementById('tkPalletWeight').textContent = palletWeight_kg>0 ? palletWeight_kg.toLocaleString('el-GR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' kg' : '–';
 }
@@ -3535,7 +3571,8 @@ function buildLabelSheets(labelDivsHtml){
 function printBoxLabels(){
   const totalBoxes = num(document.getElementById('tkTotalBoxes').textContent);
   if(!totalBoxes){ statusMsg('Δεν υπάρχουν υπολογισμένα κουτιά — πάτα πρώτα "Υπολογισμός" στη Συσκευασία.'); return; }
-  const mainLine = labelMainLine();
+  const boxLabelOverride = document.getElementById('tkBoxLabelText').value.trim();
+  const mainLine = boxLabelOverride || labelMainLine();
   const piecesPerBox = num(document.getElementById('tkPiecesPerBox').value);
   const qty = num(document.getElementById('tkQty').value);
   const logoImg = LOGO_BASE64 ? `<img class="lb-logo" src="data:image/png;base64,${LOGO_BASE64}">` : '';
@@ -4303,22 +4340,23 @@ function collectTicket(){
     schema: document.getElementById('tkSchema').value,
     selides: document.getElementById('tkSelides').value,
     selidesOut: document.getElementById('tkSelidesOut').value,
-    notes: document.getElementById('tkNotes').value,
+    notes: document.getElementById('tkNotes').innerHTML,
     paperRows: tkPaperRows.map(({id, ...r})=>r),
     procRows: tkProcRows.map(({id, ...r})=>r),
     tkUnitWeight: document.getElementById('tkUnitWeight').value,
-    tkExtraWeight: document.getElementById('tkExtraWeight').value,
     tkUnitThickness: document.getElementById('tkUnitThickness').value,
     tkExtraThickness: document.getElementById('tkExtraThickness').value,
     tkSchemaClosed: document.getElementById('tkSchemaClosed').value,
     tkBoxSize: document.getElementById('tkBoxSize').value,
     tkBoxMaxWeight: document.getElementById('tkBoxMaxWeight').value,
     tkBoxMaxPieces: document.getElementById('tkBoxMaxPieces').value,
-    tkBoxTare: document.getElementById('tkBoxTare').value,
     tkPalletMaxBoxes: document.getElementById('tkPalletMaxBoxes').value,
     tkPalletMaxWeight: document.getElementById('tkPalletMaxWeight').value,
-    tkPalletTare: document.getElementById('tkPalletTare').value,
     tkPalletAddress: document.getElementById('tkPalletAddress').value,
+    tkBoxLabelText: document.getElementById('tkBoxLabelText').value,
+    tkPackagingMode: ticketPackagingMode,
+    tkPiecesPerBox: document.getElementById('tkPiecesPerBox').value,
+    tkBoxesPerPallet: document.getElementById('tkBoxesPerPallet').value,
     attachments: ticketAttachments
   };
 }
@@ -4331,25 +4369,28 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkSchema').value = d.schema||'';
   document.getElementById('tkSelides').value = d.selides||'';
   document.getElementById('tkSelidesOut').value = d.selidesOut||'';
-  document.getElementById('tkNotes').value = d.notes||'';
+  document.getElementById('tkNotes').innerHTML = d.notes||'';
   tkPaperRows = []; tkProcRows = [];
   (d.paperRows||[]).forEach(r=>addTkPaperRow(r));
   (d.procRows||[]).forEach(r=>addTkProcRow(r));
   if(tkPaperRows.length===0) addTkPaperRow();
   if(tkProcRows.length===0) addTkProcRow();
   document.getElementById('tkUnitWeight').value = d.tkUnitWeight||'';
-  document.getElementById('tkExtraWeight').value = d.tkExtraWeight||'';
   document.getElementById('tkUnitThickness').value = d.tkUnitThickness||'';
   document.getElementById('tkExtraThickness').value = d.tkExtraThickness||'';
   document.getElementById('tkSchemaClosed').value = d.tkSchemaClosed||'';
   document.getElementById('tkBoxSize').value = d.tkBoxSize || ((d.tkBoxL && d.tkBoxW && d.tkBoxH) ? `${d.tkBoxL}*${d.tkBoxW}*${d.tkBoxH}` : '');
   document.getElementById('tkBoxMaxWeight').value = d.tkBoxMaxWeight!=null && d.tkBoxMaxWeight!=='' ? d.tkBoxMaxWeight : 15;
   document.getElementById('tkBoxMaxPieces').value = d.tkBoxMaxPieces||'';
-  document.getElementById('tkBoxTare').value = d.tkBoxTare!=null ? d.tkBoxTare : 0.3;
   document.getElementById('tkPalletMaxBoxes').value = d.tkPalletMaxBoxes!=null && d.tkPalletMaxBoxes!=='' ? d.tkPalletMaxBoxes : 32;
   document.getElementById('tkPalletMaxWeight').value = d.tkPalletMaxWeight!=null && d.tkPalletMaxWeight!=='' ? d.tkPalletMaxWeight : 500;
-  document.getElementById('tkPalletTare').value = d.tkPalletTare!=null ? d.tkPalletTare : 10;
   document.getElementById('tkPalletAddress').value = d.tkPalletAddress||'';
+  document.getElementById('tkBoxLabelText').value = d.tkBoxLabelText||'';
+  setPackagingMode(d.tkPackagingMode==='manual' ? 'manual' : 'auto');
+  if(d.tkPackagingMode==='manual'){
+    document.getElementById('tkPiecesPerBox').value = d.tkPiecesPerBox||'';
+    document.getElementById('tkBoxesPerPallet').value = d.tkBoxesPerPallet||'';
+  }
   recalcTicketPackaging();
   ticketAttachments = d.attachments || [];
   renderTicketAttachments();
@@ -4365,17 +4406,30 @@ function renderTicketAttachments(){
     return;
   }
   el.innerHTML = ticketAttachments.map((a,i)=>{
-    const icon = /pdf/i.test(a.type) ? '📄' : '🖼️';
+    const isPdf = /pdf/i.test(a.type);
+    const badgeLabel = isPdf ? 'PDF' : 'IMG';
+    const badgeBg = isPdf ? '#fbe0de' : '#eaf1fe';
+    const badgeColor = isPdf ? '#a53125' : '#2f6fed';
     return `
-      <div class="fc-job-row">
-        <div><div class="name">${icon} ${esc(a.name)}</div><div class="client">${esc(fmtDate((a.uploadedAt||'').slice(0,10)))}</div></div>
-        <div class="btns">
-          <a href="${esc(a.url)}" target="_blank" class="btn" style="text-decoration:none;">Άνοιγμα</a>
-          <button class="btn" style="color:#c0392b;" onclick="deleteTicketAttachment(${i})">Διαγραφή</button>
+      <div class="tk-attachment-row" data-url="${esc(a.url)}" style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;">
+        <div style="width:36px;height:36px;background:${badgeBg};color:${badgeColor};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:0.3px;flex:none;">${badgeLabel}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">Προστέθηκε ${esc(fmtDate((a.uploadedAt||'').slice(0,10)))}</div>
         </div>
+        <button class="tk-attachment-delete" data-idx="${i}" title="Διαγραφή" style="width:28px;height:28px;flex:none;border:1px solid var(--line-strong);border-radius:6px;background:#fff;cursor:pointer;font-size:15px;color:var(--muted);line-height:1;">⋯</button>
       </div>
     `;
   }).join('');
+  el.querySelectorAll('.tk-attachment-row').forEach(row=>{
+    row.addEventListener('click', ()=>{ window.open(row.getAttribute('data-url'), '_blank'); });
+  });
+  el.querySelectorAll('.tk-attachment-delete').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      deleteTicketAttachment(Number(btn.getAttribute('data-idx')));
+    });
+  });
 }
 
 async function uploadTicketAttachment(){
@@ -4412,11 +4466,13 @@ async function uploadTicketAttachment(){
 
 async function deleteTicketAttachment(idx){
   const attachment = ticketAttachments[idx];
+  if(!attachment) return;
+  if(!confirm(`Διαγραφή του αρχείου "${attachment.name}"; Δεν αναιρείται.`)) return;
   ticketAttachments.splice(idx, 1);
   renderTicketAttachments();
   await saveTicket();
   statusMsg('Αφαιρέθηκε το επισυναπτόμενο ✓');
-  if(attachment && attachment.path){
+  if(attachment.path){
     try{
       const key = getJbKey(), url = getJbBin();
       const token = await getAuthToken();
@@ -4428,6 +4484,17 @@ async function deleteTicketAttachment(idx){
   }
 }
 
+function toggleNotesHighlight(){
+  document.getElementById('tkNotes').focus();
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount===0 || sel.isCollapsed) return;
+  const node = sel.anchorNode;
+  const parentEl = node && node.nodeType===3 ? node.parentElement : node;
+  const currentBg = parentEl ? getComputedStyle(parentEl).backgroundColor : '';
+  const isHighlighted = currentBg==='rgb(255, 245, 157)';
+  document.execCommand('hiliteColor', false, isHighlighted ? 'transparent' : '#fff59d');
+}
+
 function newTicket(){
   document.getElementById('tkInfo').value = '';
   document.getElementById('tkQty').value = '';
@@ -4436,22 +4503,21 @@ function newTicket(){
   document.getElementById('tkSchema').value = '';
   document.getElementById('tkSelides').value = '';
   document.getElementById('tkSelidesOut').value = '';
-  document.getElementById('tkNotes').value = '';
+  document.getElementById('tkNotes').innerHTML = '';
   tkPaperRows = []; tkProcRows = [];
   addTkPaperRow(); addTkProcRow();
   document.getElementById('tkUnitWeight').value = '';
-  document.getElementById('tkExtraWeight').value = '';
   document.getElementById('tkUnitThickness').value = '';
   document.getElementById('tkExtraThickness').value = '';
   document.getElementById('tkSchemaClosed').value = '';
   document.getElementById('tkBoxSize').value = boxSizesCache.length>0 ? boxSizesCache[0] : '';
   document.getElementById('tkBoxMaxWeight').value = 15;
   document.getElementById('tkBoxMaxPieces').value = '';
-  document.getElementById('tkBoxTare').value = 0.3;
   document.getElementById('tkPalletMaxBoxes').value = 32;
   document.getElementById('tkPalletMaxWeight').value = 500;
-  document.getElementById('tkPalletTare').value = 10;
   document.getElementById('tkPalletAddress').value = '';
+  document.getElementById('tkBoxLabelText').value = '';
+  setPackagingMode('manual');
   ticketAttachments = [];
   renderTicketAttachments();
   currentTicketId = null;
@@ -4528,68 +4594,6 @@ async function deleteTicket(id){
   }catch(e){
     console.error('Delete ticket error:', e);
     statusMsg('Σφάλμα διαγραφής: ' + e.message);
-  }
-}
-
-async function handleTrelloImportFile(file){
-  const statusEl = document.getElementById('trelloImportStatus');
-  if(!file) return;
-  statusEl.textContent = 'Διάβασμα αρχείου...';
-  try{
-    const text = await file.text();
-    const board = JSON.parse(text);
-
-    // Only these production-related lists get imported — everything else (Prosfores,
-    // ΑΡΧΕΙΑ, JOB TICKET, WAIT FOR FILES, DONE, old archived duplicates, etc.) is skipped.
-    const targetListNames = ['ON HOLD','MAIN','ΜΟΝΤΑΖ','ΕΛΕΓΧΟΣ ΕΓΚΡΙΣΗ','CTP','ΕΚΤΥΠΩΣΗ OFFSET','ΒΙΒΛΙΟΔΕΣΙΑ','POSTPRESS','OUT SOURCE'];
-    const normalize = s => (s||'').toUpperCase().replace(/[-–—]/g,' ').replace(/\s+/g,' ').trim();
-    const targetNormalized = targetListNames.map(normalize);
-    const matchingListIds = new Set(
-      (board.lists||[])
-        .filter(l => !l.closed && targetNormalized.includes(normalize(l.name)))
-        .map(l => l.id)
-    );
-
-    const cards = (board.cards||[]).filter(c=>!c.closed && matchingListIds.has(c.idList));
-    if(cards.length===0){
-      statusEl.textContent = 'Δεν βρέθηκαν ενεργές κάρτες στις καθορισμένες στήλες παραγωγής.';
-      return;
-    }
-    if(!confirm(`Βρέθηκαν ${cards.length} ενεργές κάρτες στις στήλες παραγωγής (${targetListNames.join(', ')}). Θα δημιουργηθούν σαν Job Tickets, όλα στη στήλη "Νέο" της Παραγωγής, για να τα ταξινομήσεις εσύ μετά. Συνέχεια;`)) return;
-
-    statusEl.textContent = 'Εισαγωγή σε εξέλιξη...';
-    const record = await jbGetRecord();
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
-    let created = 0, skipped = 0;
-
-    cards.forEach(card=>{
-      const id = 'trello_' + card.id;
-      if(record.tickets[id]){ skipped++; return; } // already imported before — don't duplicate
-      const deadline = card.due ? card.due.slice(0,10) : '';
-      const data = {
-        info: card.name || '',
-        qty: '', deadline, eidos: '', schema: '', selides: '', selidesOut: '',
-        notes: card.desc || '',
-        paperRows: [], procRows: [],
-        tkUnitWeight:'', tkExtraWeight:'', tkUnitThickness:'', tkExtraThickness:'',
-        tkSchemaClosed:'', tkBoxSize:'', tkBoxMaxWeight:'', tkBoxMaxPieces:'', tkBoxTare:'',
-        tkPalletMaxBoxes:'', tkPalletMaxWeight:'', tkPalletTare:'', tkPalletAddress:'',
-        attachments: []
-      };
-      record.tickets[id] = {
-        label: card.name || 'Χωρίς τίτλο',
-        date: deadline, savedAt: new Date().toISOString(), deadlineDate: deadline,
-        stage: firstStage, data
-      };
-      created++;
-    });
-
-    await jbPutRecord(record);
-    await refreshTicketList();
-    statusEl.textContent = `Ολοκληρώθηκε ✓ — δημιουργήθηκαν ${created} νέα tickets${skipped>0 ? ' (' + skipped + ' παραλείφθηκαν, υπήρχαν ήδη από προηγούμενη εισαγωγή)' : ''}.`;
-  }catch(e){
-    console.error('Trello import error:', e);
-    statusEl.textContent = 'Σφάλμα εισαγωγής: ' + e.message;
   }
 }
 
@@ -4683,7 +4687,7 @@ function printTicket(){
         <thead><tr><th>Εργασία</th><th>Λεπτομέρειες</th></tr></thead>
         <tbody>${procRowsHtml}</tbody>
       </table>
-      ${v('tkNotes') ? `<div class="op-notes"><b>Παρατηρήσεις:</b><br>${v('tkNotes')}</div>` : ''}
+      ${document.getElementById('tkNotes').innerHTML.trim() ? `<div class="op-notes"><b>Παρατηρήσεις:</b><br>${document.getElementById('tkNotes').innerHTML}</div>` : ''}
     </div>
   `;
   document.getElementById('offerPrintView').innerHTML = '';
@@ -4755,7 +4759,7 @@ function convertOfferToTicket(){
   }));
   if(tkProcRows.length===0) addTkProcRow();
 
-  document.getElementById('tkNotes').value = document.getElementById('fNotes').value;
+  document.getElementById('tkNotes').innerHTML = esc(document.getElementById('fNotes').value).replace(/\n/g,'<br>');
   recalcTicketPackaging();
 
   currentTicketId = null;
@@ -5901,7 +5905,27 @@ async function refreshProductionBoard(){
           div.className = 'kanban-machine-divider';
           div.draggable = true;
           div.setAttribute('data-divider-id', entry.id);
-          div.innerHTML = `<span>${esc(entry.name)}</span><span class="kanban-col-del" style="font-size:12px;" onclick="deleteColumnDivider('${esc(stage)}','${entry.id}')" title="Διαγραφή διαχωριστικού">×</span>`;
+          if(entry.color){
+            div.style.background = entry.color;
+            div.style.borderLeftColor = entry.color;
+            div.style.color = '#fff';
+          }
+          div.innerHTML = `<span>${esc(entry.name)}</span><input type="color" class="kanban-divider-color" value="${entry.color || '#c7ccd1'}" style="display:none;"><span class="kanban-col-del" style="${entry.color ? 'color:#fff;opacity:0.85;' : ''}" title="Διαγραφή διαχωριστικού">×</span>`;
+          div.querySelector('.kanban-col-del').addEventListener('click', e=>{
+            e.stopPropagation();
+            deleteColumnDivider(stage, entry.id);
+          });
+          const colorInput = div.querySelector('.kanban-divider-color');
+          colorInput.addEventListener('click', e=>e.stopPropagation());
+          colorInput.addEventListener('change', async e=>{
+            e.stopPropagation();
+            await updateDividerColor(stage, entry.id, e.target.value);
+          });
+          div.addEventListener('contextmenu', e=>{
+            e.preventDefault();
+            e.stopPropagation();
+            colorInput.click();
+          });
           div.addEventListener('dragstart', e=>{
             e.stopPropagation();
             e.dataTransfer.setData('text/plain', `divider:${stage}:${entry.id}`);
@@ -6033,6 +6057,20 @@ async function addColumnDivider(stage){
     refreshProductionBoard();
   }catch(e){
     console.error('Add divider error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function updateDividerColor(stage, dividerId, color){
+  try{
+    const record = await jbGetRecord();
+    const entry = (record.columnOrder[stage]||[]).find(item=>item.type==='divider' && item.id===dividerId);
+    if(!entry) return;
+    entry.color = color;
+    await jbPutRecord(record);
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Update divider color error:', e);
     statusMsg('Σφάλμα: ' + e.message);
   }
 }
@@ -6888,7 +6926,7 @@ async function refreshHomeDashboard(){
       weekEl.innerHTML = dueThisWeek.map(t=>{
         const info = t.data||{};
         return `<div class="fc-job-row" style="cursor:pointer;" onclick="loadTicket('${t.id}', true)">
-          <div><div class="name">${esc(info.info || t.label || '')}</div><div class="client">${esc(t.stage||'')}</div></div>
+          <div><div class="client">${esc(info.info || t.label || '')}</div><div class="name">${esc(t.stage||'')}</div></div>
           <div class="amount" style="font-size:11.5px;">${esc(fmtDate(t.deadlineDate))}</div>
         </div>`;
       }).join('');
