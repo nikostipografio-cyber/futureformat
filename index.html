@@ -72,6 +72,7 @@
   .card-body{padding:16px;}
   .fieldgrid{display:grid;gap:12px 16px;margin-bottom:14px;}
   .fieldgrid.c2{grid-template-columns:1fr 1fr;}
+  .fieldgrid.c3{grid-template-columns:repeat(3,1fr);}
   .fieldgrid.c4{grid-template-columns:repeat(4,1fr);}
   .fieldgrid.c5{grid-template-columns:repeat(5,1fr);}
   .fieldgrid.c6{grid-template-columns:repeat(6,1fr);}
@@ -313,9 +314,23 @@
   .impo-margin-field input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line-strong);border-radius:5px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-<div class="app-shell">
+<div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--page);">
+  <div style="width:100%;max-width:340px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.08);padding:32px 28px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;">🖨</div>
+      <div style="font-weight:800;font-size:18px;margin-top:6px;">Future Format</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Σύνδεση στο πρόγραμμα</div>
+    </div>
+    <div class="field" style="margin-bottom:12px;"><label>Email</label><input id="loginEmail" type="email" placeholder="όνομα@εταιρεία.gr" onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()"></div>
+    <div class="field" style="margin-bottom:16px;"><label>Κωδικός</label><input id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') submitLogin()"></div>
+    <button class="btn solid" style="width:100%;" onclick="submitLogin()">Σύνδεση</button>
+    <div class="empty-note" id="loginStatus" style="margin-top:12px;text-align:center;"></div>
+  </div>
+</div>
+<div class="app-shell" id="appShell" style="display:none;">
   <div class="sidebar" id="sidebar">
     <div class="sidebar-brand"><span class="icon">🖨</span><span class="label">Future Format</span></div>
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Σύμπτυξη μενού">◀</button>
@@ -421,32 +436,13 @@
         <div class="field"><label>Τίτλος Έργου</label><input id="fTitle" placeholder="π.χ. Notepad Α5"></div>
       </div>
       <div class="fieldgrid c4">
-        <div class="field"><label>Είδος</label>
-          <select id="fType">
-            <option value="">--</option>
-            <option>Βιβλίο</option>
-            <option>Notepad</option>
-            <option>Φάκελος</option>
-            <option>Αφίσα</option>
-            <option>Κάρτα</option>
-            <option>Άλλο</option>
-          </select>
-        </div>
-        <div class="field"><label>Προσανατολισμός</label>
-          <select id="fOrient"><option value="">--</option><option>Κάθετος</option><option>Οριζόντιος</option></select>
-        </div>
+        <div class="field"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()" style="font-weight:700;"></div>
         <div class="field"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. Α5"></div>
         <div class="field"><label>Σχήμα Ανοιχτό</label><input id="fSchemaOpen" placeholder="π.χ. Α4"></div>
-      </div>
-      <div class="fieldgrid c6">
-        <div class="field"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()"></div>
-        <div class="field"><label>Έξτρα Ποσ. 1</label><input id="fExtra1" type="number" oninput="updateGrand()"></div>
-        <div class="field"><label>Έξτρα Ποσ. 2</label><input id="fExtra2" type="number" oninput="updateGrand()"></div>
-        <div class="field"><label>Σελ. Εσωτ.</label><input id="fPagesIn" type="number"></div>
-        <div class="field"><label>Σελ. Εξωτ.</label><input id="fPagesOut" type="number"></div>
-        <div class="field"><label>Χρόνος Παρ. (μέρες)</label><input id="fDeadline" value="15-20 Εργάσιμες ημέρες"></div>
+        <div class="field"><label>Σελίδες</label><input id="fPages" placeholder="π.χ. 288+4"></div>
       </div>
       <div class="fieldgrid c4">
+        <div class="field"><label>Χρόνος Παρ. (μέρες)</label><input id="fDeadline" value="15-20 Εργάσιμες ημέρες"></div>
         <div class="field"><label>Ημ/νία Προσφοράς</label><input id="fOfferDate" type="date"></div>
         <div class="field"><label>Ισχύς Προσφοράς (ημέρες)</label><input id="fValidityDays" type="number" value="15"></div>
         <div class="field"><label>Τρόπος Αποστολής</label>
@@ -456,6 +452,8 @@
             <option>Αποστολή σε πελάτη</option>
           </select>
         </div>
+      </div>
+      <div class="fieldgrid c4">
         <div class="field"><label>ΦΠΑ</label>
           <select id="fVat">
             <option value="">-- (δεν περιλαμβάνεται) --</option>
@@ -463,7 +461,7 @@
             <option value="24">24%</option>
           </select>
         </div>
-        <div class="field" style="grid-column:span 2;"><label>Τρόπος Πληρωμής</label><input id="fPaymentTerms" value="50% προκαταβολή και το υπόλοιπο ποσό με την παράδοση"></div>
+        <div class="field" style="grid-column:span 3;"><label>Τρόπος Πληρωμής</label><input id="fPaymentTerms" value="50% προκαταβολή και το υπόλοιπο ποσό με την παράδοση"></div>
       </div>
     </div>
   </div>
@@ -561,11 +559,11 @@
   <div class="card">
     <div class="card-head"><div class="title">🧵 Υφάσματα / Υλικά Ρολού</div>
       <div style="display:flex;gap:8px;">
-        <button class="btn" onclick="toggleCardBody('fabricCardBody', this)">Απόκρυψη</button>
+        <button class="btn" onclick="toggleCardBody('fabricCardBody', this)">Εμφάνιση</button>
         <button class="btn" onclick="addFabricRow()">+ Γραμμή</button>
       </div>
     </div>
-    <div id="fabricCardBody">
+    <div id="fabricCardBody" style="display:none;">
     <div class="card-body" style="padding:0;">
       <table>
         <thead>
@@ -592,6 +590,21 @@
   </div>
 
   <div class="card">
+    <div class="card-head"><div class="title">📦 Υλικά προς Παραγγελία</div><button class="btn" onclick="toggleMaterialsSummary()">Σύνοψη Υλικών</button></div>
+    <div id="materialsSummaryPanel" style="display:none;">
+      <div class="card-body">
+        <div class="empty-note" style="margin-bottom:8px;">Συγκεντρωτικά φύλλα ανά χαρτί, από όλες τις γραμμές Flat Work / Βιβλιοδεσίας παρακάτω — προσάρμοσε τη στήλη "Ποσότητα Παραγγελίας" αν χρειάζεται. Επίλεξε ποια θες να γίνουν εκκρεμείς παραγγελίες — θα χρειαστεί να συμπληρώσεις προμηθευτή/λεπτομέρειες εκεί.</div>
+        <div id="materialsSummaryList"></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
+          <button class="btn" onclick="emailMaterialsOrder()">📧 Αποστολή Email Παραγγελίας</button>
+        </div>
+        <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-head"><div class="title">⚙ Επεξεργασίες</div><button class="btn" onclick="addProcCategory()">+ Κατηγορία</button></div>
     <div class="card-body" style="padding:16px 16px 0;">
       <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;">
@@ -614,46 +627,24 @@
     <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" id="fManualTotal" type="number" step="0.01" placeholder="π.χ. 3100"></div>
   </div>
 
-  <div id="extraTotals"></div>
-
   <div class="card">
-    <div class="card-head"><div class="title">📦 Υλικά προς Παραγγελία</div><button class="btn" onclick="toggleMaterialsSummary()">Σύνοψη Υλικών</button></div>
-    <div id="materialsSummaryPanel" style="display:none;">
-      <div class="card-body">
-        <div class="empty-note" style="margin-bottom:8px;">Συγκεντρωτικά φύλλα ανά χαρτί, από όλες τις γραμμές Flat Work / Βιβλιοδεσίας παρακάτω — προσάρμοσε τη στήλη "Ποσότητα Παραγγελίας" αν χρειάζεται. Επίλεξε ποια θες να γίνουν εκκρεμείς παραγγελίες — θα χρειαστεί να συμπληρώσεις προμηθευτή/λεπτομέρειες εκεί.</div>
-        <div id="materialsSummaryList"></div>
-        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
-          <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
-          <button class="btn" onclick="emailMaterialsOrder()">📧 Αποστολή Email Παραγγελίας</button>
-        </div>
-        <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
-      </div>
+    <div class="card-head"><div class="title">Έξτρα Ποσότητες (εναλλακτικές τιμές στο PDF)</div><button class="btn" onclick="addExtraQuantity()">+ Ποσότητα</button></div>
+    <div class="card-body">
+      <div class="empty-note" style="margin-bottom:8px;">π.χ. 500, 1000, 1500, 2000 — κάθε μία εμφανίζεται σαν εναλλακτική τιμή στο PDF.</div>
+      <div id="extraQuantitiesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;"></div>
+      <div id="extraTotals"></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-head"><div class="title">⚖️ Βάρος & Πάχος Τεμαχίου</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn" onclick="toggleCardBody('weightCardBody', this)">Απόκρυψη</button>
-        <button class="btn" onclick="recalcWeightThickness()">Υπολογισμός</button>
-      </div>
-    </div>
-    <div id="weightCardBody">
-    <div class="card-body" style="padding-top:14px;padding-bottom:14px;">
-      <div class="fieldgrid c5">
-        <div class="field"><label>Έξτρα βάρος (g)</label><input id="pkExtraWeight" type="number" step="0.1" placeholder="κόλλα, χαρτόνι" oninput="recalcWeightThickness()"></div>
-        <div class="field"><label>Έξτρα πάχος (mm)</label><input id="pkExtraThickness" type="number" step="0.1" placeholder="σκληρό κάλυμμα" oninput="recalcWeightThickness()"></div>
-        <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="pkUnitWeight" type="number" readonly style="font-weight:700;"></div>
-        <div class="field"><label>Πάχος/τεμάχιο (mm)</label><input id="pkPieceThickness" readonly style="font-weight:700;"><div class="empty-note" id="pkPieceThicknessCm" style="margin-top:1px;font-size:10px;"></div></div>
-        <div class="field"><label>Συνολικό βάρος (kg)</label><input id="pkTotalWeight" readonly style="font-weight:700;"></div>
-      </div>
-      <div style="display:none;">
-        <input id="pkAutoWeight" type="number" readonly>
-        <input id="pkAutoThickness" type="number" readonly>
-        <div id="pkAutoThicknessCm"></div>
-      </div>
-    </div>
-    </div>
+  <div style="display:none;">
+    <input id="pkExtraWeight" type="number" step="0.1">
+    <input id="pkExtraThickness" type="number" step="0.1">
+    <input id="pkUnitWeight" type="number" readonly>
+    <input id="pkPieceThickness" readonly><div id="pkPieceThicknessCm"></div>
+    <input id="pkTotalWeight" readonly>
+    <input id="pkAutoWeight" type="number" readonly>
+    <input id="pkAutoThickness" type="number" readonly>
+    <div id="pkAutoThicknessCm"></div>
   </div>
   </div>
 
@@ -968,7 +959,10 @@
   <div id="viewStock" style="display:none;">
     <div class="card">
       <div class="card-head"><div class="title">🏬 Αποθήκη — Κίνηση Χαρτιού</div>
-        <button class="btn" onclick="toggleStockBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="toggleStockBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
+          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">🗑 Μηδενισμός Αποθήκης</button>
+        </div>
       </div>
       <div id="stockBulkImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
         <div class="empty-note" style="margin-bottom:8px;">Μία γραμμή ανά χαρτί/υλικό. Μορφή: <b>Όνομα [Tab] Ποσότητα [Tab] Μονάδα (προαιρετικό, default φύλλα)</b> — μπορείς να επικολλήσεις κατευθείαν από Excel/Sheets. Ορίζει το απόθεμα σε αυτή την τιμή (δεν προσθέτει πάνω στο υπάρχον).</div>
@@ -1116,6 +1110,18 @@
 
   <div id="viewSettings" style="display:none;">
     <div class="card">
+      <div class="card-head"><div class="title">👤 Λογαριασμός</div><button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="signOutUser()">Αποσύνδεση</button></div>
+      <div class="card-body">
+        <div class="empty-note" id="currentUserEmail">Συνδεδεμένος/η</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">💽 Διαθέσιμος Χώρος</div><button class="btn" onclick="refreshStorageUsage()">Ανανέωση</button></div>
+      <div class="card-body">
+        <div id="storageUsageInfo" class="empty-note">Πάτα "Ανανέωση" για να δεις το τρέχον μέγεθος των δεδομένων σου.</div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-head"><div class="title">🏭 Διαχείριση Μηχανών</div><button class="btn" onclick="toggleMachinesManagerCard()" id="machinesManagerToggleBtn">Εμφάνιση</button></div>
       <div id="machinesManagerBody" style="display:none;">
       <div class="card-body">
@@ -1138,14 +1144,16 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="title">Σύνδεση κοινόχρηστης βάσης (JSONBin.io)</div></div>
+      <div class="card-head"><div class="title">Σύνδεση κοινόχρηστης βάσης (Supabase)</div><button class="btn" onclick="toggleCardBody('dbConnCardBody', this)">Εμφάνιση</button></div>
+      <div id="dbConnCardBody" style="display:none;">
       <div class="card-body">
         <div class="fieldgrid c2">
-          <div class="field"><label>API Key (X-Master-Key)</label><input id="jbKey" placeholder="από το jsonbin.io dashboard" oninput="onJbChange()"></div>
-          <div class="field"><label>Bin ID</label><input id="jbBin" placeholder="πάτα 'Δημιουργία' αν δεν έχεις ακόμα" oninput="onJbChange()"></div>
+          <div class="field"><label>Project URL</label><input id="jbBin" placeholder="https://xxxxx.supabase.co" oninput="onJbChange()"></div>
+          <div class="field"><label>API Key (anon public)</label><input id="jbKey" placeholder="από Project Settings → API" oninput="onJbChange()"></div>
         </div>
-        <button class="btn" onclick="createBin()">Δημιουργία νέου Bin</button>
-        <div class="empty-note" id="jbStatus">Βάλε το API Key σου, μετά πάτα "Δημιουργία νέου Bin" την πρώτη φορά. Στους άλλους υπολογιστές βάζεις το ίδιο API Key και το ίδιο Bin ID.</div>
+        <button class="btn" onclick="testSupabaseConnection()">🔌 Δοκιμή Σύνδεσης</button>
+        <div class="empty-note" id="jbStatus">Το πρόγραμμα συνδέεται αυτόματα με την κοινόχρηστη βάση — δεν χρειάζεται να συμπληρώσεις τίποτα εδώ κανονικά. Αυτά τα πεδία χρειάζονται μόνο αν κάποια στιγμή θελήσεις να αλλάξεις βάση.</div>
+      </div>
       </div>
     </div>
     <div class="card">
@@ -1452,6 +1460,55 @@ function toggleMachinesManagerCard(){
   body.style.display = opening ? 'block' : 'none';
   btn.textContent = opening ? 'Απόκρυψη' : 'Εμφάνιση';
   if(opening) refreshMachinesManagerList();
+}
+
+function formatBytes(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(2) + ' MB';
+}
+
+async function refreshStorageUsage(){
+  const el = document.getElementById('storageUsageInfo');
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url){
+    el.innerHTML = '<div class="empty-note">Σύνδεσε πρώτα τη βάση (καρτέλα "Προσφορές").</div>';
+    return;
+  }
+  el.innerHTML = '<div class="empty-note">Υπολογισμός...</div>';
+  try{
+    const record = await jbGetRecord();
+    const fullJson = JSON.stringify(record);
+    const totalBytes = new Blob([fullJson]).size;
+    const FREE_LIMIT_MB = 500; // Supabase free-tier database storage
+    const usedMb = totalBytes/(1024*1024);
+    const pct = Math.min(100, (usedMb/FREE_LIMIT_MB*100));
+    const barColor = pct>90 ? '#c0392b' : (pct>70 ? '#e0a030' : '#4a9d6e');
+
+    const sections = Object.keys(record)
+      .map(k => ({ name:k, bytes: new Blob([JSON.stringify(record[k])]).size }))
+      .sort((a,b)=>b.bytes-a.bytes)
+      .slice(0, 8);
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
+        <div style="font-size:26px;font-weight:800;">${formatBytes(totalBytes)}</div>
+        <div class="empty-note">από ~${FREE_LIMIT_MB} MB δωρεάν όριο (Supabase) — ${pct.toFixed(2)}%</div>
+      </div>
+      <div style="background:var(--page);border-radius:8px;height:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:8px;"></div>
+      </div>
+      <div class="empty-note" style="margin-bottom:6px;">Ανάλυση ανά κατηγορία δεδομένων:</div>
+      <table>
+        <thead><tr><th>Κατηγορία</th><th style="text-align:right;">Μέγεθος</th></tr></thead>
+        <tbody>${sections.map(s=>`<tr><td>${esc(s.name)}</td><td style="text-align:right;">${formatBytes(s.bytes)}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="empty-note" style="margin-top:8px;">Κατά προσέγγιση μέγεθος βάσει των ίδιων των δεδομένων — δεν περιλαμβάνει τυχόν εσωτερικό overhead της βάσης.</div>
+    `;
+  }catch(e){
+    console.error('Storage usage error:', e);
+    el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
 }
 
 async function refreshMachinesManagerList(){
@@ -2472,10 +2529,10 @@ const defaultProcCategories = [
   { name: 'ΕΠΕΞΕΡΓΑΣΙΕΣ', tasks: [
     { name: 'ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ', speed: 296 },
     { name: 'ΘΕΡΜΟΤΥΠΙΑ', speed: 297 },
-    { name: 'ΚΟΥΒΕΡΤΟΥΡΑ', speed: 100 }
+    { name: 'ΚΟΥΒΕΡΤΟΥΡΑ', speed: 100 },
+    { name: 'ΚΑΛΟΥΠΙ', speed: 300 }
   ]},
   { name: 'ΒΙΒΛΙΟΔΕΣΙΑ', tasks: [
-    { name: 'ΚΑΛΟΥΠΙ', speed: 300 },
     { name: 'ΔΙΠΛΩΜΑ', speed: 3000 },
     { name: 'ΣΥΝΘΕΣΗ', speed: 1000 },
     { name: 'ΚΛΩΣΤΟΡΑΦΗ', speed: 1500 },
@@ -2519,6 +2576,13 @@ function addProcCategory(){
 function removeProcCategory(catId){
   if(!confirm('Διαγραφή ολόκληρης της κατηγορίας;')) return;
   procCategories = procCategories.filter(c=>c.id!==catId);
+  renderProc();
+}
+
+function toggleProcCategoryHidden(catId){
+  const cat = procCategories.find(c=>c.id===catId);
+  if(!cat) return;
+  cat.collapsed = !cat.collapsed;
   renderProc();
 }
 function addProcTask(catId){
@@ -2604,9 +2668,10 @@ function renderProc(){
         <span>${esc(cat.name)}</span>
         <span style="display:flex;gap:8px;">
           <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="addProcTask(${cat.id})">+ Εργασία</button>
-          <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="removeProcCategory(${cat.id})">Διαγραφή κατηγορίας</button>
+          <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="toggleProcCategoryHidden(${cat.id})">${cat.collapsed ? 'Εμφάνιση' : 'Απόκρυψη'} κατηγορίας</button>
         </span>
       </div>
+      <div style="${cat.collapsed ? 'display:none;' : ''}">
       <table>
         <thead>
           <tr>
@@ -2623,6 +2688,7 @@ function renderProc(){
         </thead>
         <tbody>${rowsHtml || '<tr><td colspan="8" class="empty-note">Δεν υπάρχουν εργασίες σε αυτή την κατηγορία.</td></tr>'}</tbody>
       </table>
+      </div>
     `;
     list.appendChild(catDiv);
     cat.tasks.forEach(t => recalcProcTask(cat.id, t.id));
@@ -2714,18 +2780,15 @@ function buildOfferPrintHtml(){
   };
   const t = greek => isEN ? (EN_LABELS[greek] || greek) : greek;
 
-  const extraQtyRows = [1,2].map(idx=>{
-    const eqty = num(document.getElementById('fExtra'+idx).value);
-    if(!(eqty>0)) return '';
-    const manual = num(extraManualTotals[idx]);
+  const extraQtyRows = extraQuantities.filter(e=>num(e.qty)>0).map(e=>{
+    const eqty = num(e.qty);
+    const manual = num(e.manualTotal);
     const eGrand = manual>0 ? manual : computeTotals(eqty).grand;
     const eUnit = eqty>0 ? eGrand/eqty : 0;
-    return `<tr><td>${t('Ποσότητα')} ${eqty} ${t('τεμ.')}</td><td>${eqty} ${t('τεμ.')}</td><td>${eGrand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${eUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>`;
+    return `<tr><td>${eqty} ${t('τεμ.')}</td><td>${eGrand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${eUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>`;
   }).join('');
 
-  const pagesIn = num(document.getElementById('fPagesIn').value);
-  const pagesOut = num(document.getElementById('fPagesOut').value);
-  const pagesLabel = (pagesIn || pagesOut) ? (pagesIn + '+' + pagesOut + ' ' + t('σελίδες')) : '';
+  const pagesLabel = v('fPages');
 
   const materialRows = flatRows.concat(bookRows)
     .filter(r => r.material || r.paperName)
@@ -2761,7 +2824,7 @@ function buildOfferPrintHtml(){
   const validityRow = validityUntil ? `<div class="row"><span class="l">${t('Ισχύς προσφοράς έως')}</span><span class="v">${validityUntil}</span></div>` : '';
 
   const schemaRow = v('fSchemaClosed') ? `<div class="row"><span class="l">${t('Σχήμα')}</span><span class="v">${v('fSchemaClosed')}</span></div>` : '';
-  const pagesRow = pagesLabel ? `<div class="row"><span class="l">${t('Σελίδες')}</span><span class="v">${esc(pagesLabel)}</span></div>` : '';
+  const pagesRow = pagesLabel ? `<div class="row"><span class="l">${t('Σελίδες')}</span><span class="v">${pagesLabel}</span></div>` : '';
   const qtyRow = (qty && !multiItem) ? `<div class="row"><span class="l">${t('Ποσότητα')}</span><span class="v">${qty} ${t('τεμ.')}</span></div>` : '';
 
   const html = `
@@ -2809,7 +2872,7 @@ function buildOfferPrintHtml(){
       <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${unitPrice.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
       ${extraQtyRows ? `
       <table class="op-sub">
-        <thead><tr><th>${t('Εναλλακτική ποσότητα')}</th><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
+        <thead><tr><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
         <tbody>${extraQtyRows}</tbody>
       </table>` : ''}
       ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
@@ -2823,7 +2886,7 @@ function buildOfferPrintHtml(){
 function generatePdfOffer(){
   buildOfferPrintHtml();
   const prevTitle = document.title;
-  document.title = (document.getElementById('fClient').value || 'Προσφορά');
+  document.title = [document.getElementById('fClient').value.trim(), document.getElementById('fTitle').value.trim()].filter(Boolean).join(' - ') || 'Προσφορά';
   window.print();
   setTimeout(()=>{ document.title = prevTitle; }, 1000);
 }
@@ -2832,7 +2895,10 @@ async function downloadOfferPdf(){
   const statusEl = document.getElementById('saveStatus');
   buildOfferPrintHtml();
   const el = document.getElementById('offerPrintView');
-  const filename = (document.getElementById('fClient').value || 'Προσφορά').replace(/[^\p{L}\p{N}\-_ ]/gu,'').trim() || 'Προσφορά';
+  const clientPart = document.getElementById('fClient').value.trim();
+  const titlePart = document.getElementById('fTitle').value.trim();
+  const rawFilename = [clientPart, titlePart].filter(Boolean).join(' - ') || 'Προσφορά';
+  const filename = rawFilename.replace(/[^\p{L}\p{N}\-_ ]/gu,'').trim() || 'Προσφορά';
   el.style.display = 'block'; // html2canvas needs the element actually rendered, not display:none
   try{
     await html2pdf().set({
@@ -2917,27 +2983,58 @@ function updateGrand(){
   recalcWeightThickness();
 }
 
-let extraManualTotals = { 1: '', 2: '' };
+let extraQuantities = []; // [{id, qty, manualTotal}]
+let extraQtySeq = 1;
+
+function addExtraQuantity(){
+  extraQuantities.push({ id: extraQtySeq++, qty:'', manualTotal:'' });
+  renderExtraQuantitiesList();
+  renderExtraTotals();
+}
+
+function removeExtraQuantity(id){
+  extraQuantities = extraQuantities.filter(e=>e.id!==id);
+  renderExtraQuantitiesList();
+  renderExtraTotals();
+}
+
+function onExtraQtyChange(id, value){
+  const e = extraQuantities.find(x=>x.id===id);
+  if(e) e.qty = value;
+  renderExtraTotals();
+}
+
+function renderExtraQuantitiesList(){
+  const el = document.getElementById('extraQuantitiesList');
+  if(extraQuantities.length===0){
+    el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει έξτρα ποσότητες.</div>';
+    return;
+  }
+  el.innerHTML = extraQuantities.map(e=>`
+    <div style="display:flex;align-items:center;gap:4px;background:var(--page);border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 10px;">
+      <input type="number" min="0" placeholder="π.χ. 500" value="${e.qty}" style="width:90px;border:none;background:transparent;padding:4px 2px;" oninput="onExtraQtyChange(${e.id}, this.value)">
+      <button class="rowdel" onclick="removeExtraQuantity(${e.id})" title="Διαγραφή">×</button>
+    </div>
+  `).join('');
+}
 
 function renderExtraTotals(){
   const container = document.getElementById('extraTotals');
   container.innerHTML = '';
-  const extras = [
-    { idx: 1, label: 'Έξτρα Ποσ. 1', qty: num(document.getElementById('fExtra1').value) },
-    { idx: 2, label: 'Έξτρα Ποσ. 2', qty: num(document.getElementById('fExtra2').value) }
-  ].filter(e => e.qty > 0);
+  const extras = extraQuantities.filter(e => num(e.qty) > 0);
 
   extras.forEach(e=>{
-    const t = computeTotals(e.qty);
+    const eqty = num(e.qty);
+    const t = computeTotals(eqty);
     const row = document.createElement('div');
     row.className = 'totals';
     row.style.cssText = 'padding-top:2px;grid-template-columns:1fr 1fr 1fr 1fr 1fr;margin-top:10px;';
     row.innerHTML = `
-      <div class="totcard"><div class="lbl">${esc(e.label)} (${e.qty} τεμ.) — Χαρτιά</div><div class="val">${fmt(t.materials)}</div></div>
-      <div class="totcard"><div class="lbl">${esc(e.label)} — Εκτύπωση</div><div class="val">${fmt(t.printing)}</div></div>
-      <div class="totcard"><div class="lbl">${esc(e.label)} — Επεξεργασίες</div><div class="val">${fmt(t.procTotal)}</div></div>
-      <div class="totcard"><div class="lbl">${esc(e.label)} — Σύνολο</div><div class="val">${fmt(t.grand)}</div></div>
-      <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" type="number" step="0.01" placeholder="π.χ. 3100" value="${extraManualTotals[e.idx]}" oninput="extraManualTotals[${e.idx}]=this.value"></div>
+      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} τεμ. — Χαρτιά</div><div class="val">${fmt(t.materials)}</div></div>
+      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Εκτύπωση</div><div class="val">${fmt(t.printing)}</div></div>
+      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Επεξεργασίες</div><div class="val">${fmt(t.procTotal)}</div></div>
+      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Σύνολο</div><div class="val">${fmt(t.grand)}</div></div>
+      <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" type="number" step="0.01" placeholder="π.χ. 3100" value="${e.manualTotal}" oninput="extraQuantities.find(x=>x.id===${e.id}).manualTotal=this.value"></div>
     `;
     container.appendChild(row);
   });
@@ -3344,15 +3441,10 @@ function collectOffer(){
   return {
     client: document.getElementById('fClient').value,
     title: document.getElementById('fTitle').value,
-    type: document.getElementById('fType').value,
-    orient: document.getElementById('fOrient').value,
     schemaClosed: document.getElementById('fSchemaClosed').value,
     schemaOpen: document.getElementById('fSchemaOpen').value,
     qty: document.getElementById('hdrQty').value,
-    extra1: document.getElementById('fExtra1').value,
-    extra2: document.getElementById('fExtra2').value,
-    pagesIn: document.getElementById('fPagesIn').value,
-    pagesOut: document.getElementById('fPagesOut').value,
+    pages: document.getElementById('fPages').value,
     deadline: document.getElementById('fDeadline').value,
     notes: document.getElementById('fNotes').value,
     offerDate: document.getElementById('fOfferDate').value,
@@ -3364,11 +3456,11 @@ function collectOffer(){
     multiItem: document.getElementById('fMultiItem').checked,
     englishPdf: document.getElementById('fEnglishPdf').checked,
     manualTotal: document.getElementById('fManualTotal').value,
-    extraManualTotals: extraManualTotals,
+    extraQuantities: extraQuantities.map(({id, ...rest})=>rest),
     flatRows: flatRows.map(({id, ...r})=>r),
     bookRows: bookRows.map(({id, ...r})=>r),
     fabricRows: fabricRows.map(({id, ...r})=>r),
-    procCategories: procCategories.map(c => ({ name: c.name, tasks: c.tasks.map(({id, ...t})=>t) })),
+    procCategories: procCategories.map(c => ({ name: c.name, collapsed: c.collapsed||false, tasks: c.tasks.map(({id, ...t})=>t) })),
     pkExtraWeight: document.getElementById('pkExtraWeight').value,
     pkExtraThickness: document.getElementById('pkExtraThickness').value
   };
@@ -3377,15 +3469,10 @@ function collectOffer(){
 function applyOfferData(d){
   document.getElementById('fClient').value = d.client||'';
   document.getElementById('fTitle').value = d.title||'';
-  document.getElementById('fType').value = d.type||'';
-  document.getElementById('fOrient').value = d.orient||'';
   document.getElementById('fSchemaClosed').value = d.schemaClosed||'';
   document.getElementById('fSchemaOpen').value = d.schemaOpen||'';
   document.getElementById('hdrQty').value = d.qty||1000;
-  document.getElementById('fExtra1').value = d.extra1||'';
-  document.getElementById('fExtra2').value = d.extra2||'';
-  document.getElementById('fPagesIn').value = d.pagesIn||'';
-  document.getElementById('fPagesOut').value = d.pagesOut||'';
+  document.getElementById('fPages').value = d.pages || [d.pagesIn, d.pagesOut].filter(Boolean).join('+') || '';
   document.getElementById('fDeadline').value = d.deadline||'';
   document.getElementById('fNotes').value = d.notes||'';
   document.getElementById('fOfferDate').value = d.offerDate||'';
@@ -3401,7 +3488,15 @@ function applyOfferData(d){
   document.getElementById('fManualTotal').value = d.manualTotal||'';
   document.getElementById('pkExtraWeight').value = d.pkExtraWeight||'';
   document.getElementById('pkExtraThickness').value = d.pkExtraThickness||'';
-  extraManualTotals = d.extraManualTotals || { 1: '', 2: '' };
+  if(d.extraQuantities && d.extraQuantities.length){
+    extraQuantities = d.extraQuantities.map(e => ({ id: extraQtySeq++, qty: e.qty||'', manualTotal: e.manualTotal||'' }));
+  } else {
+    // Migrate older offers saved with the old fixed extra1/extra2 fields.
+    extraQuantities = [];
+    if(num(d.extra1) > 0) extraQuantities.push({ id: extraQtySeq++, qty: d.extra1, manualTotal: (d.extraManualTotals && d.extraManualTotals[1]) || '' });
+    if(num(d.extra2) > 0) extraQuantities.push({ id: extraQtySeq++, qty: d.extra2, manualTotal: (d.extraManualTotals && d.extraManualTotals[2]) || '' });
+  }
+  renderExtraQuantitiesList();
   flatRows = []; bookRows = []; fabricRows = [];
   (d.flatRows||[]).forEach(r=>addFlatRow(r));
   (d.bookRows||[]).forEach(r=>addBookRow(r));
@@ -3410,6 +3505,7 @@ function applyOfferData(d){
     procCategories = d.procCategories.map(c => ({
       id: procCatSeq++,
       name: c.name,
+      collapsed: c.collapsed||false,
       tasks: c.tasks.map(t => Object.assign({id: procTaskSeq++}, t))
     }));
   } else {
@@ -3471,23 +3567,17 @@ function onJbChange(){
   loadCompanyInfo();
 }
 
-async function createBin(){
-  const key = getJbKey();
-  if(!key){ document.getElementById('jbStatus').textContent = 'Βάλε πρώτα το API Key'; return; }
+async function testSupabaseConnection(){
+  const statusEl = document.getElementById('jbStatus');
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url){ statusEl.textContent = 'Βάλε πρώτα το Project URL και το API Key.'; return; }
+  statusEl.textContent = 'Έλεγχος σύνδεσης...';
   try{
-    const res = await fetch('https://api.jsonbin.io/v3/b', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': key, 'X-Bin-Name': 'Offers DB' },
-      body: JSON.stringify({ offers: {}, tickets: {}, clients: [], orders: {}, forecast: {}, productionStages: ['Νέο','Μοντάζ','Έλεγχος/Έγκριση','CTP','Εκτύπωση','Βιβλιοδεσία','Postpress','Ολοκληρώθηκε'], labels: [{id:'wait_paper', name:'Αναμονή Χαρτιού', color:'#e0a030'},{id:'paper_ok', name:'Χαρτί ΟΚ', color:'#4a9d6e'}], machines: [], suppliers: ['ΧΑΡΤΙΑ ΠΕΡΡΑΚΗΣ','ΠΑΠΑΝΔΡΕΟΥ','ΧΑΤΖΗΑΛΕΞΙΑΔΗΣ','ΑΓΓΕΛΙΔΗΣ','COVERBOARD','ΜΑΚΕΔΟΝΙΚΗ','ΧΑΡΤΟΡΑΜΑ','ΛΙΓΚΟΥΡΗ','ΤΣΟΛΑΚΟΣ','ΠΑΤΣΟΠΟΥΛΟΣ'] })
-    });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    const binId = json.metadata.id;
-    document.getElementById('jbBin').value = binId;
+    await jbGetRecord();
     onJbChange();
-    document.getElementById('jbStatus').textContent = 'Δημιουργήθηκε νέο Bin ✓ — σημείωσέ το για τους άλλους υπολογιστές: ' + binId;
+    statusEl.textContent = 'Επιτυχής σύνδεση με το Supabase ✓';
   }catch(e){
-    document.getElementById('jbStatus').textContent = 'Σφάλμα δημιουργίας: ' + e.message;
+    statusEl.textContent = 'Σφάλμα σύνδεσης: ' + e.message + ' — έλεγξε το Project URL, το API Key, και ότι έχεις τρέξει το SQL για τον πίνακα "app_data".';
   }
 }
 
@@ -3536,16 +3626,25 @@ async function restoreFromBackup(){
   }
 }
 
+async function getAuthToken(){
+  if(supabaseAuthClient){
+    const { data: { session } } = await supabaseAuthClient.auth.getSession();
+    if(session) return session.access_token;
+  }
+  return getJbKey(); // fallback to the anon key if not logged in yet
+}
+
 async function jbGetRecord(){
-  const key = getJbKey(), bin = getJbBin();
-  if(!key || !bin) throw new Error('Λείπει API Key ή Bin ID');
-  const res = await fetch(`https://api.jsonbin.io/v3/b/${bin}/latest?_=${Date.now()}`, {
-    headers: { 'X-Master-Key': key },
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
+  const token = await getAuthToken();
+  const res = await fetch(`${url}/rest/v1/app_data?id=eq.1&select=record`, {
+    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` },
     cache: 'no-store'
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  const record = json.record || {};
+  const rows = await res.json();
+  const record = (rows[0] && rows[0].record) || {};
   if(!record.offers) record.offers = {};
   if(!record.tickets) record.tickets = {};
   if(!record.clients) record.clients = [];
@@ -3568,15 +3667,16 @@ async function jbGetRecord(){
 }
 
 async function jbPutRecord(record){
-  const key = getJbKey(), bin = getJbBin();
-  if(!key || !bin) throw new Error('Λείπει API Key ή Bin ID');
-  const res = await fetch(`https://api.jsonbin.io/v3/b/${bin}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': key },
-    body: JSON.stringify(record)
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
+  const token = await getAuthToken();
+  const res = await fetch(`${url}/rest/v1/app_data?id=eq.1`, {
+    method: 'PATCH',
+    headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ record, updated_at: new Date().toISOString() })
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  return true;
 }
 
 let currentOfferId = null;
@@ -3720,7 +3820,8 @@ function newOffer(){
   document.getElementById('fEnglishPdf').checked = false;
   syncOfferToggleButtons();
   document.body.classList.remove('multi-item-mode');
-  extraManualTotals = { 1: '', 2: '' };
+  extraQuantities = [];
+  renderExtraQuantitiesList();
   flatRows = []; bookRows = []; fabricRows = [];
   addFlatRow({material:'Εξώφυλλο'}); addFlatRow({material:'Φόδρες'}); addFlatRow({material:'Κουβερτούρα'}); addFlatRow({material:'Χαρτόνια'});
   addBookRow({material:'Σώμα'});
@@ -3782,7 +3883,7 @@ function renderOfferTable(){
   const search = (document.getElementById('offerSearch').value||'').toLowerCase().trim();
   let list = offersCache.filter(o=>{
     if(!search) return true;
-    const hay = [o.label, o.number, (o.data||{}).title, (o.data||{}).type].join(' ').toLowerCase();
+    const hay = [o.label, o.number, (o.data||{}).title].join(' ').toLowerCase();
     return hay.includes(search);
   });
 
@@ -3791,7 +3892,6 @@ function renderOfferTable(){
     if(col==='date') return o.date || o.savedAt || '';
     if(col==='client') return o.label||'';
     if(col==='title') return (o.data||{}).title||'';
-    if(col==='type') return (o.data||{}).type||'';
     if(col==='qty') return num((o.data||{}).qty);
     if(col==='approved') return o.approved?1:0;
     if(col==='total') return num(o.total);
@@ -3822,7 +3922,6 @@ function renderOfferTable(){
         <td>${esc(dateStr)}</td>
         <td style="font-weight:600;">${esc(o.label)}</td>
         <td>${esc(d.title||'')}</td>
-        <td>${esc(d.type||'')}</td>
         <td style="text-align:right;">${esc(d.qty||'')}</td>
         <td onclick="event.stopPropagation()"><span class="order-badge${o.approved?' received':''}" style="cursor:pointer;" onclick="toggleOfferApproved('${o.id}')">${o.approved?'Εγκρίθηκε':'Εκκρεμεί'}</span></td>
         <td style="text-align:right;">${totalStr}</td>
@@ -3837,7 +3936,7 @@ function renderOfferTable(){
   wrap.innerHTML = `
     <table class="offer-table">
       <thead><tr>
-        ${th('number','Αριθμός')}${th('date','Ημερομηνία')}${th('client','Πελάτης')}${th('title','Περιγραφή')}${th('type','Είδος')}
+        ${th('number','Αριθμός')}${th('date','Ημερομηνία')}${th('client','Πελάτης')}${th('title','Περιγραφή')}
         <th style="text-align:right;cursor:pointer;" onclick="setOfferSort('qty')">Ποσότητα${arrow('qty')}</th>
         ${th('approved','Κατάσταση')}
         <th style="text-align:right;cursor:pointer;" onclick="setOfferSort('total')">Κόστος${arrow('total')}</th>
@@ -4330,10 +4429,12 @@ function convertOfferToTicket(){
   document.getElementById('tkInfo').value = [client, title].filter(Boolean).join(' — ');
   document.getElementById('tkQty').value = document.getElementById('hdrQty').value;
   document.getElementById('tkDeadline').value = ''; // real calendar date — set separately, not the same as the offer's "χρόνος παράδοσης" estimate
-  document.getElementById('tkEidos').value = document.getElementById('fType').value;
+  document.getElementById('tkEidos').value = '';
   document.getElementById('tkSchema').value = document.getElementById('fSchemaClosed').value;
-  document.getElementById('tkSelides').value = document.getElementById('fPagesIn').value;
-  document.getElementById('tkSelidesOut').value = document.getElementById('fPagesOut').value;
+  const pagesRaw = document.getElementById('fPages').value.trim();
+  const pagesParts = pagesRaw.split('+').map(s=>s.trim());
+  document.getElementById('tkSelides').value = pagesParts[0] || '';
+  document.getElementById('tkSelidesOut').value = pagesParts[1] || '';
 
   // Carry over the offer's computed weight/thickness per piece — saves re-entering
   // them in the ticket's Συσκευασία card.
@@ -4363,7 +4464,7 @@ function convertOfferToTicket(){
   if(tkPaperRows.length===0) addTkPaperRow();
 
   tkProcRows = [];
-  procCategories.forEach(cat => cat.tasks.forEach(t => {
+  procCategories.filter(cat=>!cat.collapsed).forEach(cat => cat.tasks.forEach(t => {
     if(t.name){
       const est = procTaskCalc(t, baseQty);
       addTkProcRow({ label: t.name, details: '', estimatedSeconds: est.hours * 3600 });
@@ -5144,14 +5245,59 @@ async function refreshForecastList(){
   }
 }
 
-document.getElementById('companyNameInput').value = companyName;
-document.getElementById('companyInfoInput').value = companyInfo;
+const DEFAULT_SUPABASE_URL = 'https://aedxejiijbsapiyadkba.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlZHhlamlpamJzYXBpeWFka2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzOTEwMDQsImV4cCI6MjEwMDk2NzAwNH0.xTeBjkj0f97aq4bdr__FGcGQQcAo7B4233g69fQFvdM';
 
-const savedJbKey = localStorage.getItem('offer_jb_key');
-const savedJbBin = localStorage.getItem('offer_jb_bin');
-if(savedJbKey) document.getElementById('jbKey').value = savedJbKey;
-if(savedJbBin) document.getElementById('jbBin').value = savedJbBin;
-if(savedJbKey && savedJbBin){ loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo(); }
+const savedJbKey = localStorage.getItem('offer_jb_key') || DEFAULT_SUPABASE_KEY;
+const savedJbBin = localStorage.getItem('offer_jb_bin') || DEFAULT_SUPABASE_URL;
+document.getElementById('jbKey').value = savedJbKey;
+document.getElementById('jbBin').value = savedJbBin;
+
+let supabaseAuthClient = null;
+
+async function initAuthAndApp(){
+  supabaseAuthClient = window.supabase.createClient(getJbBin(), getJbKey());
+  const { data: { session } } = await supabaseAuthClient.auth.getSession();
+  if(session){
+    showAppAfterLogin();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+  }
+}
+
+function showAppAfterLogin(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = '';
+  loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo();
+  supabaseAuthClient.auth.getUser().then(({data})=>{
+    const el = document.getElementById('currentUserEmail');
+    if(el && data && data.user) el.textContent = 'Συνδεδεμένος/η ως: ' + data.user.email;
+  });
+}
+
+async function submitLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const statusEl = document.getElementById('loginStatus');
+  if(!email || !password){ statusEl.textContent = 'Συμπλήρωσε email και κωδικό.'; return; }
+  statusEl.textContent = 'Σύνδεση...';
+  try{
+    const { error } = await supabaseAuthClient.auth.signInWithPassword({ email, password });
+    if(error){ statusEl.textContent = 'Λάθος email ή κωδικός.'; return; }
+    statusEl.textContent = '';
+    showAppAfterLogin();
+  }catch(e){
+    statusEl.textContent = 'Σφάλμα σύνδεσης: ' + e.message;
+  }
+}
+
+async function signOutUser(){
+  if(supabaseAuthClient) await supabaseAuthClient.auth.signOut();
+  location.reload();
+}
+
+initAuthAndApp();
 
 function getCloudinaryCloudName(){ return document.getElementById('cloudinaryCloudName').value.trim(); }
 function getCloudinaryPreset(){ return document.getElementById('cloudinaryPreset').value.trim(); }
@@ -6434,6 +6580,25 @@ let stockPage = 0;
 const STOCK_PAGE_SIZE = 30;
 let expandedStockPaper = null;
 let stockRecordCache = null;
+
+async function resetAllStock(){
+  const statusEl = document.getElementById('stockMovementStatus');
+  const sure = confirm('ΠΡΟΣΟΧΗ: Αυτό θα μηδενίσει ΟΛΟ το απόθεμα (όλα τα χαρτιά/υλικά στο 0) και θα ΔΙΑΓΡΑΨΕΙ ολόκληρο το ιστορικό κινήσεων.\n\nΑυτή η ενέργεια ΔΕΝ αναιρείται.\n\nΕίσαι σίγουρος/η ότι θέλεις να συνεχίσεις;');
+  if(!sure) return;
+  const sureAgain = confirm('Τελευταία επιβεβαίωση — θα χαθεί όλο το ιστορικό κινήσεων αποθήκης και όλα τα αποθέματα θα γίνουν 0. Συνέχεια;');
+  if(!sureAgain) return;
+  try{
+    const record = await jbGetRecord();
+    Object.keys(record.stock || {}).forEach(name=>{ record.stock[name].qty = 0; });
+    record.stockLog = [];
+    await jbPutRecord(record);
+    statusEl.textContent = 'Μηδενίστηκε όλη η αποθήκη και το ιστορικό κινήσεων ✓';
+    refreshStockList();
+  }catch(e){
+    console.error('Reset stock error:', e);
+    statusEl.textContent = 'Σφάλμα: ' + e.message;
+  }
+}
 
 async function refreshStockList(){
   const el = document.getElementById('stockList');
