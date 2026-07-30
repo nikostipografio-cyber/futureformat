@@ -6335,8 +6335,11 @@ async function toggleLabelPopover(ticketId, anchorEl){
       cb.addEventListener('change', ()=>{ toggleTicketLabel(ticketId, cb.getAttribute('data-lbl'), cb.checked); });
     });
     pop.querySelectorAll('input[data-lbl-color]').forEach(inp=>{
-      inp.addEventListener('input', ()=>{ updateLabelColor(inp.getAttribute('data-lbl-color'), inp.value); });
-      inp.addEventListener('change', ()=>{ toggleLabelPopover(ticketId, anchorEl); }); // refresh assigned card colors once picking is done
+      inp.addEventListener('change', async ()=>{
+        await updateLabelColor(inp.getAttribute('data-lbl-color'), inp.value, /*skipRefresh*/ true);
+        await toggleLabelPopover(ticketId, anchorEl); // reposition first, while anchorEl is still valid
+        refreshProductionBoard(); // now safe — updates the card label chips on the board
+      });
     });
     pop.querySelectorAll('button[data-lbl-delete]').forEach(btn=>{
       btn.addEventListener('click', ()=>{ deleteLabelDefinition(btn.getAttribute('data-lbl-delete'), ticketId, anchorEl); });
@@ -6364,14 +6367,14 @@ async function toggleTicketLabel(ticketId, labelId, checked){
   }
 }
 
-async function updateLabelColor(labelId, color){
+async function updateLabelColor(labelId, color, skipRefresh){
   try{
     const record = await jbGetRecord();
     const lbl = (record.labels||[]).find(l=>l.id===labelId);
     if(!lbl) return;
     lbl.color = color;
     await jbPutRecord(record);
-    refreshProductionBoard();
+    if(!skipRefresh) refreshProductionBoard();
   }catch(e){
     console.error('Update label color error:', e);
     statusMsg('Σφάλμα: ' + e.message);
