@@ -5454,7 +5454,7 @@ async function submitLogin(){
   statusEl.textContent = 'Σύνδεση...';
   try{
     const { error } = await supabaseAuthClient.auth.signInWithPassword({ email, password });
-    if(error){ statusEl.textContent = 'Λάθος email ή κωδικός.'; return; }
+    if(error){ statusEl.textContent = 'Σφάλμα: ' + error.message + (error.code ? ' (' + error.code + ')' : ''); return; }
     statusEl.textContent = '';
     showAppAfterLogin();
   }catch(e){
