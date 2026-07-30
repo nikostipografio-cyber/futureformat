@@ -324,9 +324,11 @@
       <div style="font-weight:800;font-size:18px;margin-top:6px;">Future Format</div>
       <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Σύνδεση στο πρόγραμμα</div>
     </div>
-    <div class="field" style="margin-bottom:12px;"><label>Email</label><input id="loginEmail" type="email" placeholder="όνομα@εταιρεία.gr" onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()"></div>
-    <div class="field" style="margin-bottom:16px;"><label>Κωδικός</label><input id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') submitLogin()"></div>
-    <button class="btn solid" style="width:100%;" onclick="submitLogin()">Σύνδεση</button>
+    <form id="loginForm" autocomplete="on" onsubmit="event.preventDefault(); submitLogin();">
+      <div class="field" style="margin-bottom:12px;"><label>Email</label><input id="loginEmail" type="email" name="username" autocomplete="username" placeholder="όνομα@εταιρεία.gr"></div>
+      <div class="field" style="margin-bottom:16px;"><label>Κωδικός</label><input id="loginPassword" type="password" name="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <button class="btn solid" type="submit" style="width:100%;">Σύνδεση</button>
+    </form>
     <div class="empty-note" id="loginStatus" style="margin-top:12px;text-align:center;"></div>
   </div>
 </div>
