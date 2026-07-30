@@ -711,15 +711,15 @@
       <div class="card-body"><textarea id="tkNotes" rows="3"></textarea></div>
     </div>
 
-    <div class="card" style="display:none;">
-      <div class="card-head"><div class="title">📎 Επισυναπτόμενα</div></div>
+    <div class="card">
+      <div class="card-head"><div class="title">📎 Επισυναπτόμενα Αρχεία (PDF/Φωτογραφίες)</div></div>
       <div class="card-body">
+        <div id="tkAttachmentList" style="margin-bottom:10px;"></div>
         <div style="display:flex;gap:10px;align-items:center;">
           <input type="file" id="tkAttachmentInput" accept=".pdf,image/*" style="flex:1;">
           <button class="btn solid" onclick="uploadTicketAttachment()">⬆ Ανέβασμα</button>
         </div>
         <div class="empty-note" id="tkAttachmentStatus" style="margin-top:6px;"></div>
-        <div id="tkAttachmentList" style="margin-top:10px;"></div>
       </div>
     </div>
 
@@ -1201,16 +1201,6 @@
         </div>
         <div class="empty-note" style="margin-top:8px;">Κατέβασε τακτικά ένα αντίγραφο (π.χ. μία φορά τη βδομάδα) και κράτησέ το κάπου ασφαλές. Η "Επαναφορά" <b>αντικαθιστά εντελώς</b> όλα τα τρέχοντα δεδομένα — χρησιμοποίησέ την μόνο αν κάτι χάθηκε ή χάλασε.</div>
         <div class="empty-note" id="backupStatus" style="margin-top:4px;"></div>
-      </div>
-    </div>
-    <div class="card" style="display:none;">
-      <div class="card-head"><div class="title">Επισυναπτόμενα Αρχείων (Cloudinary)</div></div>
-      <div class="card-body">
-        <div class="fieldgrid c2">
-          <div class="field"><label>Cloud Name</label><input id="cloudinaryCloudName" placeholder="από το cloudinary.com dashboard" oninput="onCloudinaryChange()"></div>
-          <div class="field"><label>Upload Preset (Unsigned)</label><input id="cloudinaryPreset" placeholder="π.χ. ff_uploads" oninput="onCloudinaryChange()"></div>
-        </div>
-        <div class="empty-note">Χρειάζεται για να μπορείς να ανεβάζεις PDF/φωτογραφίες στα Job Tickets. Δωρεάν λογαριασμός στο cloudinary.com.</div>
       </div>
     </div>
   </div>
@@ -4298,7 +4288,7 @@ function applyTicketData(d, topLevelDeadline){
   renderTicketAttachments();
 }
 
-// ===== Επισυναπτόμενα (Cloudinary uploads) =====
+// ===== Επισυναπτόμενα (Supabase Storage uploads) =====
 let ticketAttachments = [];
 
 function renderTicketAttachments(){
@@ -4326,21 +4316,23 @@ async function uploadTicketAttachment(){
   const statusEl = document.getElementById('tkAttachmentStatus');
   const file = input.files[0];
   if(!file){ statusEl.textContent = 'Διάλεξε πρώτα ένα αρχείο.'; return; }
-  const cloudName = getCloudinaryCloudName();
-  const preset = getCloudinaryPreset();
-  if(!cloudName || !preset){
-    statusEl.textContent = 'Ρύθμισε πρώτα το Cloudinary (καρτέλα "Προσφορές" → "Επισυναπτόμενα Αρχείων").';
-    return;
-  }
   statusEl.textContent = 'Ανέβασμα...';
   try{
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', preset);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method:'POST', body: formData });
-    const data = await res.json();
-    if(!res.ok || !data.secure_url) throw new Error(data.error ? data.error.message : 'Άγνωστο σφάλμα ανεβάσματος.');
-    ticketAttachments.push({ name: file.name, url: data.secure_url, type: file.type, uploadedAt: new Date().toISOString() });
+    const key = getJbKey(), url = getJbBin();
+    const token = await getAuthToken();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${Date.now()}_${safeName}`;
+    const res = await fetch(`${url}/storage/v1/object/attachments/${path}`, {
+      method: 'POST',
+      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if(!res.ok){
+      const errData = await res.json().catch(()=>({}));
+      throw new Error(errData.message || ('HTTP ' + res.status) + ' — έλεγξε ότι έχει δημιουργηθεί το "attachments" bucket στο Supabase Storage.');
+    }
+    const publicUrl = `${url}/storage/v1/object/public/attachments/${path}`;
+    ticketAttachments.push({ name: file.name, url: publicUrl, path, type: file.type, uploadedAt: new Date().toISOString() });
     renderTicketAttachments();
     input.value = '';
     statusEl.textContent = 'Ανέβηκε ✓';
@@ -4352,10 +4344,21 @@ async function uploadTicketAttachment(){
 }
 
 async function deleteTicketAttachment(idx){
+  const attachment = ticketAttachments[idx];
   ticketAttachments.splice(idx, 1);
   renderTicketAttachments();
   await saveTicket();
   statusMsg('Αφαιρέθηκε το επισυναπτόμενο ✓');
+  if(attachment && attachment.path){
+    try{
+      const key = getJbKey(), url = getJbBin();
+      const token = await getAuthToken();
+      await fetch(`${url}/storage/v1/object/attachments/${attachment.path}`, {
+        method: 'DELETE',
+        headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+      });
+    }catch(e){ console.error('Delete storage file error (non-fatal):', e); }
+  }
 }
 
 function newTicket(){
@@ -5553,17 +5556,6 @@ async function signOutUser(){
 
 initAuthAndApp();
 
-function getCloudinaryCloudName(){ return document.getElementById('cloudinaryCloudName').value.trim(); }
-function getCloudinaryPreset(){ return document.getElementById('cloudinaryPreset').value.trim(); }
-function onCloudinaryChange(){
-  localStorage.setItem('offer_cloudinary_cloud', getCloudinaryCloudName());
-  localStorage.setItem('offer_cloudinary_preset', getCloudinaryPreset());
-}
-const savedCloudName = localStorage.getItem('offer_cloudinary_cloud');
-const savedCloudPreset = localStorage.getItem('offer_cloudinary_preset');
-if(savedCloudName) document.getElementById('cloudinaryCloudName').value = savedCloudName;
-if(savedCloudPreset) document.getElementById('cloudinaryPreset').value = savedCloudPreset;
-
 // ===== Παραγωγή (Production Kanban) =====
 function ensureColumnOrder(record, stage, cardsInStage){
   if(!record.columnOrder) record.columnOrder = {};
@@ -5677,6 +5669,41 @@ async function applyLabelToSelected(labelId){
     console.error('Apply bulk label error:', e);
     statusMsg('Σφάλμα: ' + e.message);
   }
+}
+
+function closeCardContextMenu(){
+  const menu = document.getElementById('cardContextMenu');
+  if(menu) menu.remove();
+  document.removeEventListener('click', closeCardContextMenuOnClickOutside);
+}
+function closeCardContextMenuOnClickOutside(e){
+  const menu = document.getElementById('cardContextMenu');
+  if(menu && !menu.contains(e.target)) closeCardContextMenu();
+}
+
+function showCardContextMenu(e, ticketId, cardEl, stage, currentDividerId){
+  closeCardContextMenu();
+  const menu = document.createElement('div');
+  menu.id = 'cardContextMenu';
+  menu.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:6px;z-index:2100;min-width:190px;';
+  menu.style.top = e.pageY + 'px';
+  menu.style.left = e.pageX + 'px';
+  menu.innerHTML = `
+    <div class="ctx-menu-item" data-action="labels" style="padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;display:flex;align-items:center;gap:8px;">🏷️ Ετικέτες</div>
+    <div class="ctx-menu-item" data-action="move" style="padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;display:flex;align-items:center;gap:8px;">↦ Μετακίνηση σε άλλο στάδιο</div>
+  `;
+  document.body.appendChild(menu);
+  menu.querySelectorAll('.ctx-menu-item').forEach(item=>{
+    item.addEventListener('mouseenter', ()=>{ item.style.background = 'var(--page)'; });
+    item.addEventListener('mouseleave', ()=>{ item.style.background = ''; });
+    item.addEventListener('click', ()=>{
+      const action = item.getAttribute('data-action');
+      closeCardContextMenu();
+      if(action==='labels') toggleLabelPopover(ticketId, cardEl);
+      if(action==='move') toggleMovePopover(ticketId, cardEl, stage, currentDividerId);
+    });
+  });
+  setTimeout(()=>{ document.addEventListener('click', closeCardContextMenuOnClickOutside); }, 0);
 }
 
 async function refreshProductionBoard(){
@@ -5858,9 +5885,7 @@ async function refreshProductionBoard(){
             <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
               <input type="checkbox" class="kanban-bulk-checkbox" data-id="${t.id}" ${bulkSelectedIds.has(t.id)?'checked':''} style="display:${bulkSelectMode?'inline-block':'none'};margin-right:2px;">
               ${labelsHtml}
-              <span class="kanban-label-btn" title="Ετικέτες">🏷️</span>
               <span class="kanban-date-btn" title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
-              <span class="kanban-label-btn kanban-move-btn" title="Μετακίνηση σε άλλο στάδιο">↦</span>
             </div>
             <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
             <div class="meta">${metaBits.join(' · ')}</div>
@@ -5875,14 +5900,16 @@ async function refreshProductionBoard(){
             }
             loadTicket(t.id, true);
           });
+          card.addEventListener('contextmenu', (e)=>{
+            e.preventDefault();
+            showCardContextMenu(e, t.id, card, stage, currentDividerId);
+          });
           card.addEventListener('dragstart', e=>{
             e.dataTransfer.setData('text/plain', `card:${t.id}`);
             setTimeout(()=>card.style.opacity='0.4', 0);
           });
           card.addEventListener('dragend', ()=>{ card.style.opacity='1'; });
-          card.querySelector('.kanban-label-btn:not(.kanban-move-btn)').addEventListener('click', (e)=>{ toggleLabelPopover(t.id, e.currentTarget); });
           card.querySelector('.kanban-date-btn').addEventListener('click', (e)=>{ toggleDatePopover(t.id, e.currentTarget, t.deadlineDate); });
-          card.querySelector('.kanban-move-btn').addEventListener('click', (e)=>{ toggleMovePopover(t.id, e.currentTarget, stage, currentDividerId); });
           const archiveBtn = card.querySelector('.kanban-archive-btn');
           if(archiveBtn) archiveBtn.addEventListener('click', (e)=>{ e.stopPropagation(); archiveTicket(t.id); });
           makeDropTarget(card, entry);
