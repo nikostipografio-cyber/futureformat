@@ -7192,6 +7192,10 @@ async function refreshClientsList(){
   try{
     const record = await jbGetRecord();
     const byClient = {};
+    (record.clients||[]).forEach(name=>{
+      const client = (name||'').trim();
+      if(client) byClient[client] = { count:0, approved:0, total:0 };
+    });
     Object.values(record.offers||{}).forEach(o=>{
       const client = (o.label || (o.data||{}).client || '').trim();
       if(!client) return;
