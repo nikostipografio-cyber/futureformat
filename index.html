@@ -65,6 +65,9 @@
   .topbar h1{font-size:21px;margin:0;font-weight:600;}
   .topbar .actions{display:flex;gap:10px;}
   button.btn{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);display:inline-flex;align-items:center;gap:6px;}
+  .pdf-dropdown-item{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink);white-space:nowrap;}
+  .pdf-dropdown-item:hover{background:var(--page);}
+  .pdf-dropdown-item:not(:last-child){border-bottom:1px solid var(--line);}
   button.btn.solid{background:var(--blue);color:#fff;}
   button.btn:hover{opacity:0.85;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden;}
@@ -480,12 +483,17 @@ function toggleMobileSidebar(forceClose){
   <div class="topbar">
     <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
-      <button class="btn" onclick="generatePdfOffer()">📄 PDF Προσφοράς</button>
-      <button class="btn" onclick="downloadOfferPdf()">⬇ Κατέβασμα PDF</button>
-      <button class="btn" onclick="convertOfferToTicket()">🎫 Μετατροπή σε Job Ticket</button>
-      <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">⏳ Εκκρεμεί</button>
-      <button class="btn" id="multiItemBtn" onclick="toggleMultiItemBtn()" title="Κάθε γραμμή Flat Work = ξεχωριστό είδος, με δική του Ποσότητα και τιμή στο PDF">▤ Πολλαπλά Είδη</button>
-      <button class="btn" id="englishPdfBtn" onclick="toggleEnglishPdfBtn()" title="Μεταφράζει τις σταθερές ετικέτες του PDF στα Αγγλικά — ό,τι γράφεις εσύ μένει όπως το έγραψες">🇬🇧 Αγγλικά PDF</button>
+      <div style="position:relative;display:inline-block;">
+        <button class="btn" id="pdfDropdownBtn" onclick="togglePdfDropdown(event)">PDF Προσφοράς ▾</button>
+        <div id="pdfDropdownMenu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:100;min-width:210px;margin-top:4px;overflow:hidden;">
+          <div class="pdf-dropdown-item" onclick="generatePdfOffer();closePdfDropdown();">PDF Προσφοράς</div>
+          <div class="pdf-dropdown-item" onclick="downloadOfferPdf();closePdfDropdown();">Κατέβασμα PDF</div>
+          <div class="pdf-dropdown-item" onclick="toggleEnglishPdfBtn();closePdfDropdown();"><span id="englishPdfCheck">☐</span> Αγγλικά PDF</div>
+        </div>
+      </div>
+      <button class="btn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
+      <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
+      <button class="btn" id="multiItemBtn" onclick="toggleMultiItemBtn()" title="Κάθε γραμμή Flat Work = ξεχωριστό είδος, με δική του Ποσότητα και τιμή στο PDF">Πολλαπλά Είδη</button>
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
     </div>
   </div>
@@ -1292,7 +1300,7 @@ function toggleMobileSidebar(forceClose){
     <div class="sub" id="impoSub"></div>
 
     <div class="impo-margins" style="grid-template-columns:1fr 1fr;">
-      <div class="impo-margin-field"><label>Σχήμα (πχ 21x29)</label><input id="impoSchema" type="text" oninput="recalcCurrentImposition()"></div>
+      <div class="impo-margin-field" id="impoSchemaGroup"><label>Σχήμα (πχ 21x29)</label><input id="impoSchema" type="text" oninput="recalcCurrentImposition()"></div>
       <div class="impo-margin-field"><label>Προσανατολισμός τεμαχίου</label>
         <select id="impoOrientation" onchange="recalcCurrentImposition()">
           <option value="auto">Αυτόματο (ό,τι χωράει καλύτερα)</option>
@@ -1319,7 +1327,7 @@ function toggleMobileSidebar(forceClose){
       </div>
     </div>
 
-    <div class="impo-margins">
+    <div class="impo-margins" id="impoMarginsGroup">
       <div class="impo-margin-field"><label>Πάνω (mm)</label><input id="impoMarginTop" type="number" value="8" oninput="recalcCurrentImposition()"></div>
       <div class="impo-margin-field"><label>Αριστερό (mm)</label><input id="impoMarginLeft" type="number" value="5" oninput="recalcCurrentImposition()"></div>
       <div class="impo-margin-field"><label>Δεξί (mm)</label><input id="impoMarginRight" type="number" value="5" oninput="recalcCurrentImposition()"></div>
@@ -2250,7 +2258,7 @@ function recalcBookTotal(){
 
 function addFabricRow(vals){
   const id = fabricSeq++;
-  fabricRows.push(Object.assign({id, material:'', rollWidth:'', patternW:'', patternL:'', qty:'', xtraMeters:'', pricePerMeter:''}, vals||{}));
+  fabricRows.push(Object.assign({id, material:'', rollWidth:'', patternW:'', patternL:'', qty:'', xtraMeters:'', pricePerMeter:'', orientation:'auto'}, vals||{}));
   renderFabric();
 }
 function removeFabricRow(id){ fabricRows = fabricRows.filter(r=>r.id!==id); renderFabric(); }
@@ -2305,11 +2313,19 @@ function showImpositionModal(layout, opts){
   const { sheetW, sheetH, pieceW, pieceH, cols, rows, count, rotated, margins, usableW, usableH } = layout;
   const m = margins || {top:0,left:0,right:0,bottom:0,cutV:0,cutH:0};
 
-  // Always draw the sheet landscape (wider than tall), matching how these
-  // signature diagrams are conventionally shown, regardless of actual sheet orientation.
+  // For fabric, draw the roll "standing up" — its WIDTH is the vertical axis
+  // (matching how a roll physically looks), and its LENGTH runs horizontally.
+  // For everything else, force landscape (wider than tall) as before.
   let drawSheetW = sheetW, drawSheetH = sheetH, drawCols = cols, drawRows = rows, drawPieceW = pieceW, drawPieceH = pieceH;
   const dm = m;
-  if(sheetH > sheetW){
+  const isFabric = !!opts.isFabric;
+  if(isFabric){
+    // Fabric: sheetW is the roll WIDTH, sheetH is the (100cm) length reference —
+    // always draw width vertically and length horizontally, like a real roll.
+    drawSheetW = sheetH; drawSheetH = sheetW;
+    drawCols = rows; drawRows = cols;
+    drawPieceW = pieceH; drawPieceH = pieceW;
+  } else if(sheetH > sheetW){
     drawSheetW = sheetH; drawSheetH = sheetW;
     drawCols = rows; drawRows = cols;
     drawPieceW = pieceH; drawPieceH = pieceW;
@@ -2343,8 +2359,11 @@ function showImpositionModal(layout, opts){
   }
 
   let wasteRects = '';
+  // For fabric, leftover WIDTH doesn't cost anything extra (the roll's full width
+  // is paid for regardless) — so it's shown as a neutral "unused, but free" zone,
+  // not the same "costly waste" red hatch used for paper leftover LENGTH.
   if(leftoverWpx > 1){
-    wasteRects += `<rect x="${(usableX0+gridWpx).toFixed(1)}" y="${usableY0.toFixed(1)}" width="${leftoverWpx.toFixed(1)}" height="${usableHpx.toFixed(1)}" fill="url(#wastehatch)"/>`;
+    wasteRects += `<rect x="${(usableX0+gridWpx).toFixed(1)}" y="${usableY0.toFixed(1)}" width="${leftoverWpx.toFixed(1)}" height="${usableHpx.toFixed(1)}" fill="${isFabric ? 'url(#freehatch)' : 'url(#wastehatch)'}"/>`;
   }
   if(leftoverHpx > 1){
     wasteRects += `<rect x="${usableX0.toFixed(1)}" y="${(usableY0+gridHpx).toFixed(1)}" width="${gridWpx.toFixed(1)}" height="${leftoverHpx.toFixed(1)}" fill="url(#wastehatch)"/>`;
@@ -2359,25 +2378,56 @@ function showImpositionModal(layout, opts){
         <rect width="6" height="6" fill="#fbe4df"/>
         <line x1="0" y1="0" x2="0" y2="6" stroke="#c8564a" stroke-width="1.5"/>
       </pattern>
+      <pattern id="freehatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <rect width="6" height="6" fill="#eef0f2"/>
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#b7bcc2" stroke-width="1.5"/>
+      </pattern>
     </defs>
     <path d="M0,0 H${svgW.toFixed(1)} V${svgH.toFixed(1)} H0 Z M${mLeft.toFixed(1)},${mTop.toFixed(1)} H${(svgW-mRight).toFixed(1)} V${(svgH-mBottom).toFixed(1)} H${mLeft.toFixed(1)} Z" fill="url(#hatch)" fill-rule="evenodd"/>
     ${wasteRects}
   `;
 
+  // For fabric, draw a clear bracket + label along the LENGTH edge of the first
+  // piece — this is the dimension that actually drives cost (metres of roll used
+  // per row), regardless of how much width space looks "wasted".
+  let lengthCallout = '';
+  if(isFabric && drawRows>0 && drawCols>0){
+    const calloutY = usableY0 + gridHpx + 14;
+    const x0 = usableX0, x1 = usableX0 + realCellW;
+    lengthCallout = `
+      <g>
+        <line x1="${x0.toFixed(1)}" y1="${calloutY.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${calloutY.toFixed(1)}" stroke="#2f6fed" stroke-width="2"/>
+        <line x1="${x0.toFixed(1)}" y1="${(calloutY-4).toFixed(1)}" x2="${x0.toFixed(1)}" y2="${(calloutY+4).toFixed(1)}" stroke="#2f6fed" stroke-width="2"/>
+        <line x1="${x1.toFixed(1)}" y1="${(calloutY-4).toFixed(1)}" x2="${x1.toFixed(1)}" y2="${(calloutY+4).toFixed(1)}" stroke="#2f6fed" stroke-width="2"/>
+        <text x="${((x0+x1)/2).toFixed(1)}" y="${(calloutY+14).toFixed(1)}" fill="#2f6fed" font-size="11" font-weight="700" text-anchor="middle">${opts.lengthPerRow ? opts.lengthPerRow.toFixed(1) : ''}cm</text>
+      </g>
+    `;
+  }
+
   const usedArea = (cols*pieceW)*(rows*pieceH);
   const usableArea = (usableW>0 && usableH>0) ? usableW*usableH : sheetW*sheetH;
   const wastePct = usableArea>0 ? (100 - (usedArea/usableArea*100)) : 0;
 
-  const svg = `<svg width="${svgW.toFixed(1)}" height="${svgH.toFixed(1)}" viewBox="0 0 ${svgW.toFixed(1)} ${svgH.toFixed(1)}">
-    <rect x="0" y="0" width="${svgW.toFixed(1)}" height="${svgH.toFixed(1)}" fill="#f7f5ea" stroke="#1a1a1a" stroke-width="2.5"/>
-    ${marginHatch}
-    ${rects}
+  const padBottom = isFabric ? 30 : 0;
+  const svg = `<svg width="${svgW.toFixed(1)}" height="${(svgH+padBottom).toFixed(1)}" viewBox="0 0 ${svgW.toFixed(1)} ${(svgH+padBottom).toFixed(1)}">
+    <g>
+      <rect x="0" y="0" width="${svgW.toFixed(1)}" height="${svgH.toFixed(1)}" fill="#f7f5ea" stroke="#1a1a1a" stroke-width="2.5"/>
+      ${marginHatch}
+      ${rects}
+      ${lengthCallout}
+    </g>
   </svg>`;
 
   document.getElementById('impoTitle').textContent = opts.title || 'Προσομοίωση Μοντάζ';
   document.getElementById('impoSub').textContent = `Φύλλο ${sheetW}×${sheetH}cm — Σχήμα ${drawPieceW}×${drawPieceH}cm${rotated?' (περιστροφή 90°)':''} — Εκτυπώσιμη περιοχή ${usableW.toFixed(1)}×${usableH.toFixed(1)}cm`;
   document.getElementById('impoSvgWrap').innerHTML = svg;
-  document.getElementById('impoStats').innerHTML = `
+  document.getElementById('impoStats').innerHTML = isFabric ? `
+    <div class="row"><span class="l">${esc(opts.countLabel||'Τεμάχια/φύλλο')}</span><span class="v">${count}</span></div>
+    <div class="row"><span class="l">Διάταξη</span><span class="v">${drawCols} × ${drawRows}</span></div>
+    <div class="row"><span class="l">Μήκος ρολού ανά σειρά <span style="color:#2f6fed;">(αυτό κοστίζει)</span></span><span class="v">${opts.lengthPerRow ? opts.lengthPerRow.toFixed(1) : '–'}cm</span></div>
+    <div class="row"><span class="l">Αχρησιμοποίητο πλάτος <span style="color:#8a8f96;">(δεν κοστίζει επιπλέον)</span></span><span class="v">${(usableW - drawCols*drawPieceW).toFixed(1)}cm</span></div>
+    ${opts.extraStat ? `<div class="row" style="grid-column:span 2;background:var(--page);border-radius:6px;padding:6px 8px;margin-top:2px;"><span class="l">${esc(opts.extraStat.label)}</span><span class="v">${esc(opts.extraStat.value)}</span></div>` : ''}
+  ` : `
     <div class="row"><span class="l">${esc(opts.countLabel||'Τεμάχια/φύλλο')}</span><span class="v">${count}</span></div>
     <div class="row"><span class="l">Διάταξη</span><span class="v">${drawCols} × ${drawRows}</span></div>
     <div class="row"><span class="l">Εκμετάλλευση εκτυπώσιμης περιοχής</span><span class="v">${(100-wastePct).toFixed(1)}%</span></div>
@@ -2407,6 +2457,7 @@ function toggleCustomSig(){
 function recalcCurrentImposition(){
   if(currentImpoRowId==null) return;
   if(currentImpoKind==='flat') simulateFlatFit(currentImpoRowId, true);
+  else if(currentImpoKind==='fabric') simulateFabricFit(currentImpoRowId, true);
   else simulateBookFit(currentImpoRowId, true);
 }
 
@@ -2422,9 +2473,11 @@ function simulateFabricFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'fabric';
   document.getElementById('impoSignatureGroup').style.display = 'none';
+  document.getElementById('impoSchemaGroup').style.display = 'none';
+  document.getElementById('impoMarginsGroup').style.display = 'none';
   const r = fabricRows.find(x=>x.id===id);
   const rollWidth = num(r.rollWidth), patternW = num(r.patternW), patternL = num(r.patternL);
-  const title = 'Μοντάζ — Ύφασμα/Ρολό — ' + (r.material||'');
+  const title = 'Μοντάζ — Ύφασμα — ' + (r.material||'');
   if(!(rollWidth>0)){
     openEmptyImpositionModal(title, 'Συμπλήρωσε πρώτα το πλάτος ρολού σε αυτή τη γραμμή.');
     return;
@@ -2433,22 +2486,40 @@ function simulateFabricFit(id, keepModalOpen){
     openEmptyImpositionModal(title, 'Συμπλήρωσε τις διαστάσεις μοτίβου (Π x Υ) σε αυτή τη γραμμή.');
     return;
   }
-  // Reference unit is "πλάτος ρολού × 1 τρέχον μέτρο" (100cm) — how many
-  // patterns fit per running metre of the roll, not per fixed sheet size.
-  const margins = getModalMargins();
+  // If this is the FIRST open (not a recalc from changing the dropdown), reflect
+  // whatever orientation is already saved on the row, instead of resetting to auto.
+  if(!keepModalOpen) document.getElementById('impoOrientation').value = r.orientation || 'auto';
+  // Fabric is used edge-to-edge — no margins/bleed, the whole roll width counts.
+  const margins = {top:0, left:0, right:0, bottom:0, cutV:0, cutH:0};
   const orientation = document.getElementById('impoOrientation').value;
+  // Persist the explicit choice onto the row so the REAL costing in the table
+  // respects it too — not just this preview.
+  r.orientation = orientation;
+  recalcFabricRow(id);
   const layout = bestFitLayout(rollWidth, 100, patternW, patternL, margins, orientation);
   if(layout.count<=0){
     openEmptyImpositionModal(title, 'Το μοτίβο δεν χωράει ούτε μία φορά στο πλάτος του ρολού.');
     return;
   }
-  showImpositionModal(layout, { title, countLabel: 'Μοτίβα ανά τρέχον μέτρο' });
+  // Show, live, how many total metres THIS specific orientation needs for the
+  // real quantity — using the exact same formula as the actual costing — so
+  // switching Κανονικό/Περιστροφή 90° shows the real difference directly.
+  const qty = num(r.qty) || num(document.getElementById('hdrQty').value);
+  const acrossDim = layout.rotated ? patternL : patternW;
+  const lengthDim = layout.rotated ? patternW : patternL;
+  const across = Math.floor(rollWidth/acrossDim);
+  const rowsNeeded = across>0 ? ceilSafe(qty/across) : 0;
+  const metersNeeded = rowsNeeded * (lengthDim/100);
+  const extraStat = { label: `Συνολικά μέτρα για ${qty} τεμάχια (εφαρμόζεται και στον πίνακα)`, value: metersNeeded.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' μ.' };
+  showImpositionModal(layout, { title, countLabel: 'Μοτίβα ανά τρέχον μέτρο', extraStat, isFabric:true, lengthPerRow: lengthDim });
 }
 
 function simulateFlatFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'flat';
   document.getElementById('impoSignatureGroup').style.display = 'none';
+  document.getElementById('impoSchemaGroup').style.display = '';
+  document.getElementById('impoMarginsGroup').style.display = '';
   const r = flatRows.find(x=>x.id===id);
   const p = paperByName[r.paperName];
   if(!p || !p.w || !p.l){
@@ -2555,6 +2626,8 @@ function simulateBookFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'book';
   document.getElementById('impoSignatureGroup').style.display = 'contents';
+  document.getElementById('impoSchemaGroup').style.display = '';
+  document.getElementById('impoMarginsGroup').style.display = '';
   const r = bookRows.find(x=>x.id===id);
   const p = paperByName[r.paperName];
   if(!p || !p.w || !p.l){
@@ -2660,12 +2733,33 @@ function simulateBookFit(id, keepModalOpen){
 function fabricCalc(r, overrideQty){
   const rollWidth = num(r.rollWidth), patternW = num(r.patternW), patternL = num(r.patternL);
   const qty = num(r.qty) || (overrideQty!=null ? overrideQty : num(document.getElementById('hdrQty').value));
-  const across = patternW>0 ? Math.floor(rollWidth/patternW) : 0;
-  const rows = across>0 ? ceilSafe(qty/across) : 0;
-  const meters = rows * (patternL/100);
-  const totalMeters = meters + num(r.xtraMeters);
+
+  function tryOrientation(acrossDim, lengthDim){
+    const across = acrossDim>0 ? Math.floor(rollWidth/acrossDim) : 0;
+    if(across<=0) return null;
+    const rows = ceilSafe(qty/across);
+    const meters = rows * (lengthDim/100);
+    return {across, rows, meters};
+  }
+
+  const forced = r.orientation || 'auto';
+  let best;
+  if(forced==='normal'){
+    best = tryOrientation(patternW, patternL);
+  } else if(forced==='rotated'){
+    best = tryOrientation(patternL, patternW);
+  } else {
+    // auto — try both (as entered, and rotated 90°) and pick whichever needs LESS roll length.
+    const optA = tryOrientation(patternW, patternL);
+    const optB = (patternW!==patternL) ? tryOrientation(patternL, patternW) : null;
+    best = optA;
+    if(optB && (!best || optB.meters < best.meters)) best = optB;
+  }
+  if(!best) best = {across:0, rows:0, meters:0};
+
+  const totalMeters = best.meters + num(r.xtraMeters);
   const cost = totalMeters * num(r.pricePerMeter);
-  return {across, rows, meters, totalMeters, cost};
+  return {across: best.across, rows: best.rows, meters: best.meters, totalMeters, cost};
 }
 
 function renderFabric(){
@@ -2706,10 +2800,22 @@ function recalcFabricRow(id){
   recalcFabricTotal();
 }
 
+function ensureFabricCardVisibleIfNeeded(){
+  const hasData = fabricRows.some(r => num(r.rollWidth)>0 && num(r.patternW)>0 && num(r.patternL)>0);
+  if(!hasData) return;
+  const body = document.getElementById('fabricCardBody');
+  if(body.style.display==='none'){
+    body.style.display = '';
+    const btn = document.querySelector('button[onclick*="fabricCardBody"]');
+    if(btn) btn.textContent = 'Απόκρυψη';
+  }
+}
+
 function recalcFabricTotal(){
   const total = fabricRows.reduce((s,r)=>s+fabricCalc(r).cost,0);
   document.getElementById('fabricTotal').textContent = fmt(total);
   updateGrand();
+  ensureFabricCardVisibleIfNeeded();
 }
 
 const defaultProcCategories = [
@@ -2964,6 +3070,7 @@ function buildOfferPrintHtml(){
     'Τιμή τεμαχίου': 'Unit price', 'Εναλλακτική ποσότητα': 'Alternative quantity',
     'Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.': 'The above prices do not include VAT.',
     'Τρόπος πληρωμής': 'Payment method',
+    'Επιβάρυνση πελάτη': 'Customer shipping', 'Αποστολή σε πελάτη': 'Shipping',
   };
   const t = greek => isEN ? (EN_LABELS[greek] || greek) : greek;
 
@@ -3005,7 +3112,7 @@ function buildOfferPrintHtml(){
   const validityDays = num(document.getElementById('fValidityDays').value) || 15;
   const validityUntil = offerDateVal ? addDays(offerDateVal, validityDays) : '';
 
-  const shippingRow = v('fShipping') ? `<div class="row"><span class="l">${t('Τρόπος αποστολής')}</span><span class="v">${v('fShipping')}</span></div>` : '';
+  const shippingRow = v('fShipping') ? `<div class="row"><span class="l">${t('Τρόπος αποστολής')}</span><span class="v">${t(v('fShipping'))}</span></div>` : '';
   const deadlineRow = v('fDeadline') ? `<div class="row"><span class="l">${t('Χρόνος παράδοσης')}</span><span class="v">${v('fDeadline')}</span></div>` : '';
   const offerDateRow = offerDateVal ? `<div class="row"><span class="l">${t('Ημ/νία προσφοράς')}</span><span class="v">${fmtDate(offerDateVal)}</span></div>` : '';
   const validityRow = validityUntil ? `<div class="row"><span class="l">${t('Ισχύς προσφοράς έως')}</span><span class="v">${validityUntil}</span></div>` : '';
@@ -3937,9 +4044,26 @@ function toggleCardBody(bodyId, btn){
   btn.textContent = hidden ? 'Απόκρυψη' : 'Εμφάνιση';
 }
 
+function togglePdfDropdown(e){
+  e.stopPropagation();
+  const menu = document.getElementById('pdfDropdownMenu');
+  const opening = menu.style.display==='none';
+  menu.style.display = opening ? 'block' : 'none';
+  if(opening) setTimeout(()=>{ document.addEventListener('click', closePdfDropdownOnClickOutside); }, 0);
+}
+function closePdfDropdown(){
+  document.getElementById('pdfDropdownMenu').style.display = 'none';
+  document.removeEventListener('click', closePdfDropdownOnClickOutside);
+}
+function closePdfDropdownOnClickOutside(e){
+  const menu = document.getElementById('pdfDropdownMenu');
+  if(menu && !menu.contains(e.target) && e.target.id!=='pdfDropdownBtn') closePdfDropdown();
+}
+
 function syncOfferToggleButtons(){
   document.getElementById('multiItemBtn').classList.toggle('solid', document.getElementById('fMultiItem').checked);
-  document.getElementById('englishPdfBtn').classList.toggle('solid', document.getElementById('fEnglishPdf').checked);
+  const checked = document.getElementById('fEnglishPdf').checked;
+  document.getElementById('englishPdfCheck').textContent = checked ? '☑' : '☐';
 }
 
 function toggleMultiItemMode(){
@@ -4066,7 +4190,11 @@ function newOffer(){
   flatRows = []; bookRows = []; fabricRows = [];
   addFlatRow({material:'Εξώφυλλο'}); addFlatRow({material:'Φόδρες'}); addFlatRow({material:'Κουβερτούρα'}); addFlatRow({material:'Χαρτόνια'});
   addBookRow({material:'Σώμα'});
-  addFabricRow({material:'Κάλυμμα', rollWidth:132});
+  addFabricRow({material:'Κάλυμμα'});
+  const fabricBody = document.getElementById('fabricCardBody');
+  fabricBody.style.display = 'none';
+  const fabricBtn = document.querySelector('button[onclick*="fabricCardBody"]');
+  if(fabricBtn) fabricBtn.textContent = 'Εμφάνιση';
   buildDefaultProcCategories();
   renderProc();
   updateGrand();
@@ -4772,12 +4900,12 @@ function updateApproveButton(approved){
   const btn = document.getElementById('approveBtn');
   if(!btn) return;
   if(approved){
-    btn.textContent = '✅ Εγκρίθηκε';
+    btn.textContent = 'Εγκρίθηκε';
     btn.style.background = '#4a9d6e';
     btn.style.color = '#fff';
     btn.style.borderColor = '#4a9d6e';
   } else {
-    btn.textContent = '⏳ Εκκρεμεί';
+    btn.textContent = 'Εκκρεμεί';
     btn.style.background = '';
     btn.style.color = '';
     btn.style.borderColor = '';
@@ -5588,10 +5716,11 @@ async function checkUserPermissions(){
     const rows = await res.json();
     // No row for this email = no explicit grant = no access, matching how the RLS policies actually behave.
     const perms = rows[0] || { can_view_offers: false, can_view_forecast: false };
-    const navList = document.getElementById('navList'), navForecast = document.getElementById('navForecast'), navReports = document.getElementById('navReports');
+    const navList = document.getElementById('navList'), navForecast = document.getElementById('navForecast'), navReports = document.getElementById('navReports'), navClients = document.getElementById('navClients');
     if(!perms.can_view_offers){
       navList.style.display = 'none';
       navReports.style.display = 'none'; // Reports' cost analysis draws from offers data — same permission
+      navClients.style.display = 'none'; // Clients revenue/history is tied to the same offers data
     }
     if(!perms.can_view_forecast) navForecast.style.display = 'none';
 
@@ -6952,7 +7081,7 @@ async function refreshHomeDashboard(){
 
 if(flatRows.length===0){ addFlatRow({material:'Εξώφυλλο'}); addFlatRow({material:'Φόδρες'}); addFlatRow({material:'Κουβερτούρα'}); addFlatRow({material:'Χαρτόνια'}); }
 if(bookRows.length===0){ addBookRow({material:'Σώμα'}); }
-if(fabricRows.length===0){ addFabricRow({material:'Κάλυμμα', rollWidth:132}); }
+if(fabricRows.length===0){ addFabricRow({material:'Κάλυμμα'}); }
 if(procCategories.length===0){ buildDefaultProcCategories(); renderProc(); }
 // ===== Unsaved-changes indicators =====
 let offerDirty = false;
