@@ -811,14 +811,21 @@ function toggleMobileSidebar(forceClose){
     </div>
 
     <div class="card">
-      <div class="card-head"><div class="title">Χαρτί</div><button class="btn" onclick="addTkPaperRow()">+ Γραμμή</button></div>
+      <div class="card-head"><div class="title">Χαρτί</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="tkConsumeBtn" onclick="consumeTicketPaper()" title="Αφαιρεί από την Αποθήκη τα φύλλα αυτού του ticket — κάθε γραμμή αφαιρείται μόνο μία φορά">📉 Καταχώρηση Κατανάλωσης</button>
+          <button class="btn" onclick="addTkPaperRow()">+ Γραμμή</button>
+        </div>
+      </div>
       <div class="card-body" style="padding:0;">
         <table>
           <thead><tr>
             <th style="width:7%">Τύπος</th><th style="width:16%">Χαρτί</th><th style="width:10%">Χρώμα</th>
             <th style="width:8%">Καθαρά Φύλλα</th><th style="width:7%">Έξτρα</th><th style="width:9%">Σύνολο Φύλλων</th>
+            <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
             <th style="width:10%">Σχήμα εκτ/σης</th>
-            <th style="width:7%">ΜΟΝΤΑΖ</th><th style="width:6%">Όψεις</th><th style="width:3%"></th>
+            <th style="width:7%">ΜΟΝΤΑΖ</th><th style="width:6%">Όψεις</th>
+            <th style="width:3%"></th>
           </tr></thead>
           <tbody id="tkPaperBody"></tbody>
         </table>
@@ -1152,6 +1159,7 @@ function toggleMobileSidebar(forceClose){
       </div>
       <div class="card-body" id="stockList"></div>
     </div>
+
 
     <div class="card">
       <div class="card-head"><div class="title" id="stockLogTitle">Ιστορικό Κινήσεων</div></div>
@@ -4970,7 +4978,7 @@ let currentTicketId = null;
 
 function addTkPaperRow(vals){
   const id = tkPaperSeq++;
-  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:''}, vals||{}));
+  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false}, vals||{}));
   renderTkPaper();
 }
 function removeTkPaperRow(id){ tkPaperRows = tkPaperRows.filter(r=>r.id!==id); renderTkPaper(); }
@@ -5026,6 +5034,113 @@ async function splitTicketPaperRowToChild(rowId){
   statusMsg(`Δημιουργήθηκε ξεχωριστό, συνδεδεμένο Job Ticket για "${rowLabel}" ✓`);
 }
 
+// The paper for a job is physically consumed when it's printed. Recording that
+// here — rather than automatically on a board move — means the operator confirms
+// it at the moment they actually know, and a card moving back and forth can't
+// deduct the same sheets twice.
+async function consumeTicketPaper(){
+  const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0 && !r.consumed);
+  if(pending.length === 0){
+    const already = tkPaperRows.filter(r=>r.consumed).length;
+    statusMsg(already
+      ? 'Η κατανάλωση για αυτό το ticket έχει ήδη καταχωρηθεί.'
+      : 'Συμπλήρωσε πρώτα χαρτί και σύνολο φύλλων στις γραμμές.');
+    return;
+  }
+  const summary = pending.map(r=>`• ${r.xarti}: ${num(r.fylla).toLocaleString('el-GR')} φύλλα`).join('\n');
+  if(!confirm(`Αφαίρεση από την Αποθήκη:\n\n${summary}\n\nΘα καταγραφεί ως κατανάλωση αυτής της δουλειάς. Συνέχεια;`)) return;
+  try{
+    const record = await jbGetRecord();
+    record.stockLog = record.stockLog || [];
+    const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
+    const warnings = [];
+    pending.forEach(r=>{
+      const paper = r.xarti.trim(), qty = num(r.fylla);
+      if(!record.stock[paper]) record.stock[paper] = { qty:0, unit:'φύλλα' };
+      const before = num(record.stock[paper].qty);
+      if(before < qty) warnings.push(`${paper} (είχε ${before.toLocaleString('el-GR')})`);
+      record.stock[paper].qty = Math.max(0, before - qty);
+      record.stockLog.unshift({
+        id: 'stk'+Date.now()+Math.random().toString(36).slice(2,6),
+        paper, type:'remove', qty, unit: record.stock[paper].unit || 'φύλλα',
+        note: `Κατανάλωση από «${jobName}»`, date: new Date().toISOString()
+      });
+      r.consumed = true;
+    });
+    record.stockLog = record.stockLog.slice(0, 200);
+    await jbMergePath(SLICE_MAIN, ['stock'], record.stock);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    renderTkPaper();
+    markTicketDirty();
+    statusMsg(warnings.length
+      ? `Καταχωρήθηκε ✓ — προσοχή, το απόθεμα δεν επαρκούσε για: ${warnings.join(', ')}. Μην ξεχάσεις να αποθηκεύσεις το ticket.`
+      : `Καταχωρήθηκε η κατανάλωση ${pending.length} χαρτ${pending.length===1?'ιού':'ιών'} ✓ — μην ξεχάσεις να αποθηκεύσεις το ticket`);
+  }catch(e){
+    console.error('Consume paper error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+// Paper bought for a job often isn't fully used. Letting the operator report
+// what was left lets it go back into stock instead of quietly disappearing.
+function leftoverCell(r){
+  if(r.leftoverPosted){
+    return `<span style="font-size:10.5px;color:#1f7a4d;font-weight:700;" title="Καταχωρήθηκε στην Αποθήκη">✓ ${num(r.leftover).toLocaleString('el-GR')} πίσω</span>`;
+  }
+  const canPost = num(r.leftover) > 0 && (r.xarti||'').trim();
+  return `
+    <input type="number" min="0" style="width:62px;display:inline-block;" placeholder="0" value="${esc(r.leftover||'')}"
+      oninput="onLeftoverInput(${r.id}, this)" title="Φύλλα που περίσσεψαν">
+    <button class="own-ticket-btn lo-post" style="${canPost?'border-color:#4a9d6e;color:#1f7a4d;opacity:1;':''}"
+      ${canPost?'':'disabled'} title="Επιστροφή στην Αποθήκη"
+      onclick="postLeftoverToStock(${r.id})">↩</button>`;
+}
+
+// Updating the button in place rather than redrawing keeps the cursor where it
+// is — a full re-render would send it back to the start of the field.
+function onLeftoverInput(rowId, input){
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r) return;
+  r.leftover = input.value;
+  const btn = input.parentElement.querySelector('.lo-post');
+  if(!btn) return;
+  const canPost = num(r.leftover) > 0 && (r.xarti||'').trim();
+  btn.disabled = !canPost;
+  btn.style.cssText = canPost ? 'border-color:#4a9d6e;color:#1f7a4d;opacity:1;' : '';
+  markTicketDirty();
+}
+
+async function postLeftoverToStock(rowId){
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r) return;
+  const paper = (r.xarti||'').trim();
+  const qty = num(r.leftover);
+  if(!paper || !(qty>0)) return;
+  if(!confirm(`Επιστροφή ${qty.toLocaleString('el-GR')} φύλλων "${paper}" στην Αποθήκη;\n\nΘα προστεθούν στο απόθεμα και θα καταγραφεί η κίνηση.`)) return;
+  try{
+    const record = await jbGetRecord();
+    if(!record.stock[paper]) record.stock[paper] = { qty:0, unit:'φύλλα' };
+    record.stock[paper].qty = num(record.stock[paper].qty) + qty;
+    record.stockLog = record.stockLog || [];
+    const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
+    record.stockLog.unshift({
+      id: 'stk'+Date.now(), paper, type:'add', qty, unit: record.stock[paper].unit || 'φύλλα',
+      note: `Περίσσευμα από «${jobName}»`, date: new Date().toISOString()
+    });
+    record.stockLog = record.stockLog.slice(0, 200);
+    await jbMergePath(SLICE_MAIN, ['stock'], record.stock);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    // Mark it posted so the same sheets can't be added to stock twice.
+    r.leftoverPosted = true;
+    renderTkPaper();
+    markTicketDirty();
+    statusMsg(`Επιστράφηκαν ${qty.toLocaleString('el-GR')} φύλλα «${paper}» στην Αποθήκη ✓ — μην ξεχάσεις να αποθηκεύσεις το ticket`);
+  }catch(e){
+    console.error('Leftover to stock error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 function renderTkPaper(){
   const body = document.getElementById('tkPaperBody');
   body.innerHTML = '';
@@ -5037,7 +5152,8 @@ function renderTkPaper(){
       <td><input value="${esc(r.xroma)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value"></td>
       <td><input value="${esc(r.fyllaNet)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaNet=this.value" title="Καθαρά φύλλα (χωρίς έξτρα/σκάρτα)"></td>
       <td><input value="${esc(r.fyllaXtra)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaXtra=this.value" title="Έξτρα φύλλα (σκάρτα)"></td>
-      <td><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"></td>
+      <td><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
+      <td style="white-space:nowrap;">${leftoverCell(r)}</td>
       <td><input value="${esc(r.sxima)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).sxima=this.value"></td>
       <td><input value="${esc(r.tatgab)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tatgab=this.value"></td>
       <td><input value="${esc(r.opseis)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).opseis=this.value"></td>
@@ -8162,6 +8278,8 @@ async function resetAllStock(){
   }
 }
 
+// What the jobs still on the board actually need, paper by paper. Archived and
+// How many sheets are already on order but not yet delivered. Without this, a
 async function refreshStockList(){
   const el = document.getElementById('stockList');
   const key = getJbKey(), bin = getJbBin();
@@ -8248,9 +8366,12 @@ function toggleStockPaperExpand(paper){
   refreshStockList();
 }
 
-function quickStockAdjust(paper, unit){
+function quickStockAdjust(paper, unit, prefillQty){
   document.getElementById('stockPaperName').value = paper;
   document.getElementById('stockUnit').value = unit;
+  // When coming from a shortage, start with exactly the missing amount —
+  // it's almost always what you're about to add.
+  if(prefillQty > 0) document.getElementById('stockQty').value = prefillQty;
   document.getElementById('stockQty').focus();
   window.scrollTo({top:0, behavior:'smooth'});
 }
