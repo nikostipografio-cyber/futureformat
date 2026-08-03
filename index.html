@@ -5599,6 +5599,7 @@ async function refreshTicketList(){
         <div class="meta">${esc(t.label)}<div class="sub">${esc(dateStr)}</div></div>
         <div class="btns">
           ${statusHtml}
+          <button class="btn" onclick="event.stopPropagation();duplicateTicket('${t.id}')" title="Δημιουργεί νέο ticket με τα ίδια στοιχεία και το βάζει στην Παραγωγή — για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
           <button class="btn" onclick="event.stopPropagation();deleteTicket('${t.id}')">Διαγραφή</button>
         </div>
       `;
@@ -5607,6 +5608,65 @@ async function refreshTicketList(){
   }catch(e){
     console.error('List tickets error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα σύνδεσης: ' + esc(e.message) + '</div>';
+  }
+}
+
+// Repeat jobs are common: same product, new run. Copying a finished ticket
+// saves re-entering everything — but anything that belonged to the *previous*
+// run has to start clean, otherwise the new job inherits old times and would
+// double-count paper that was already taken out of stock.
+async function duplicateTicket(id){
+  try{
+    const record = await jbGetRecord();
+    const src = record.tickets[id];
+    if(!src){ statusMsg('Δεν βρέθηκε το ticket'); return; }
+
+    const baseName = (src.data||{}).info || src.label || 'Χωρίς τίτλο';
+    const newName = prompt(
+      'Αντιγραφή Job Ticket\n\nΤο νέο ticket θα μπει στην Παραγωγή με τα ίδια χαρτιά και επεξεργασίες.\nΔεν αντιγράφονται: ημερομηνία παράδοσης, μετρημένοι χρόνοι και κινήσεις αποθήκης.\n\nΌνομα νέου ticket:',
+      baseName + ' (ανατύπωση)'
+    );
+    if(newName === null) return;
+
+    const data = JSON.parse(JSON.stringify(src.data || {}));
+    data.info = newName.trim() || baseName;
+    data.deadline = '';                    // new run needs its own date
+    delete data.linkGroupId;               // not part of the old order group
+    delete data.isLinkChild;
+    delete data.approvedQty;
+    (data.paperRows || []).forEach(r=>{
+      r.consumed = false;                  // stock for the new run hasn't moved yet
+      r.leftover = '';
+      r.leftoverPosted = false;
+    });
+    (data.procRows || []).forEach(r=>{
+      r.mrSeconds = 0;                     // times belong to the previous run
+      r.prodSeconds = 0;
+      r.mrRunning = false;
+      r.prodRunning = false;
+      delete r.mrStartedAt;
+      delete r.prodStartedAt;
+    });
+    data.attachments = data.attachments || []; // files stay — same artwork
+
+    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    const newId = 't' + Date.now();
+    const copy = {
+      label: data.info,
+      date: '', deadlineDate: '',
+      savedAt: new Date().toISOString(),
+      stage: firstStage,
+      archived: false,
+      labels: [],
+      data
+    };
+    await jbMergePath(SLICE_MAIN, ['tickets', newId], copy);
+    await refreshTicketList();
+    await loadTicket(newId, false);
+    statusMsg(`Δημιουργήθηκε αντίγραφο στο στάδιο «${firstStage}» ✓ — βάλε ημερομηνία παράδοσης και αποθήκευσε`);
+  }catch(e){
+    console.error('Duplicate ticket error:', e);
+    statusMsg('Σφάλμα αντιγραφής: ' + e.message);
   }
 }
 
