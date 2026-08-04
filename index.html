@@ -82,8 +82,8 @@
   .kanban-invoice-btn{font-size:10px;font-weight:700;padding:4px 6px;border-radius:5px;cursor:pointer;
     background:#eaf1fe;color:#2f6fed;border:1px solid #c6d9fb;}
   .kanban-invoice-btn:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
-  .inv-return{background:#f4f4f2;color:var(--muted);border:1px solid var(--line);}
-  .inv-return:hover{background:#eceef1;color:var(--ink);}
+  .inv-offer{background:#eaf1fe;color:#2f6fed;border:1px solid #c6d9fb;}
+  .inv-offer:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
   .own-ticket-btn{border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;font-size:10px;padding:2px 3px;margin-right:2px;opacity:0.55;width:22px;height:22px;line-height:1;}
   .own-ticket-btn:hover{opacity:1;background:#eaf1fe;border-color:#2f6fed;}
   button.btn.solid{background:var(--blue);color:#fff;}
@@ -792,6 +792,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <input type="hidden" id="fApprovedQty" value="">
+  <input type="hidden" id="tkOfferId" value="">
 
   <div id="stickyTotals">
     <span class="st-item"><span class="st-lbl">Χαρτιά</span><span class="st-val" id="stMaterials">0,00 €</span></span>
@@ -5388,6 +5389,7 @@ function collectTicket(){
     tkPackagingMode: ticketPackagingMode,
     multiItem: ticketMultiItem,
     client: document.getElementById('tkClient').value,
+    offerId: document.getElementById('tkOfferId').value,
     tkPiecesPerBox: document.getElementById('tkPiecesPerBox').value,
     tkBoxesPerPallet: document.getElementById('tkBoxesPerPallet').value,
     linkGroupId: currentTicketLinkGroupId,
@@ -5403,6 +5405,7 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkSchema').value = d.schema||'';
   document.getElementById('tkSelides').value = d.selides||'';
   document.getElementById('tkClient').value = d.client||'';
+  document.getElementById('tkOfferId').value = d.offerId||'';
   document.getElementById('tkNotes').innerHTML = d.notes||'';
   tkPaperRows = []; tkProcRows = [];
   (d.paperRows||[]).forEach(r=>addTkPaperRow(r));
@@ -5600,6 +5603,7 @@ function newTicket(){
   document.getElementById('tkSchema').value = '';
   document.getElementById('tkSelides').value = '';
   document.getElementById('tkClient').value = '';
+  document.getElementById('tkOfferId').value = '';
   document.getElementById('tkNotes').innerHTML = '';
   tkPaperRows = []; tkProcRows = [];
   addTkPaperRow(); addTkProcRow();
@@ -5939,6 +5943,8 @@ function convertOfferToTicket(){
   document.getElementById('tkSchema').value = schemaClosedVal;
   document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
   document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
+  // Remember the offer this job came from, so the invoicing board can jump back to it.
+  document.getElementById('tkOfferId').value = currentOfferId || '';
 
   // Carry over the offer's computed weight/thickness per piece — saves re-entering
   // them in the ticket's Συσκευασία card.
@@ -6027,6 +6033,8 @@ async function convertOfferToMultipleTickets(){
   document.getElementById('tkSchemaClosed').value = schemaClosedVal;
   document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
   document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
+  // Remember the offer this job came from, so the invoicing board can jump back to it.
+  document.getElementById('tkOfferId').value = currentOfferId || '';
   document.getElementById('tkUnitWeight').value = document.getElementById('pkUnitWeight').value;
   document.getElementById('tkUnitThickness').value = document.getElementById('pkPieceThickness').value;
 
@@ -7676,23 +7684,6 @@ async function moveInvoiceCardTo(id, stage){
   }
 }
 
-async function returnFromInvoicing(id){
-  if(!confirm('Επιστροφή στην Παραγωγή;\n\nΗ κάρτα θα ξαναεμφανιστεί στον πίνακα παραγωγής και στο ημερολόγιο.')) return;
-  try{
-    const record = await jbGetRecord();
-    const t = record.tickets[id];
-    if(!t) return;
-    delete t.invoiceStage;
-    delete t.invoicedAt;
-    await jbMergePath(SLICE_MAIN, ['tickets', id], t);
-    statusMsg('Επέστρεψε στην Παραγωγή ✓');
-    refreshInvoicingBoard();
-  }catch(e){
-    console.error('Return from invoicing error:', e);
-    statusMsg('Σφάλμα: ' + e.message);
-  }
-}
-
 async function addInvoicingColumn(){
   const name = prompt('Όνομα νέας στήλης:');
   if(!name || !name.trim()) return;
@@ -7721,6 +7712,36 @@ async function deleteInvoicingColumn(idx){
     await jbPutRecord(record);
     refreshInvoicingBoard();
   }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// Tickets made after this feature carry the offer's id. Older ones don't, so
+// fall back to matching on the name the conversion builds ("Πελάτης — Τίτλος").
+function findLinkedOffer(record, t){
+  const offers = record.offers || {};
+  const info = t.data || {};
+  if(info.offerId && offers[info.offerId]) return { id: info.offerId, offer: offers[info.offerId] };
+  const name = ((info.info || t.label || '')).trim().toLowerCase();
+  if(!name) return null;
+  const hit = Object.entries(offers).find(([id,o])=>{
+    const d = o.data || {};
+    const built = [d.client, d.title].filter(Boolean).join(' — ').trim().toLowerCase();
+    return built && built === name;
+  });
+  return hit ? { id: hit[0], offer: hit[1] } : null;
+}
+
+async function openLinkedOffer(ticketId){
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[ticketId];
+    if(!t) return;
+    const linked = findLinkedOffer(record, { ...t, data: t.data });
+    if(!linked){ statusMsg('Δεν βρέθηκε συνδεδεμένη προσφορά για αυτή τη δουλειά.'); return; }
+    await loadOffer(linked.id);
+  }catch(e){
+    console.error('Open linked offer error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 async function refreshInvoicingBoard(){
@@ -7761,6 +7782,9 @@ async function refreshInvoicingBoard(){
         const metaBits = [];
         if(info.qty) metaBits.push('📦 ' + info.qty + ' τεμ.');
         if(t.deadlineDate) metaBits.push('🗓 ' + fmtDateShort(t.deadlineDate));
+        const linked = findLinkedOffer(record, t);
+        const offerId = linked ? linked.id : null;
+        const offerNo = linked ? (linked.offer.number || '') : '';
         card.innerHTML = `
           <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
             ${labelsHtml}
@@ -7768,9 +7792,9 @@ async function refreshInvoicingBoard(){
           </div>
           <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
           <div class="meta">${metaBits.join(' · ')}</div>
-          <div class="kanban-archive-btn inv-return" title="Επιστροφή στον πίνακα παραγωγής">↩ Πίσω στην Παραγωγή</div>`;
+          ${offerId ? `<div class="kanban-archive-btn inv-offer" title="Άνοιγμα της προσφοράς από την οποία προήλθε">📄 Προσφορά${offerNo ? ' ' + esc(offerNo) : ''}</div>` : ''}`;
         card.addEventListener('click', e=>{
-          if(e.target.closest('.inv-return')){ returnFromInvoicing(t.id); return; }
+          if(e.target.closest('.inv-offer')){ openLinkedOffer(t.id); return; }
           loadTicket(t.id, true);
         });
         card.addEventListener('dragstart', e=>{
