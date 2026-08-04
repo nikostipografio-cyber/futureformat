@@ -135,6 +135,14 @@
   .auto{background:#eceef1;border:1px solid transparent;border-radius:5px;padding:5px 6px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;color:#41474d;}
   input[readonly],select[disabled],textarea[readonly]{background:#eceef1;border-color:transparent;color:#41474d;cursor:default;}
   input[readonly]:focus{outline:none;border-color:transparent;}
+  /* A locked ticket is a document to read, not a disabled form. Full contrast is
+     kept; only the cursor and a soft frame say it can't be edited. */
+  body.tk-locked #viewTicketForm input[readonly],
+  body.tk-locked #viewTicketForm textarea[readonly]{
+    background:#fff;color:var(--ink);border-color:var(--line);cursor:default;
+  }
+  body.tk-locked #viewTicketForm .auto{background:#f4f4f2;color:var(--ink);}
+  body.tk-locked #viewTicketForm .tk-qty-cell[readonly]{background:#f0efe9;border-color:var(--ink);}
   .fixed{background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:5px 6px;text-align:center;color:var(--ink);}
   .rowdel{width:24px;height:24px;border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;}
   .rowdel:hover{background:#fbe6e5;color:#a3312a;border-color:#a3312a;}
@@ -5578,6 +5586,9 @@ async function loadTicket(id, locked){
 const TICKET_LOCK_FIELD_IDS = ['tkInfo','tkQty','tkDeadline','tkSchema','tkSelides'];
 
 function lockTicketForm(){
+  // Locked means "don't edit", not "hard to read". Production reads this on the
+  // shop floor, so the fields keep their normal contrast.
+  document.body.classList.add('tk-locked');
   document.getElementById('ticketLockBanner').style.display = 'flex';
   TICKET_LOCK_FIELD_IDS.forEach(id=>{ document.getElementById(id).readOnly = true; });
   document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{ inp.readOnly = true; });
@@ -5588,6 +5599,7 @@ function lockTicketForm(){
 }
 
 function unlockTicketForm(){
+  document.body.classList.remove('tk-locked');
   document.getElementById('ticketLockBanner').style.display = 'none';
   TICKET_LOCK_FIELD_IDS.forEach(id=>{ document.getElementById(id).readOnly = false; });
   document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{ inp.readOnly = false; });
