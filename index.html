@@ -69,6 +69,12 @@
   .pdf-dropdown-item{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink);white-space:nowrap;}
   .pdf-dropdown-item:hover{background:var(--page);}
   .pdf-dropdown-item:not(:last-child){border-bottom:1px solid var(--line);}
+  /* Per-row quantity, styled like the main quantity box at the top so it reads as
+     the same kind of figure. Only shown when the ticket holds several items. */
+  .tk-qty-cell{font-weight:800;font-size:15px;text-align:center;border:2px solid var(--ink);background:#f0efe9;}
+  .tk-qty-cell:focus{background:#fff;}
+  .tk-multi-col{display:none;}
+  body.tk-multi-mode .tk-multi-col{display:table-cell;}
   .own-ticket-btn{border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;font-size:10px;padding:2px 3px;margin-right:2px;opacity:0.55;width:22px;height:22px;line-height:1;}
   .own-ticket-btn:hover{opacity:1;background:#eaf1fe;border-color:#2f6fed;}
   button.btn.solid{background:var(--blue);color:#fff;}
@@ -287,23 +293,31 @@
   .op-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
   .op-company-info{max-width:60%;}
   .op-header .co-name{font-size:13px;font-weight:700;letter-spacing:0.2px;margin-bottom:5px;}
-  .op-header .co-tagline{font-size:10.5px;color:#666;line-height:1.6;}
+  .op-header .co-tagline{font-size:10.5px;color:#444;line-height:1.6;}
   .op-logo{max-height:70px;max-width:220px;object-fit:contain;}
   .op-client{font-size:19px;font-weight:700;color:#1a1a1a;margin-bottom:2px;letter-spacing:-0.2px;}
   .op-title{font-size:19px;font-weight:700;margin-bottom:2px;}
   .op-subtitle{font-size:19px;font-weight:700;margin-bottom:20px;letter-spacing:-0.2px;color:#555;}
   .op-infogrid{display:grid;grid-template-columns:1fr 1fr;column-gap:32px;row-gap:8px;font-size:12px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid #e5e5e5;}
   .op-infogrid .row{display:flex;justify-content:space-between;}
-  .op-infogrid .row .l{color:#888;}
-  .op-infogrid .row .v{font-weight:600;color:#1a1a1a;}
+  .op-infogrid .row .l{color:#8a8a8a;}
+  .op-infogrid .row .v{font-weight:700;color:#111;}
   table.op-table{width:100%;border-collapse:collapse;margin-bottom:14px;}
   table.op-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:#888;font-weight:600;padding:6px 4px;}
   table.op-table td{font-size:12.5px;padding:6px 4px;}
   .op-desc-row td{font-weight:700;font-size:14px;padding-top:10px;}
-  .op-meta-row td{font-size:11px;color:#777;padding:1px 4px;}
+  .op-meta-row td{font-size:11px;color:#444;padding:1px 4px;}
   table.op-sub{width:100%;border-collapse:collapse;margin:8px 0 20px;}
-  table.op-sub th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:0.4px;color:#999;font-weight:600;padding:5px 4px;border-bottom:1px solid #e5e5e5;}
-  table.op-sub td{font-size:12px;padding:6px 4px;border-bottom:1px solid #f2f2f2;}
+  /* Smaller and tighter: at the previous size long paper names ran into the
+     neighbouring column when printed. Wrapping is allowed so nothing overlaps. */
+  table.op-sub{table-layout:fixed;}
+  table.op-sub th{text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:0.2px;color:#8a8a8a;font-weight:600;padding:4px 3px;border-bottom:1px solid #e5e5e5;word-break:break-word;line-height:1.2;}
+  /* Values print near-black: on press the sheet is read at arm's length under
+     poor light, where mid-grey text is hard work. Only headings stay grey. */
+  table.op-sub td{font-size:10px;padding:5px 3px;border-bottom:1px solid #f2f2f2;word-break:break-word;line-height:1.25;color:#111;}
+  table.op-sub td.tipos{font-weight:800;}
+  table.op-sub td.qty{font-weight:800;font-size:12px;text-align:center;border:1.5px solid #333;background:#f0efe9;}
+  .op-fieldlabel{font-size:8.5px;text-transform:uppercase;letter-spacing:0.5px;color:#8a8a8a;font-weight:600;margin-bottom:2px;}
   .op-total-row{display:flex;justify-content:flex-end;align-items:baseline;gap:20px;font-weight:700;font-size:15px;border-top:1px solid #1a1a1a;padding-top:12px;margin-top:8px;margin-bottom:6px;}
   .op-vatnote{font-size:10.5px;color:#999;margin-bottom:14px;}
   .op-notes{font-size:11.5px;white-space:pre-wrap;margin-bottom:12px;line-height:1.6;color:#333;}
@@ -799,7 +813,7 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body">
         <div class="fieldgrid c2">
           <div class="field"><label>Πελάτης / Προϊόν</label><input id="tkInfo" style="font-size:18px;font-weight:800;" placeholder="π.χ. GABRILAKIS — FOSS NOTEPAD"></div>
-          <div class="field" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" style="font-size:18px;font-weight:800;"></div>
+          <div class="field" id="tkQtyField" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" style="font-size:18px;font-weight:800;"></div>
         </div>
         <div class="fieldgrid c3">
           <div class="field" id="tkDeadlineField"><label>Deadline (Ημερομηνία Παράδοσης)</label><input id="tkDeadline" type="date"></div>
@@ -813,6 +827,7 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">Χαρτί</div>
         <div style="display:flex;gap:8px;">
+          <button class="btn" id="tkMultiBtn" onclick="toggleTicketMultiItem()" title="Κάθε γραμμή είναι ξεχωριστό είδος με δική του ποσότητα">▤ Πολλαπλά Είδη</button>
           <button class="btn" id="tkConsumeBtn" onclick="consumeTicketPaper()" title="Αφαιρεί από την Αποθήκη τα φύλλα αυτού του ticket — κάθε γραμμή αφαιρείται μόνο μία φορά">📉 Καταχώρηση Κατανάλωσης</button>
           <button class="btn" onclick="addTkPaperRow()">+ Γραμμή</button>
         </div>
@@ -820,7 +835,8 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body" style="padding:0;">
         <table>
           <thead><tr>
-            <th style="width:7%">Τύπος</th><th style="width:16%">Χαρτί</th><th style="width:10%">Χρώμα</th>
+            <th style="width:7%">Τύπος</th><th style="width:15%">Χαρτί</th><th style="width:8%">Χρώμα</th>
+            <th style="width:8%" class="tk-multi-col" title="Πόσα τεμάχια αφορά αυτή η γραμμή">Ποσότητα</th>
             <th style="width:8%">Καθαρά Φύλλα</th><th style="width:7%">Έξτρα</th><th style="width:9%">Σύνολο Φύλλων</th>
             <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
             <th style="width:10%">Σχήμα εκτ/σης</th>
@@ -4978,7 +4994,7 @@ let currentTicketId = null;
 
 function addTkPaperRow(vals){
   const id = tkPaperSeq++;
-  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false}, vals||{}));
+  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', qty:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false}, vals||{}));
   renderTkPaper();
 }
 function removeTkPaperRow(id){ tkPaperRows = tkPaperRows.filter(r=>r.id!==id); renderTkPaper(); }
@@ -5038,6 +5054,34 @@ async function splitTicketPaperRowToChild(rowId){
 // here — rather than automatically on a board move — means the operator confirms
 // it at the moment they actually know, and a card moving back and forth can't
 // deduct the same sheets twice.
+// A ticket can hold several separate items, each with its own quantity. In that
+// case a single quantity at the top is meaningless, so it gives way to a column
+// in the paper table.
+let ticketMultiItem = false;
+
+function setTicketMultiItem(on){
+  ticketMultiItem = !!on;
+  document.body.classList.toggle('tk-multi-mode', ticketMultiItem);
+  const btn = document.getElementById('tkMultiBtn');
+  if(btn) btn.classList.toggle('solid', ticketMultiItem);
+  const qtyField = document.getElementById('tkQtyField');
+  if(qtyField) qtyField.style.display = ticketMultiItem ? 'none' : '';
+  renderTkPaper();
+}
+
+function toggleTicketMultiItem(){
+  const turningOff = ticketMultiItem;
+  if(turningOff){
+    const withQty = tkPaperRows.filter(r=>num(r.qty)>0).length;
+    if(withQty > 0 && !confirm(`Οι ποσότητες των ${withQty} γραμμών θα πάψουν να εμφανίζονται και θα ισχύει η μία ποσότητα στην κορυφή.\n\nΟι τιμές δεν σβήνονται — επανεμφανίζονται αν ξαναγυρίσεις σε Πολλαπλά Είδη. Συνέχεια;`)) return;
+  }
+  setTicketMultiItem(!ticketMultiItem);
+  markTicketDirty();
+  statusMsg(ticketMultiItem
+    ? 'Πολλαπλά Είδη: κάθε γραμμή χαρτιού έχει δική της ποσότητα.'
+    : 'Ένα είδος: ισχύει η ποσότητα στην κορυφή του ticket.');
+}
+
 async function consumeTicketPaper(){
   const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0 && !r.consumed);
   if(pending.length === 0){
@@ -5150,6 +5194,7 @@ function renderTkPaper(){
       <td><input value="${esc(r.tipos)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value"></td>
       <td><input list="paperOptions" value="${esc(r.xarti)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xarti=this.value"></td>
       <td><input value="${esc(r.xroma)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value"></td>
+      <td class="tk-multi-col"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
       <td><input value="${esc(r.fyllaNet)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaNet=this.value" title="Καθαρά φύλλα (χωρίς έξτρα/σκάρτα)"></td>
       <td><input value="${esc(r.fyllaXtra)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaXtra=this.value" title="Έξτρα φύλλα (σκάρτα)"></td>
       <td><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
@@ -5264,6 +5309,7 @@ function collectTicket(){
     tkPalletAddress: document.getElementById('tkPalletAddress').value,
     tkBoxLabelText: document.getElementById('tkBoxLabelText').value,
     tkPackagingMode: ticketPackagingMode,
+    multiItem: ticketMultiItem,
     tkPiecesPerBox: document.getElementById('tkPiecesPerBox').value,
     tkBoxesPerPallet: document.getElementById('tkBoxesPerPallet').value,
     linkGroupId: currentTicketLinkGroupId,
@@ -5295,6 +5341,7 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkPalletMaxWeight').value = d.tkPalletMaxWeight!=null && d.tkPalletMaxWeight!=='' ? d.tkPalletMaxWeight : 500;
   document.getElementById('tkPalletAddress').value = d.tkPalletAddress||'';
   document.getElementById('tkBoxLabelText').value = d.tkBoxLabelText||'';
+  setTicketMultiItem(!!d.multiItem);
   setPackagingMode(d.tkPackagingMode==='manual' ? 'manual' : 'auto');
   if(d.tkPackagingMode==='manual'){
     document.getElementById('tkPiecesPerBox').value = d.tkPiecesPerBox||'';
@@ -5438,6 +5485,7 @@ function toggleNotesHighlight(){
 }
 
 function newTicket(){
+  setTicketMultiItem(false); // a fresh ticket starts as a single item
   document.getElementById('tkInfo').value = '';
   document.getElementById('tkQty').value = '';
   document.getElementById('tkDeadline').value = '';
@@ -5672,10 +5720,40 @@ async function duplicateTicket(id){
 
 function printTicket(){
   const v = id => esc(document.getElementById(id).value);
-  const paperRowsHtml = tkPaperRows.map(r => `
-    <tr><td>${esc(r.tipos)}</td><td>${esc(r.xarti)}</td><td>${esc(r.xroma)}</td><td>${esc(r.fyllaNet)}</td><td>${esc(r.fyllaXtra)}</td><td>${esc(r.fylla)}</td><td>${esc(r.sxima)}</td><td>${esc(r.tatgab)}</td><td>${esc(r.opseis)}</td></tr>
-  `).join('');
-  const procRowsHtml = tkProcRows.map(r => `<tr><td>${esc(r.label)}</td><td>${esc(r.details)}</td></tr>`).join('');
+  // Only print what's actually filled in. Empty rows and whole empty columns are
+  // dropped, so the sheet that reaches the press carries no blank noise.
+  const hasVal = v => String(v ?? '').trim() !== '';
+  const paperRows = tkPaperRows.filter(r => hasVal(r.tipos) || hasVal(r.xarti) || hasVal(r.fylla));
+  const paperCols = [
+    { key:'tipos',    head:'Τύπος',          cls:'tipos' },
+    { key:'xarti',    head:'Χαρτί' },
+    { key:'xroma',    head:'Χρώμα' },
+    ...(ticketMultiItem ? [{ key:'qty', head:'Ποσότητα', cls:'qty' }] : []),
+    { key:'fyllaNet', head:'Καθαρά Φύλλα' },
+    { key:'fyllaXtra',head:'Έξτρα' },
+    { key:'fylla',    head:'Σύνολο Φύλλων' },
+    { key:'sxima',    head:'Σχήμα εκτ/σης' },
+    { key:'tatgab',   head:'ΜΟΝΤΑΖ' },
+    { key:'opseis',   head:'Όψεις' }
+  ].filter(col => paperRows.some(r => hasVal(r[col.key])));
+  const paperHeadHtml = paperCols.map(col => `<th>${col.head}</th>`).join('');
+  const paperRowsHtml = paperRows.map(r =>
+    `<tr>${paperCols.map(col => `<td${col.cls ? ` class="${col.cls}"` : ''}>${esc(r[col.key] ?? '')}</td>`).join('')}</tr>`
+  ).join('');
+
+  const procRows = tkProcRows.filter(r => hasVal(r.label) || hasVal(r.details));
+  const procHasDetails = procRows.some(r => hasVal(r.details));
+  const procRowsHtml = procRows.map(r =>
+    `<tr><td>${esc(r.label)}</td>${procHasDetails ? `<td>${esc(r.details)}</td>` : ''}</tr>`
+  ).join('');
+
+  const infoRow = (label, value) => hasVal(value)
+    ? `<div class="row"><span class="l">${label}</span><span class="v">${value}</span></div>` : '';
+  const infoRows = [
+    infoRow('Deadline', esc(fmtDate(v('tkDeadline')))),
+    infoRow('Σχήμα', v('tkSchema')),
+    infoRow('Σελίδες', v('tkSelides'))
+  ].filter(Boolean);
 
   const html = `
     <div class="op-page">
@@ -5687,27 +5765,24 @@ function printTicket(){
         ${LOGO_BASE64 ? `<img class="op-logo" src="data:image/png;base64,${LOGO_BASE64}">` : ''}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:20px;">
-        <div class="op-client" style="font-size:20px;font-weight:800;margin-bottom:0;">${v('tkInfo')}</div>
-        <div class="op-qtybox" style="padding:12px 24px;text-align:center;flex:none;">
+        <div>
+          <div class="op-fieldlabel">Πελάτης / Προϊόν</div>
+          <div class="op-client" style="font-size:20px;font-weight:800;margin-bottom:0;">${v('tkInfo')}</div>
+        </div>
+        ${ticketMultiItem ? '' : `<div class="op-qtybox" style="padding:12px 24px;text-align:center;flex:none;">
           <div class="l">Ποσότητα</div>
           <div class="v" style="font-size:26px;">${v('tkQty')} τεμ.</div>
-        </div>
+        </div>`}
       </div>
-      <div class="op-infogrid" style="grid-template-columns:1fr 1fr;">
-        <div class="row"><span class="l">Deadline</span><span class="v">${esc(fmtDate(v('tkDeadline')))}</span></div>
-        <div class="row"><span class="l">Σχήμα</span><span class="v">${v('tkSchema')}</span></div>
-      </div>
-      <div class="op-infogrid" style="grid-template-columns:1fr;">
-        <div class="row"><span class="l">Σελίδες</span><span class="v">${v('tkSelides')}</span></div>
-      </div>
-      <table class="op-sub">
-        <thead><tr><th>Τύπος</th><th>Χαρτί</th><th>Χρώμα</th><th>Καθαρά Φύλλα</th><th>Έξτρα</th><th>Σύνολο Φύλλων</th><th>Σχήμα εκτ/σης</th><th>ΜΟΝΤΑΖ</th><th>Όψεις</th></tr></thead>
+      ${infoRows.length ? `<div class="op-infogrid" style="grid-template-columns:repeat(${Math.min(infoRows.length,3)},1fr);">${infoRows.join('')}</div>` : ''}
+      ${paperRows.length ? `<table class="op-sub">
+        <thead><tr>${paperHeadHtml}</tr></thead>
         <tbody>${paperRowsHtml}</tbody>
-      </table>
-      <table class="op-sub">
-        <thead><tr><th>Εργασία</th><th>Λεπτομέρειες</th></tr></thead>
+      </table>` : ''}
+      ${procRows.length ? `<table class="op-sub">
+        <thead><tr><th>Εργασία</th>${procHasDetails ? '<th>Λεπτομέρειες</th>' : ''}</tr></thead>
         <tbody>${procRowsHtml}</tbody>
-      </table>
+      </table>` : ''}
       ${document.getElementById('tkNotes').innerHTML.trim() ? `<div class="op-notes"><b>Παρατηρήσεις:</b><br>${document.getElementById('tkNotes').innerHTML}</div>` : ''}
     </div>
   `;
@@ -5744,7 +5819,7 @@ function convertOfferToTicket(){
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const xtra = num(r.xtra);
     const totalSheets = sheets + xtra;
-    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: r.sides || '' });
+    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty) || '', fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: r.sides || '' });
   });
   bookRows.filter(r=>r.material || r.paperName).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
@@ -5827,7 +5902,7 @@ async function convertOfferToMultipleTickets(){
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const xtra = num(r.xtra);
     const totalSheets = sheets + xtra;
-    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
+    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty)||'', fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
   });
   bookRows.filter(r=>r.material || r.paperName).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
@@ -5877,7 +5952,7 @@ async function convertOfferToMultipleTickets(){
       const xtra = num(r.xtra);
       const totalSheets = sheets + xtra;
       tkPaperRows = [];
-      addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
+      addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty)||'', fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
 
       tkProcRows = [];
       procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
