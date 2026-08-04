@@ -75,6 +75,15 @@
   .tk-qty-cell:focus{background:#fff;}
   .tk-multi-col{display:none;}
   body.tk-multi-mode .tk-multi-col{display:table-cell;}
+  /* Two ways out of the last column: archive it, or send it on to invoicing. */
+  .kanban-done-actions{display:flex;gap:5px;margin-top:7px;}
+  .kanban-done-actions .kanban-archive-btn,
+  .kanban-done-actions .kanban-invoice-btn{margin-top:0;flex:1;text-align:center;}
+  .kanban-invoice-btn{font-size:10px;font-weight:700;padding:4px 6px;border-radius:5px;cursor:pointer;
+    background:#eaf1fe;color:#2f6fed;border:1px solid #c6d9fb;}
+  .kanban-invoice-btn:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
+  .inv-return{background:#f4f4f2;color:var(--muted);border:1px solid var(--line);}
+  .inv-return:hover{background:#eceef1;color:var(--ink);}
   .own-ticket-btn{border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;font-size:10px;padding:2px 3px;margin-right:2px;opacity:0.55;width:22px;height:22px;line-height:1;}
   .own-ticket-btn:hover{opacity:1;background:#eaf1fe;border-color:#2f6fed;}
   button.btn.solid{background:var(--blue);color:#fff;}
@@ -185,6 +194,12 @@
   .ticket-item .btns{display:flex;gap:8px;align-items:center;}
 
   .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:6px;}
+  .ord-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    margin:16px 0 7px;padding-bottom:5px;border-bottom:2px solid var(--ink);flex-wrap:wrap;}
+  .ord-group-head:first-child{margin-top:0;}
+  .ord-group-name{font-weight:800;font-size:13.5px;text-transform:uppercase;letter-spacing:0.3px;}
+  .ord-group-meta{font-size:12px;color:var(--muted);}
+  .ord-group-meta b{color:var(--ink);}
   .order-card.received{border-left-color:#4a9d6e;opacity:0.85;}
   .order-card.missing-info{border-left-color:#c0392b;background:#fef7f6;}
   .order-card .info .job{font-weight:700;font-size:13px;}
@@ -320,11 +335,14 @@
      neighbouring column when printed. Wrapping is allowed so nothing overlaps. */
   table.op-sub{table-layout:fixed;}
   table.op-sub th{text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:0.2px;color:#8a8a8a;font-weight:600;padding:4px 3px;border-bottom:1px solid #e5e5e5;word-break:break-word;line-height:1.2;}
-  /* Values print near-black: on press the sheet is read at arm's length under
-     poor light, where mid-grey text is hard work. Only headings stay grey. */
-  table.op-sub td{font-size:10px;padding:5px 3px;border-bottom:1px solid #f2f2f2;word-break:break-word;line-height:1.25;color:#111;}
+  /* Values print near-black and a size up now that dropping the net/waste
+     columns freed the room: the sheet is read at arm's length on press. */
+  table.op-sub td{font-size:10.5px;padding:6px 3px;border-bottom:1px solid #f2f2f2;word-break:break-word;line-height:1.3;color:#111;}
   table.op-sub td.tipos{font-weight:800;}
-  table.op-sub td.qty{font-weight:800;font-size:12px;text-align:center;border:1.5px solid #333;background:#f0efe9;}
+  table.op-sub td.qty{text-align:center;padding:5px 4px;}
+  table.op-sub td.qty .qty-pill{display:flex;align-items:center;justify-content:center;
+    font-weight:800;white-space:nowrap;width:100%;height:24px;box-sizing:border-box;
+    border:1.5px solid #333;border-radius:12px;background:#f0efe9;padding:0 6px;line-height:1;}
   .op-fieldlabel{font-size:8.5px;text-transform:uppercase;letter-spacing:0.5px;color:#8a8a8a;font-weight:600;margin-bottom:2px;}
   .op-total-row{display:flex;justify-content:flex-end;align-items:baseline;gap:20px;font-weight:700;font-size:15px;border-top:1px solid #1a1a1a;padding-top:12px;margin-top:8px;margin-bottom:6px;}
   .op-vatnote{font-size:10.5px;color:#999;margin-bottom:14px;}
@@ -479,6 +497,7 @@ function toggleMobileSidebar(forceClose){
     <button class="sidebar-link" id="navList" onclick="switchView('list');toggleMobileSidebar(true)"><span class="icon">📄</span><span class="label">Προσφορές</span></button>
     <button class="sidebar-link" id="navTicket" onclick="switchView('ticketlist');toggleMobileSidebar(true)"><span class="icon">🎫</span><span class="label">Job Tickets</span></button>
     <button class="sidebar-link" id="navProduction" onclick="switchView('production');toggleMobileSidebar(true)"><span class="icon">🏭</span><span class="label">Παραγωγή</span></button>
+    <button class="sidebar-link" id="navInvoicing" onclick="switchView('invoicing');toggleMobileSidebar(true)"><span class="icon">🧾</span><span class="label">Τιμολόγηση</span></button>
     <button class="sidebar-link" id="navClients" onclick="switchView('clients');toggleMobileSidebar(true)"><span class="icon">👥</span><span class="label">Πελάτες</span></button>
     <button class="sidebar-link" id="navOrders" onclick="switchView('orders');toggleMobileSidebar(true)"><span class="icon">📦</span><span class="label">Παραγγελίες Υλικών</span></button>
     <button class="sidebar-link" id="navStock" onclick="switchView('stock');toggleMobileSidebar(true)"><span class="icon">🏬</span><span class="label">Αποθήκη</span></button>
@@ -824,6 +843,7 @@ function toggleMobileSidebar(forceClose){
           <div class="field" id="tkQtyField" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" style="font-size:18px;font-weight:800;"></div>
         </div>
         <div class="fieldgrid c3">
+          <div class="field"><label>Πελάτης</label><input id="tkClient" list="clientOptions" placeholder="Διάλεξε ή γράψε πελάτη" title="Χρησιμεύει για να βρίσκεις όλες τις δουλειές ενός πελάτη"></div>
           <div class="field" id="tkDeadlineField"><label>Deadline (Ημερομηνία Παράδοσης)</label><input id="tkDeadline" type="date"></div>
           <div class="field" id="tkDeadlineChildNote" style="display:none;"><label>Deadline (Ημερομηνία Παράδοσης)</label><div class="empty-note" style="padding:8px 0;">Καθορίζεται από το κύριο ticket της παραγγελίας (δείτε πιο πάνω) — αυτό εδώ χρησιμοποιείται μόνο στην Παραγωγή.</div></div>
           <div class="field"><label>Σχήμα</label><input id="tkSchema"></div>
@@ -843,8 +863,9 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body" style="padding:0;">
         <table>
           <thead><tr>
-            <th style="width:7%">Τύπος</th><th style="width:15%">Χαρτί</th><th style="width:8%">Χρώμα</th>
+            <th style="width:7%">Τύπος</th>
             <th style="width:8%" class="tk-multi-col" title="Πόσα τεμάχια αφορά αυτή η γραμμή">Ποσότητα</th>
+            <th style="width:15%">Χαρτί</th><th style="width:8%">Χρώμα</th>
             <th style="width:8%">Καθαρά Φύλλα</th><th style="width:7%">Έξτρα</th><th style="width:9%">Σύνολο Φύλλων</th>
             <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
             <th style="width:10%">Σχήμα εκτ/σης</th>
@@ -878,8 +899,10 @@ function toggleMobileSidebar(forceClose){
     </div>
 
     <div class="card">
-      <div class="card-head"><div class="title">📎 Επισυναπτόμενα Αρχεία (PDF/Φωτογραφίες)</div></div>
-      <div class="card-body">
+      <div class="card-head"><div class="title">📎 Επισυναπτόμενα Αρχεία (PDF/Φωτογραφίες)</div>
+        <button class="btn" id="tkAttachToggle" onclick="toggleTicketSection('tkAttachBody','tkAttachToggle')">▶ Εμφάνιση</button>
+      </div>
+      <div class="card-body" id="tkAttachBody" style="display:none;">
         <div id="tkAttachmentList" style="margin-bottom:10px;"></div>
         <div style="display:flex;gap:10px;align-items:center;">
           <input type="file" id="tkAttachmentInput" accept=".pdf,image/*" style="flex:1;">
@@ -892,12 +915,15 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">📦 Συσκευασία</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn" id="pkModeManualBtn" onclick="setPackagingMode('manual')">✍️ Χειροκίνητα</button>
-          <button class="btn" id="pkModeAutoBtn" onclick="setPackagingMode('auto')">🧮 Αυτόματος Υπολογισμός</button>
-          <button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button>
+          <span id="pkControls" style="display:none;gap:8px;">
+            <button class="btn" id="pkModeManualBtn" onclick="setPackagingMode('manual')">✍️ Χειροκίνητα</button>
+            <button class="btn" id="pkModeAutoBtn" onclick="setPackagingMode('auto')">🧮 Αυτόματος Υπολογισμός</button>
+            <button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button>
+          </span>
+          <button class="btn" id="tkPackToggle" onclick="toggleTicketSection('tkPackBody','tkPackToggle','pkControls')">▶ Εμφάνιση</button>
         </div>
       </div>
-      <div class="card-body" style="padding-top:14px;padding-bottom:14px;">
+      <div class="card-body" id="tkPackBody" style="padding-top:14px;padding-bottom:14px;display:none;">
         <div class="pk-section pk-manual" id="pkManualSection">
           <div class="fieldgrid c4">
             <div class="field pk-auto-only"><label>Πάχος/τεμάχιο (mm)</label><input id="tkUnitThickness" type="number" step="0.01" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
@@ -930,17 +956,18 @@ function toggleMobileSidebar(forceClose){
 
         <div class="pk-section pk-auto" style="margin-top:8px;">
           <div class="fieldgrid c4">
-            <div class="field"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field" id="tkUnitWeightField"><label>Βάρος/τεμάχιο (g)</label><input id="tkUnitWeight" type="number" step="0.1" placeholder="από προσφορά" oninput="recalcTicketPackaging()"></div>
+            <div class="field" id="tkPackQtyField"><label>Ποσότητα</label><input id="tkPackQty" type="number" min="0" placeholder="όλη η ποσότητα" title="Πόσα τεμάχια συσκευάζονται. Άφησέ το κενό για όλη την ποσότητα του ticket — συμπλήρωσέ το όταν στέλνεις μέρος της παραγγελίας σε έναν προορισμό." oninput="onManualPackagingInput()"></div>
             <div class="field"><label>Τεμάχια/κουτί</label><input id="tkPiecesPerBox" oninput="onManualPackagingInput()"></div>
             <div class="field"><label>Κουτιά/παλέτα</label><input id="tkBoxesPerPallet" oninput="onManualPackagingInput()"></div>
           </div>
         </div>
 
-        <div class="totals" style="padding-top:2px;grid-template-columns:1fr 1fr 1fr;">
+        <div class="totals" style="padding-top:2px;grid-template-columns:1fr 1fr;">
           <div class="totcard"><div class="lbl">Σύνολο Κουτιών</div><div class="val" id="tkTotalBoxes">–</div></div>
           <div class="totcard"><div class="lbl">Σύνολο Παλετών</div><div class="val" id="tkTotalPallets">–</div></div>
-          <div class="totcard"><div class="lbl">Βάρος/Παλέτα (τελευταία εξαιρείται)</div><div class="val" id="tkPalletWeight">–</div></div>
         </div>
+        <input type="hidden" id="tkPalletWeight">
         <div class="field" style="margin-top:12px;"><label>Εναλλακτικό κείμενο ετικέτας κουτιού (αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkBoxLabelText" rows="2" placeholder="π.χ. αφήστε κενό για το κανονικό Πελάτης — Τίτλος Έργου"></textarea></div>
         <div class="field" style="margin-top:12px;"><label>Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkPalletAddress" rows="2" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea></div>
         <div style="display:flex;gap:10px;margin-top:12px;">
@@ -1018,6 +1045,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn ord-filter-btn solid" data-filter="all" onclick="setOrdersFilter('all')">Όλες</button>
           <button class="btn ord-filter-btn" data-filter="pending" onclick="setOrdersFilter('pending')">Εκκρεμείς</button>
           <button class="btn ord-filter-btn" data-filter="received" onclick="setOrdersFilter('received')">Παραλήφθηκαν</button>
+          <button class="btn" id="ordGroupBtn" onclick="toggleOrdersGrouping()" title="Ομαδοποίηση ανά προμηθευτή — τι περιμένουμε από τον καθένα">🏢 Ανά Προμηθευτή</button>
           <input id="ordSearch" placeholder="Αναζήτηση δουλειάς / υλικού..." style="flex:1;min-width:200px;" oninput="refreshOrdersList()">
           <button class="btn" style="color:#c0392b;border-color:#c0392b;display:none;" id="ordersBulkDeleteBtn" onclick="deleteSelectedOrders()">🗑 Διαγραφή Επιλεγμένων (<span id="ordersSelectedCount">0</span>)</button>
         </div>
@@ -1102,7 +1130,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" id="archiveToggleBtn" onclick="toggleArchiveView()">📦 Αρχειοθετημένα</button>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά ολοκληρωθεί, πάτα "✓ Αρχειοθέτηση" πάνω στην κάρτα για να φύγει από τον πίνακα (τα στοιχεία της δεν χάνονται, μένουν διαθέσιμα εδώ).</div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική.</div>
       <div class="card-body" id="archiveList" style="display:none;"></div>
       <div id="bulkSelectBar" style="display:none;padding:10px 16px;border-top:1px solid var(--line);background:var(--page);align-items:center;gap:12px;">
         <span id="bulkSelectCount" style="font-size:12.5px;font-weight:600;">0 επιλεγμένα</span>
@@ -1266,6 +1294,18 @@ function toggleMobileSidebar(forceClose){
         <div id="repMarginTable"></div>
       </div>
     </div>
+  </div>
+
+  <div id="viewInvoicing" style="display:none;">
+    <div class="card">
+      <div class="card-head"><div class="title">🧾 Τιμολόγηση</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="addInvoicingColumn()">+ Νέα Στήλη</button>
+        </div>
+      </div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Οι δουλειές έρχονται εδώ όταν πατήσεις «🧾 Τιμολόγηση» στην τελευταία στήλη της Παραγωγής. Σύρε τις κάρτες ανάμεσα στις στήλες. Κλικ σε μια κάρτα ανοίγει το ticket.</div>
+    </div>
+    <div id="invoicingBoard" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:50px;align-items:flex-start;scroll-behavior:smooth;"></div>
   </div>
 
   <div id="viewClients" style="display:none;">
@@ -4095,6 +4135,8 @@ function setPackagingMode(mode){
     el.style.fontWeight = '';
   });
   document.getElementById('pkManualSection').style.display = (mode==='manual') ? 'none' : '';
+  // Weight per piece only matters when the app is working out box limits itself.
+  document.getElementById('tkUnitWeightField').style.display = (mode==='manual') ? 'none' : '';
   if(mode==='manual') document.getElementById('tkPackagingMorePanel').style.display = 'none';
   recalcTicketPackaging();
 }
@@ -4107,7 +4149,9 @@ function recalcTicketPackaging(){
   const baseWeight_g = num(document.getElementById('tkUnitWeight').value);
   const extraWeight_g = 0; // field removed — extra weight no longer tracked separately
   const unitWeight_g = baseWeight_g + extraWeight_g;
-  const qty = num(document.getElementById('tkQty').value);
+  // Part of an order often ships to one destination, so packaging can be worked
+  // out on a smaller figure than the ticket's total.
+  const qty = num(document.getElementById('tkPackQty').value) || num(document.getElementById('tkQty').value);
   const unitWeight_kg = unitWeight_g/1000;
   const boxMaxWeight = num(document.getElementById('tkBoxMaxWeight').value);
   const boxMaxPieces = num(document.getElementById('tkBoxMaxPieces').value);
@@ -4167,7 +4211,7 @@ function recalcTicketPackaging(){
   const palletWeight_kg = palletTare + boxesPerPallet*boxWeight_kg;
 
   document.getElementById('tkTotalPallets').textContent = totalPallets>0 ? totalPallets : '–';
-  document.getElementById('tkPalletWeight').textContent = palletWeight_kg>0 ? palletWeight_kg.toLocaleString('el-GR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' kg' : '–';
+  document.getElementById('tkPalletWeight').value = palletWeight_kg>0 ? palletWeight_kg.toFixed(1) : '';
 }
 
 // Exact geometry of the "Tray 1" sticker sheet: 175x248mm page, four labels
@@ -4189,7 +4233,11 @@ function labelPrintCss(){
     .label{position:absolute;left:${LABEL_LEFT_MM}mm;width:${LABEL_W_MM}mm;height:${LABEL_H_MM}mm;box-sizing:border-box;padding:3.5mm 4.5mm;overflow:hidden;}
     .lb-top{display:flex;gap:3.5mm;}
     .lb-main-box{flex:1;min-width:0;padding:0 3mm;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;}
-    .lb-main{font-size:12pt;font-weight:400;line-height:1.26;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;white-space:pre-line;}
+    /* Addresses run to three or four lines; clamping at two silently cut them
+       off. Uppercase reads better across a warehouse. */
+    .lb-main{font-size:12pt;font-weight:400;line-height:1.24;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;word-break:break-word;white-space:pre-line;text-transform:uppercase;}
+    .lb-main.lb-main-sm{font-size:10pt;line-height:1.2;}
+    .lb-main.lb-main-xs{font-size:8.5pt;line-height:1.15;}
     .lb-count-box{width:29mm;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0 1mm;}
     .lb-count-header{display:flex;justify-content:space-between;width:100%;font-size:7pt;letter-spacing:0.5pt;text-transform:uppercase;color:#888;margin-bottom:1.5mm;}
     .lb-count-value{font-size:26pt;font-weight:800;line-height:1;text-align:right;width:100%;}
@@ -4201,6 +4249,15 @@ function labelPrintCss(){
 
 function labelMainLine(){
   return document.getElementById('tkInfo').value;
+}
+
+// Long addresses get a step down in size rather than being cut off.
+function labelMainClass(text){
+  const lines = String(text||'').split('\n').length;
+  const chars = String(text||'').length;
+  if(lines >= 4 || chars > 90) return 'lb-main lb-main-xs';
+  if(lines === 3 || chars > 55) return 'lb-main lb-main-sm';
+  return 'lb-main';
 }
 
 function buildLabelSheets(labelDivsHtml){
@@ -4221,9 +4278,11 @@ function printBoxLabels(){
   const boxLabelOverride = document.getElementById('tkBoxLabelText').value.trim();
   const mainLine = boxLabelOverride || labelMainLine();
   const piecesPerBox = num(document.getElementById('tkPiecesPerBox').value);
-  const qty = num(document.getElementById('tkQty').value);
+  // Labels must describe the shipment being packed, not the whole order.
+  const qty = num(document.getElementById('tkPackQty').value) || num(document.getElementById('tkQty').value);
   const logoImg = LOGO_BASE64 ? `<img class="lb-logo" src="data:image/png;base64,${LOGO_BASE64}">` : '';
 
+  const mainCls = labelMainClass(mainLine);
   const labelDivs = [];
   for(let i=1; i<=totalBoxes; i++){
     const isLast = i===totalBoxes;
@@ -4232,7 +4291,7 @@ function printBoxLabels(){
       <div class="label" style="top:__TOP__mm;">
         <div class="lb-top">
           <div class="lb-main-box">
-            <div class="lb-main">${esc(mainLine)}</div>
+            <div class="${mainCls}">${esc(mainLine)}</div>
           </div>
           <div class="lb-count-box">
             <div class="lb-count-header"><span>Qnt</span><span>Pcs</span></div>
@@ -4256,15 +4315,16 @@ function printPalletLabels(){
   const totalBoxes = num(document.getElementById('tkTotalBoxes').textContent);
   const logoImg = LOGO_BASE64 ? `<img class="lb-logo" src="data:image/png;base64,${LOGO_BASE64}">` : '';
 
+  const mainCls = labelMainClass(mainLine);
   const labelDivs = [];
   for(let i=1; i<=totalPallets; i++){
     const isLast = i===totalPallets;
     const boxesOnThisPallet = isLast ? (totalBoxes - boxesPerPallet*(totalPallets-1)) : boxesPerPallet;
-    labelDivs.push(`
+    const label = `
       <div class="label" style="top:__TOP__mm;">
         <div class="lb-top">
           <div class="lb-main-box">
-            <div class="lb-main">${esc(mainLine)}</div>
+            <div class="${mainCls}">${esc(mainLine)}</div>
           </div>
           <div class="lb-count-box">
             <div class="lb-count-header"><span>Qnt</span><span>Box</span></div>
@@ -4274,7 +4334,10 @@ function printPalletLabels(){
         </div>
         <div class="lb-bottom">${logoImg}</div>
       </div>
-    `);
+    `;
+    // Four identical labels per pallet — one for each side. With four labels to
+    // a sheet, that lands as exactly one sheet per pallet.
+    for(let side=0; side<4; side++) labelDivs.push(label);
   }
   openLabelWindowAndPrint('Ετικέτες Παλετών', buildLabelSheets(labelDivs));
 }
@@ -4390,6 +4453,7 @@ function switchView(view){
   document.getElementById('viewOrders').style.display = view==='orders' ? 'block' : 'none';
   document.getElementById('viewForecast').style.display = view==='forecast' ? 'block' : 'none';
   document.getElementById('viewProduction').style.display = view==='production' ? 'block' : 'none';
+  document.getElementById('viewInvoicing').style.display = view==='invoicing' ? 'block' : 'none';
   document.getElementById('viewProductionTime').style.display = view==='productiontime' ? 'block' : 'none';
   document.getElementById('viewStock').style.display = view==='stock' ? 'block' : 'none';
   document.getElementById('viewReports').style.display = view==='reports' ? 'block' : 'none';
@@ -4402,6 +4466,7 @@ function switchView(view){
   document.getElementById('navOrders').classList.toggle('solid', view==='orders');
   document.getElementById('navForecast').classList.toggle('solid', view==='forecast');
   document.getElementById('navProduction').classList.toggle('solid', view==='production');
+  document.getElementById('navInvoicing').classList.toggle('solid', view==='invoicing');
   document.getElementById('navProdTime').classList.toggle('solid', view==='productiontime');
   document.getElementById('navStock').classList.toggle('solid', view==='stock');
   document.getElementById('navReports').classList.toggle('solid', view==='reports');
@@ -4413,6 +4478,7 @@ function switchView(view){
   if(view==='orders') refreshOrdersList();
   if(view==='forecast') refreshForecastList();
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
+  if(view==='invoicing') refreshInvoicingBoard();
   if(view==='productiontime') refreshProdTimeList();
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
@@ -4533,6 +4599,7 @@ async function jbGetRecord(){
   if(!record.orders) record.orders = {};
   if(!record.forecast) record.forecast = {};
   if(!record.productionStages) record.productionStages = ['Νέο','Μοντάζ','Έλεγχος/Έγκριση','CTP','Εκτύπωση','Βιβλιοδεσία','Postpress','Ολοκληρώθηκε'];
+  if(!record.invoicingStages) record.invoicingStages = ['ΠΡΟΣ ΤΙΜΟΛΟΓΗΣΗ','ΤΙΜΟΛΟΓΗΘΗΚΑΝ','ΙΤΥΕ-ΤΙΜΟΛΟΓΗΘΗΚΑΝ','AVENUE PACK','FSC - COMPLETED','ΚΚΕ-ΚΝΕ','ΔΩΡΑ-ΧΟΡΗΓΙΕΣ'];
   if(!record.labels) record.labels = [
     {id:'wait_paper', name:'Αναμονή Χαρτιού', color:'#e0a030'},
     {id:'paper_ok', name:'Χαρτί ΟΚ', color:'#4a9d6e'}
@@ -5200,9 +5267,10 @@ function renderTkPaper(){
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input value="${esc(r.tipos)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value"></td>
+      <td class="tk-multi-col"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
       <td><input list="paperOptions" value="${esc(r.xarti)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xarti=this.value"></td>
       <td><input value="${esc(r.xroma)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value"></td>
-      <td class="tk-multi-col"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
+
       <td><input value="${esc(r.fyllaNet)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaNet=this.value" title="Καθαρά φύλλα (χωρίς έξτρα/σκάρτα)"></td>
       <td><input value="${esc(r.fyllaXtra)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaXtra=this.value" title="Έξτρα φύλλα (σκάρτα)"></td>
       <td><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
@@ -5306,6 +5374,7 @@ function collectTicket(){
     paperRows: tkPaperRows.map(({id, ...r})=>r),
     procRows: tkProcRows.map(({id, ...r})=>r),
     tkUnitWeight: document.getElementById('tkUnitWeight').value,
+    tkPackQty: document.getElementById('tkPackQty').value,
     tkUnitThickness: document.getElementById('tkUnitThickness').value,
     tkExtraThickness: document.getElementById('tkExtraThickness').value,
     tkSchemaClosed: document.getElementById('tkSchemaClosed').value,
@@ -5318,6 +5387,7 @@ function collectTicket(){
     tkBoxLabelText: document.getElementById('tkBoxLabelText').value,
     tkPackagingMode: ticketPackagingMode,
     multiItem: ticketMultiItem,
+    client: document.getElementById('tkClient').value,
     tkPiecesPerBox: document.getElementById('tkPiecesPerBox').value,
     tkBoxesPerPallet: document.getElementById('tkBoxesPerPallet').value,
     linkGroupId: currentTicketLinkGroupId,
@@ -5332,6 +5402,7 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkDeadline').value = topLevelDeadline || d.deadline || '';
   document.getElementById('tkSchema').value = d.schema||'';
   document.getElementById('tkSelides').value = d.selides||'';
+  document.getElementById('tkClient').value = d.client||'';
   document.getElementById('tkNotes').innerHTML = d.notes||'';
   tkPaperRows = []; tkProcRows = [];
   (d.paperRows||[]).forEach(r=>addTkPaperRow(r));
@@ -5339,6 +5410,7 @@ function applyTicketData(d, topLevelDeadline){
   if(tkPaperRows.length===0) addTkPaperRow();
   if(tkProcRows.length===0) addTkProcRow();
   document.getElementById('tkUnitWeight').value = d.tkUnitWeight||'';
+  document.getElementById('tkPackQty').value = d.tkPackQty||'';
   document.getElementById('tkUnitThickness').value = d.tkUnitThickness||'';
   document.getElementById('tkExtraThickness').value = d.tkExtraThickness||'';
   document.getElementById('tkSchemaClosed').value = d.tkSchemaClosed||'';
@@ -5350,6 +5422,7 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkPalletAddress').value = d.tkPalletAddress||'';
   document.getElementById('tkBoxLabelText').value = d.tkBoxLabelText||'';
   setTicketMultiItem(!!d.multiItem);
+  collapseTicketSections();
   setPackagingMode(d.tkPackagingMode==='manual' ? 'manual' : 'auto');
   if(d.tkPackagingMode==='manual'){
     document.getElementById('tkPiecesPerBox').value = d.tkPiecesPerBox||'';
@@ -5492,17 +5565,46 @@ function toggleNotesHighlight(){
   document.execCommand('hiliteColor', false, isHighlighted ? 'transparent' : '#fff59d');
 }
 
+// Attachments and packaging are needed occasionally, not on every job, so they
+// start closed and the ticket opens on what matters: paper and processing.
+function toggleTicketSection(bodyId, btnId, extraId){
+  const body = document.getElementById(bodyId);
+  const btn = document.getElementById(btnId);
+  if(!body || !btn) return;
+  const showing = body.style.display !== 'none';
+  body.style.display = showing ? 'none' : '';
+  btn.textContent = showing ? '▶ Εμφάνιση' : '▼ Απόκρυψη';
+  btn.classList.toggle('solid', !showing);
+  if(extraId){
+    const extra = document.getElementById(extraId);
+    if(extra) extra.style.display = showing ? 'none' : 'flex';
+  }
+}
+
+function collapseTicketSections(){
+  ['tkAttachBody','tkPackBody'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  ['tkAttachToggle','tkPackToggle'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b){ b.textContent='▶ Εμφάνιση'; b.classList.remove('solid'); }
+  });
+  const extra = document.getElementById('pkControls');
+  if(extra) extra.style.display='none';
+}
+
 function newTicket(){
   setTicketMultiItem(false); // a fresh ticket starts as a single item
+  collapseTicketSections();
   document.getElementById('tkInfo').value = '';
   document.getElementById('tkQty').value = '';
   document.getElementById('tkDeadline').value = '';
   document.getElementById('tkSchema').value = '';
   document.getElementById('tkSelides').value = '';
+  document.getElementById('tkClient').value = '';
   document.getElementById('tkNotes').innerHTML = '';
   tkPaperRows = []; tkProcRows = [];
   addTkPaperRow(); addTkProcRow();
   document.getElementById('tkUnitWeight').value = '';
+  document.getElementById('tkPackQty').value = '';
   document.getElementById('tkUnitThickness').value = '';
   document.getElementById('tkExtraThickness').value = '';
   document.getElementById('tkSchemaClosed').value = '';
@@ -5634,7 +5736,7 @@ async function refreshTicketList(){
     const search = (document.getElementById('ticketSearch').value||'').toLowerCase().trim();
     let list = Object.entries(record.tickets).map(([id, t]) => ({ id, ...t }));
     if(search){
-      list = list.filter(t => (t.label||'').toLowerCase().includes(search) || ((t.data||{}).info||'').toLowerCase().includes(search));
+      list = list.filter(t => (t.label||'').toLowerCase().includes(search) || ((t.data||{}).info||'').toLowerCase().includes(search) || ((t.data||{}).client||'').toLowerCase().includes(search));
     }
     list.sort((a,b) => (b.savedAt||'').localeCompare(a.savedAt||''));
     el.innerHTML = '';
@@ -5736,21 +5838,39 @@ function printTicket(){
   // dropped, so the sheet that reaches the press carries no blank noise.
   const hasVal = v => String(v ?? '').trim() !== '';
   const paperRows = tkPaperRows.filter(r => hasVal(r.tipos) || hasVal(r.xarti) || hasVal(r.fylla));
+  // The press sheet only needs the total. Net and waste stay on screen for the
+  // office, but printing all three made the important number hard to pick out.
+  // Weights, not fixed widths: the paper name is the longest value on the sheet
+  // and needs the room, while sides and montage are a few characters each.
   const paperCols = [
-    { key:'tipos',    head:'Τύπος',          cls:'tipos' },
-    { key:'xarti',    head:'Χαρτί' },
-    { key:'xroma',    head:'Χρώμα' },
-    ...(ticketMultiItem ? [{ key:'qty', head:'Ποσότητα', cls:'qty' }] : []),
-    { key:'fyllaNet', head:'Καθαρά Φύλλα' },
-    { key:'fyllaXtra',head:'Έξτρα' },
-    { key:'fylla',    head:'Σύνολο Φύλλων' },
-    { key:'sxima',    head:'Σχήμα εκτ/σης' },
-    { key:'tatgab',   head:'ΜΟΝΤΑΖ' },
-    { key:'opseis',   head:'Όψεις' }
+    { key:'tipos',    head:'Τύπος',          cls:'tipos', w:13 },
+    ...(ticketMultiItem ? [{ key:'qty', head:'Ποσότητα', cls:'qty', suffix:' τεμ.', w:13 }] : []),
+    { key:'xarti',    head:'Χαρτί',          w:30 },
+    { key:'xroma',    head:'Χρώμα',          w:9 },
+    { key:'fylla',    head:'Σύνολο Φύλλων',  w:10 },
+    { key:'sxima',    head:'Σχήμα εκτ/σης',  w:11 },
+    { key:'tatgab',   head:'ΜΟΝΤΑΖ',         w:11 },
+    { key:'opseis',   head:'Όψεις',          w:7 }
   ].filter(col => paperRows.some(r => hasVal(r[col.key])));
-  const paperHeadHtml = paperCols.map(col => `<th>${col.head}</th>`).join('');
+  // Share out whatever the dropped columns left behind.
+  const wTotal = paperCols.reduce((s,col)=>s+col.w,0) || 1;
+  paperCols.forEach(col => { col.pct = (col.w / wTotal * 100).toFixed(1); });
+  const paperHeadHtml = paperCols.map(col => `<th style="width:${col.pct}%">${col.head}</th>`).join('');
   const paperRowsHtml = paperRows.map(r =>
-    `<tr>${paperCols.map(col => `<td${col.cls ? ` class="${col.cls}"` : ''}>${esc(r[col.key] ?? '')}</td>`).join('')}</tr>`
+    `<tr>${paperCols.map(col => {
+      const val = esc(r[col.key] ?? '');
+      // The quantity gets a rounded pill of its own: a table cell can't take a
+      // border radius under border-collapse, so the frame goes inside.
+      if(col.cls === 'qty'){
+        if(!hasVal(r[col.key])) return '<td class="qty"></td>';
+        const txt = val + (col.suffix || '');
+        // The box stays the same size on every row; long figures step the type
+        // down instead of breaking out of the frame.
+        const size = txt.length <= 8 ? 13 : txt.length <= 10 ? 11 : txt.length <= 13 ? 9.5 : 8;
+        return `<td class="qty"><span class="qty-pill" style="font-size:${size}px;">${txt}</span></td>`;
+      }
+      return `<td${col.cls ? ` class="${col.cls}"` : ''}>${val}${(col.suffix && hasVal(r[col.key])) ? col.suffix : ''}</td>`;
+    }).join('')}</tr>`
   ).join('');
 
   const procRows = tkProcRows.filter(r => hasVal(r.label) || hasVal(r.details));
@@ -5818,6 +5938,7 @@ function convertOfferToTicket(){
   document.getElementById('tkDeadline').value = ''; // real calendar date — set separately, not the same as the offer's "χρόνος παράδοσης" estimate
   document.getElementById('tkSchema').value = schemaClosedVal;
   document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
+  document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
 
   // Carry over the offer's computed weight/thickness per piece — saves re-entering
   // them in the ticket's Συσκευασία card.
@@ -5905,6 +6026,7 @@ async function convertOfferToMultipleTickets(){
   document.getElementById('tkSchema').value = schemaClosedVal;
   document.getElementById('tkSchemaClosed').value = schemaClosedVal;
   document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
+  document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
   document.getElementById('tkUnitWeight').value = document.getElementById('pkUnitWeight').value;
   document.getElementById('tkUnitThickness').value = document.getElementById('pkPieceThickness').value;
 
@@ -6126,6 +6248,17 @@ async function submitOrder(){
   }
 }
 
+// Grouping answers a different question from the flat list: not "what is
+// outstanding" but "what am I waiting on from each supplier" — the view you want
+// before picking up the phone.
+let ordersGrouped = false;
+
+function toggleOrdersGrouping(){
+  ordersGrouped = !ordersGrouped;
+  document.getElementById('ordGroupBtn').classList.toggle('solid', ordersGrouped);
+  refreshOrdersList();
+}
+
 function setOrdersFilter(f){
   ordersFilter = f;
   document.querySelectorAll('.ord-filter-btn').forEach(b=>{
@@ -6297,7 +6430,7 @@ async function refreshOrdersList(){
     const record = await jbGetRecord();
     const jobOptionsEl = document.getElementById('orderJobOptions');
     const activeTicketNames = Object.values(record.tickets||{})
-      .filter(t=>!t.archived)
+      .filter(isTicketActive)
       .map(t=>(t.data||{}).info || t.label)
       .filter(Boolean);
     const jobOptions = ['Αποθήκη', ...new Set(activeTicketNames)];
@@ -6329,7 +6462,7 @@ async function refreshOrdersList(){
       el.innerHTML = '<div class="empty-note">Δεν υπάρχουν παραγγελίες με αυτά τα κριτήρια.</div>';
       return;
     }
-    list.forEach(o=>{
+    const buildOrderCard = (o) => {
       const received = o.status === 'received';
       const missingInfo = !received && !o.supplier;
       const div = document.createElement('div');
@@ -6353,8 +6486,42 @@ async function refreshOrdersList(){
           <button class="del-link" onclick="deleteOrder('${o.id}')">Διαγραφή</button>
         </div>
       `;
-      el.appendChild(div);
-    });
+      return div;
+    };
+
+    if(!ordersGrouped){
+      list.forEach(o => el.appendChild(buildOrderCard(o)));
+    } else {
+      // Group by supplier, and lead with whoever we're waiting on the most.
+      const groups = {};
+      list.forEach(o=>{
+        const key = (o.supplier||'').trim() || '(χωρίς προμηθευτή)';
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(o);
+      });
+      const names = Object.keys(groups).sort((a,b)=>{
+        const pa = groups[a].filter(o=>o.status!=='received').length;
+        const pb = groups[b].filter(o=>o.status!=='received').length;
+        if(pa !== pb) return pb - pa;
+        return a.localeCompare(b,'el');
+      });
+      names.forEach(name=>{
+        const items = groups[name];
+        const pending = items.filter(o=>o.status!=='received');
+        const sheets = pending.reduce((s,o)=>s+num(o.sheets),0);
+        const head = document.createElement('div');
+        head.className = 'ord-group-head';
+        head.innerHTML = `
+          <span class="ord-group-name">${esc(name)}</span>
+          <span class="ord-group-meta">${
+            pending.length
+              ? `<b>${pending.length}</b> εκκρεμ${pending.length===1?'εί':'ούν'}${sheets>0 ? ` · <b>${sheets.toLocaleString('el-GR')}</b> φύλλα σε αναμονή` : ''}`
+              : 'όλα παραλήφθηκαν'
+          }</span>`;
+        el.appendChild(head);
+        items.forEach(o => el.appendChild(buildOrderCard(o)));
+      });
+    }
   }catch(e){
     console.error('List orders error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα σύνδεσης: ' + esc(e.message) + '</div>';
@@ -7028,7 +7195,7 @@ async function refreshProductionBoard(){
   try{
     const record = await jbGetRecord();
     const stages = record.productionStages;
-    const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(t=>!t.archived);
+    const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(isTicketActive);
 
     // Make sure every ticket has a stage; default new/untouched ones to the first column.
     let changed = false;
@@ -7222,9 +7389,13 @@ async function refreshProductionBoard(){
             </div>
             <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
             <div class="meta">${metaBits.join(' · ')}</div>
-            ${stage===stages[stages.length-1] ? `<div class="kanban-archive-btn">✓ Αρχειοθέτηση</div>` : ''}
+            ${stage===stages[stages.length-1] ? `<div class="kanban-done-actions">
+              <div class="kanban-archive-btn">✓ Αρχειοθέτηση</div>
+              <div class="kanban-invoice-btn">🧾 Τιμολόγηση</div>
+            </div>` : ''}
           `;
           card.addEventListener('click', (e)=>{
+            if(e.target.closest('.kanban-invoice-btn')){ sendToInvoicing(t.id); return; }
             if(e.target.closest('.kanban-card-labels, .kanban-archive-btn') && !e.target.classList.contains('kanban-bulk-checkbox')) return;
             if(bulkSelectMode){
               if(bulkSelectedIds.has(t.id)) bulkSelectedIds.delete(t.id); else bulkSelectedIds.add(t.id);
@@ -7463,6 +7634,173 @@ async function deleteProductionStage(idx){
   }catch(e){
     console.error('Delete stage error:', e);
     statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+// A ticket is "active" while it is still moving through production. Once it is
+// archived or has gone to invoicing, it must stop appearing on the board, in the
+// calendar and on the home dashboard — the work is done.
+function isTicketActive(t){
+  return !t.archived && !t.invoiceStage;
+}
+
+// ===== Τιμολόγηση (invoicing board) =====
+async function sendToInvoicing(id){
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[id];
+    if(!t) return;
+    const stages = record.invoicingStages || [];
+    t.invoiceStage = stages[0] || 'ΠΡΟΣ ΤΙΜΟΛΟΓΗΣΗ';
+    t.invoicedAt = new Date().toISOString();
+    await jbMergePath(SLICE_MAIN, ['tickets', id], t);
+    statusMsg('Πέρασε στην Τιμολόγηση ✓');
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Send to invoicing error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function moveInvoiceCardTo(id, stage){
+  try{
+    const record = await jbGetRecord();
+    if(record.tickets[id]){
+      record.tickets[id].invoiceStage = stage;
+      await jbMergePath(SLICE_MAIN, ['tickets', id], record.tickets[id]);
+    }
+  }catch(e){
+    console.error('Move invoice card error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+    refreshInvoicingBoard();
+  }
+}
+
+async function returnFromInvoicing(id){
+  if(!confirm('Επιστροφή στην Παραγωγή;\n\nΗ κάρτα θα ξαναεμφανιστεί στον πίνακα παραγωγής και στο ημερολόγιο.')) return;
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[id];
+    if(!t) return;
+    delete t.invoiceStage;
+    delete t.invoicedAt;
+    await jbMergePath(SLICE_MAIN, ['tickets', id], t);
+    statusMsg('Επέστρεψε στην Παραγωγή ✓');
+    refreshInvoicingBoard();
+  }catch(e){
+    console.error('Return from invoicing error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function addInvoicingColumn(){
+  const name = prompt('Όνομα νέας στήλης:');
+  if(!name || !name.trim()) return;
+  try{
+    const record = await jbGetRecord();
+    record.invoicingStages = record.invoicingStages || [];
+    record.invoicingStages.push(name.trim());
+    await jbMergePath(SLICE_MAIN, ['invoicingStages'], record.invoicingStages);
+    refreshInvoicingBoard();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function deleteInvoicingColumn(idx){
+  try{
+    const record = await jbGetRecord();
+    const stages = record.invoicingStages || [];
+    if(stages.length<=1){ statusMsg('Πρέπει να μείνει τουλάχιστον μία στήλη.'); return; }
+    const stage = stages[idx];
+    const inHere = Object.values(record.tickets||{}).filter(t=>t.invoiceStage===stage).length;
+    if(!confirm(`Διαγραφή στήλης «${stage}»;` + (inHere ? `\n\nΟι ${inHere} κάρτες της θα μετακινηθούν στην πρώτη στήλη.` : ''))) return;
+    stages.splice(idx,1);
+    const fallback = stages[0];
+    Object.entries(record.tickets||{}).forEach(([id,t])=>{
+      if(t.invoiceStage===stage){ t.invoiceStage = fallback; }
+    });
+    await jbPutRecord(record);
+    refreshInvoicingBoard();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function refreshInvoicingBoard(){
+  const boardEl = document.getElementById('invoicingBoard');
+  if(!boardEl) return;
+  try{
+    const record = await jbGetRecord();
+    const stages = record.invoicingStages || [];
+    const tickets = Object.entries(record.tickets||{})
+      .map(([id,t]) => ({ id, ...t }))
+      .filter(t => t.invoiceStage && !t.archived);
+
+    boardEl.innerHTML = '';
+    stages.forEach((stage, idx)=>{
+      const inStage = tickets.filter(t => t.invoiceStage === stage);
+      const col = document.createElement('div');
+      col.className = 'kanban-col';
+      col.innerHTML = `
+        <div class="kanban-col-head">
+          <span>${esc(stage)}</span>
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span class="count">${inStage.length}</span>
+            <span class="kanban-col-del" title="Διαγραφή στήλης">×</span>
+          </span>
+        </div>
+        <div class="kanban-cards" data-stage="${esc(stage)}"></div>`;
+      col.querySelector('.kanban-col-del').addEventListener('click', ()=>deleteInvoicingColumn(idx));
+      const cardsEl = col.querySelector('.kanban-cards');
+
+      inStage.forEach(t=>{
+        const info = t.data || {};
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.draggable = true;
+        card.setAttribute('data-id', t.id);
+        const assigned = (t.labels||[]).map(lid => (record.labels||[]).find(l=>l.id===lid)).filter(Boolean);
+        const labelsHtml = assigned.map(l => `<span style="background:${l.color};color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;">${esc(l.name)}</span>`).join('');
+        const metaBits = [];
+        if(info.qty) metaBits.push('📦 ' + info.qty + ' τεμ.');
+        if(t.deadlineDate) metaBits.push('🗓 ' + fmtDateShort(t.deadlineDate));
+        card.innerHTML = `
+          <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
+            ${labelsHtml}
+            ${info.linkGroupId ? '<span title="Μέρος μεγαλύτερης παραγγελίας" style="font-size:11px;">🔗</span>' : ''}
+          </div>
+          <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
+          <div class="meta">${metaBits.join(' · ')}</div>
+          <div class="kanban-archive-btn inv-return" title="Επιστροφή στον πίνακα παραγωγής">↩ Πίσω στην Παραγωγή</div>`;
+        card.addEventListener('click', e=>{
+          if(e.target.closest('.inv-return')){ returnFromInvoicing(t.id); return; }
+          loadTicket(t.id, true);
+        });
+        card.addEventListener('dragstart', e=>{
+          e.dataTransfer.setData('text/plain', t.id);
+          setTimeout(()=>card.style.opacity='0.4', 0);
+        });
+        card.addEventListener('dragend', ()=>{ card.style.opacity='1'; });
+        cardsEl.appendChild(card);
+      });
+
+      cardsEl.addEventListener('dragover', e=>{ e.preventDefault(); cardsEl.classList.add('dragover'); });
+      cardsEl.addEventListener('dragleave', ()=>cardsEl.classList.remove('dragover'));
+      cardsEl.addEventListener('drop', async e=>{
+        e.preventDefault();
+        cardsEl.classList.remove('dragover');
+        const id = e.dataTransfer.getData('text/plain');
+        if(!id) return;
+        const dragged = boardEl.querySelector(`.kanban-card[data-id="${id}"]`);
+        if(dragged) cardsEl.appendChild(dragged);
+        boardEl.querySelectorAll('.kanban-col').forEach(col2=>{
+          const cnt = col2.querySelector('.kanban-col-head .count');
+          if(cnt) cnt.textContent = col2.querySelectorAll('.kanban-card').length;
+        });
+        await moveInvoiceCardTo(id, stage);
+      });
+      boardEl.appendChild(col);
+    });
+  }catch(e){
+    console.error('Invoicing board error:', e);
+    boardEl.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -7817,7 +8155,7 @@ async function renderProductionCalendar(targetId, readOnly){
   }
   try{
     const record = await jbGetRecord();
-    const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(t=>t.deadlineDate && !(t.data && t.data.isLinkChild));
+    const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(t=>t.deadlineDate && isTicketActive(t) && !(t.data && t.data.isLinkChild));
 
     const monthNames = ['Ιανουάριος','Φεβρουάριος','Μάρτιος','Απρίλιος','Μάιος','Ιούνιος','Ιούλιος','Αύγουστος','Σεπτέμβριος','Οκτώβριος','Νοέμβριος','Δεκέμβριος'];
     const dayLabels = ['Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ','Κυρ'];
@@ -8152,7 +8490,7 @@ async function refreshHomeDashboard(){
     const record = await jbGetRecord();
     const stages = record.productionStages || [];
     const doneStage = stages[stages.length-1];
-    const tickets = Object.entries(record.tickets||{}).map(([id,t])=>({id, ...t}));
+    const tickets = Object.entries(record.tickets||{}).map(([id,t])=>({id, ...t})).filter(isTicketActive);
 
     const todayStr = todayISO();
     const in7 = new Date(); in7.setDate(in7.getDate()+7);
@@ -8354,6 +8692,12 @@ function jumpToClient(client){
   switchView('list');
   closeGlobalSearch();
   setTimeout(()=>{ const s = document.getElementById('offerSearch'); if(s){ s.value = client; offerListPage = 0; renderOfferTable(); } }, 50);
+}
+
+function jumpToClientTickets(client){
+  switchView('ticketlist');
+  closeGlobalSearch();
+  setTimeout(()=>{ const s = document.getElementById('ticketSearch'); if(s){ s.value = client; refreshTicketList(); } }, 50);
 }
 
 function toggleSidebar(){
@@ -8869,17 +9213,25 @@ async function refreshClientsList(){
     const byClient = {};
     (record.clients||[]).forEach(name=>{
       const client = (name||'').trim();
-      if(client) byClient[client] = { count:0, approved:0, total:0 };
+      if(client) byClient[client] = { count:0, approved:0, total:0, jobs:0 };
     });
     Object.values(record.offers||{}).forEach(o=>{
       const client = (o.label || (o.data||{}).client || '').trim();
       if(!client) return;
-      if(!byClient[client]) byClient[client] = { count:0, approved:0, total:0 };
+      if(!byClient[client]) byClient[client] = { count:0, approved:0, total:0, jobs:0 };
       byClient[client].count++;
       if(o.approved){
         byClient[client].approved++;
         byClient[client].total += num(o.total);
       }
+    });
+    // Tickets made without an offer still belong to a client, so count them too —
+    // otherwise a customer's real workload is invisible here.
+    Object.values(record.tickets||{}).forEach(t=>{
+      const client = ((t.data||{}).client || '').trim();
+      if(!client) return;
+      if(!byClient[client]) byClient[client] = { count:0, approved:0, total:0, jobs:0 };
+      byClient[client].jobs = (byClient[client].jobs||0) + 1;
     });
 
     const search = (document.getElementById('clientsSearch').value||'').toLowerCase().trim();
@@ -8893,7 +9245,7 @@ async function refreshClientsList(){
 
     el.innerHTML = `
       <table class="offer-table">
-        <thead><tr><th>Πελάτης</th><th style="text-align:right;">Προσφορές</th><th style="text-align:right;">Εγκεκριμένες</th><th style="text-align:right;">Σύνολο Τζίρου</th><th></th></tr></thead>
+        <thead><tr><th>Πελάτης</th><th style="text-align:right;">Προσφορές</th><th style="text-align:right;">Εγκεκριμένες</th><th style="text-align:right;" title="Job Tickets που φέρουν αυτόν τον πελάτη">Δουλειές</th><th style="text-align:right;">Σύνολο Τζίρου</th><th></th></tr></thead>
         <tbody>${clients.map(c=>{
           const d = byClient[c];
           return `
@@ -8901,6 +9253,7 @@ async function refreshClientsList(){
               <td style="font-weight:600;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</td>
               <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.count}</td>
               <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.approved}</td>
+              <td style="text-align:right;cursor:pointer;" onclick="jumpToClientTickets('${esc(c).replace(/'/g,"\\'")}')" title="Δες τα Job Tickets αυτού του πελάτη">${d.jobs||0}</td>
               <td style="text-align:right;font-weight:700;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
               <td style="white-space:nowrap;"><button class="del-link" onclick="event.stopPropagation();deleteClient('${esc(c).replace(/'/g,"\\'")}')">Διαγραφή</button></td>
             </tr>
