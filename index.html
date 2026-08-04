@@ -5087,7 +5087,7 @@ let currentTicketId = null;
 
 function addTkPaperRow(vals){
   const id = tkPaperSeq++;
-  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', qty:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false}, vals||{}));
+  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', qty:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false, movedToChild:false}, vals||{}));
   renderTkPaper();
 }
 function removeTkPaperRow(id){ tkPaperRows = tkPaperRows.filter(r=>r.id!==id); renderTkPaper(); }
@@ -5112,8 +5112,13 @@ async function splitTicketPaperRowToChild(rowId){
   const parentSelides = document.getElementById('tkSelides').value;
   const parentProcRows = tkProcRows.map(p => ({ label: p.label, details: p.details }));
 
+  // The row stays here for the full picture, but the child now owns it: mark it
+  // so the paper can't be taken out of stock twice, once from each ticket.
+  row.movedToChild = true;
+  renderTkPaper();
+
   // Save the parent ticket first, so its (possibly newly-assigned) linkGroupId
-  // persists — the row STAYS here, only a copy goes to the new ticket.
+  // and the new marker persist.
   await saveTicket();
 
   // Build and save the new child ticket as a copy of just that row — it moves
@@ -5203,12 +5208,16 @@ function toggleTicketMultiItem(){
 }
 
 async function consumeTicketPaper(){
-  const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0 && !r.consumed);
+  // Rows split off to their own ticket are consumed there, not here.
+  const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0 && !r.consumed && !r.movedToChild);
   if(pending.length === 0){
     const already = tkPaperRows.filter(r=>r.consumed).length;
+    const moved = tkPaperRows.filter(r=>r.movedToChild && !r.consumed).length;
     statusMsg(already
       ? 'Η κατανάλωση για αυτό το ticket έχει ήδη καταχωρηθεί.'
-      : 'Συμπλήρωσε πρώτα χαρτί και σύνολο φύλλων στις γραμμές.');
+      : moved
+        ? `${moved===1?'Η γραμμή έχει':'Οι γραμμές έχουν'} ξεχωριστό ticket — η κατανάλωση καταχωρείται εκεί.`
+        : 'Συμπλήρωσε πρώτα χαρτί και σύνολο φύλλων στις γραμμές.');
     return;
   }
   const summary = pending.map(r=>`• ${r.xarti}: ${num(r.fylla).toLocaleString('el-GR')} φύλλα`).join('\n');
@@ -5248,6 +5257,9 @@ async function consumeTicketPaper(){
 // Paper bought for a job often isn't fully used. Letting the operator report
 // what was left lets it go back into stock instead of quietly disappearing.
 function leftoverCell(r){
+  if(r.movedToChild && !r.consumed){
+    return '<span style="font-size:10px;color:#2f6fed;font-weight:700;" title="Η κατανάλωση και το περίσσευμα καταχωρούνται στο ξεχωριστό ticket αυτής της γραμμής">🎫 σε δικό του ticket</span>';
+  }
   if(r.leftoverPosted){
     return `<span style="font-size:10.5px;color:#1f7a4d;font-weight:700;" title="Καταχωρήθηκε στην Αποθήκη">✓ ${num(r.leftover).toLocaleString('el-GR')} πίσω</span>`;
   }
