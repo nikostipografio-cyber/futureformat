@@ -187,11 +187,17 @@
   #saveStatus{font-size:14.5px;font-weight:700;padding:8px 4px;min-height:22px;color:var(--ink);transition:color 0.15s;}
   #saveStatus.status-ok{color:#1f7a4d;}
   #saveStatus.status-error{color:#a53125;}
-  .ticket-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background 0.1s,border-color 0.1s;}
+  /* Compact rows: the list is for scanning and picking, so more jobs on screen
+     matters more than roomy padding. The date sits beside the name rather than
+     under it, which halves the row height. */
+  /* Toolbar buttons keep their labels on one line — wrapped text made the row
+     twice as tall and harder to scan. */
+  .tk-list-tools button{white-space:nowrap;padding:7px 14px;}
+  .ticket-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background 0.1s,border-color 0.1s;}
   .ticket-item:hover{background:var(--page);border-color:var(--line-strong);}
-  .ticket-item .meta{font-size:15px;font-weight:600;}
-  .ticket-item .meta .sub{color:var(--muted);font-size:12px;font-weight:400;margin-top:2px;}
-  .ticket-item .btns{display:flex;gap:8px;align-items:center;}
+  .ticket-item .meta{font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px;min-width:0;}
+  .ticket-item .meta .sub{color:var(--muted);font-size:12px;font-weight:400;white-space:nowrap;flex:none;}
+  .ticket-item .btns{display:flex;gap:8px;align-items:center;flex:none;}
 
   .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:6px;}
   .ord-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
@@ -983,8 +989,9 @@ function toggleMobileSidebar(forceClose){
   <div id="viewTicketList" style="display:none;">
     <div class="card">
       <div class="card-head"><div class="title">Αποθηκευμένα Job Tickets</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input id="ticketSearch" placeholder="Αναζήτηση..." style="max-width:200px;" oninput="refreshTicketList()">
+        <div class="tk-list-tools" style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" id="tkGroupBtn" onclick="toggleTicketGrouping()" title="Ομαδοποίηση ανά πελάτη — όλες οι δουλειές του καθενός μαζί">👥 Ανά Πελάτη</button>
+          <input id="ticketSearch" placeholder="Αναζήτηση (και σε ολοκληρωμένες)..." style="max-width:260px;" oninput="refreshTicketList()" title="Χωρίς αναζήτηση βλέπεις μόνο ό,τι τρέχει στην Παραγωγή. Γράψε κάτι για να βρεις και αρχειοθετημένες ή τιμολογημένες δουλειές.">
           <button class="btn solid" onclick="newTicket();switchView('ticketform')">+ Νέο Ticket</button>
         </div>
       </div>
@@ -1018,7 +1025,16 @@ function toggleMobileSidebar(forceClose){
               <div class="empty-note" id="npMaterialStatus"></div>
             </div>
           </div>
-          <div class="field"><label>Φύλλα (παραγγελία)</label><input id="ordSheets" type="number" min="0" placeholder="π.χ. 20"></div>
+          <div class="field"><label>Ποσότητα (παραγγελία)</label>
+            <div style="display:flex;gap:6px;">
+              <input id="ordSheets" type="number" min="0" placeholder="π.χ. 20" style="flex:1;">
+              <select id="ordUnit" style="width:100px;flex:none;" title="Χαρτί μετριέται σε φύλλα, ρολά σε μέτρα, έτοιμα υλικά σε τεμάχια">
+                <option value="φύλλα">φύλλα</option>
+                <option value="μέτρα">μέτρα</option>
+                <option value="τεμάχια">τεμάχια</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="field"><label>Προμηθευτής</label>
           <div style="display:flex;gap:6px;">
@@ -5739,16 +5755,35 @@ async function refreshTicketList(){
     const doneStage = stages[stages.length-1];
     const search = (document.getElementById('ticketSearch').value||'').toLowerCase().trim();
     let list = Object.entries(record.tickets).map(([id, t]) => ({ id, ...t }));
+    // With no search the list is the shop floor: only what's actually running.
+    // Searching widens it to everything ever made, so finished work stays
+    // findable without cluttering the daily view.
+    const isFinished = t => t.archived || !!t.invoiceStage;
+    const finishedCount = list.filter(isFinished).length;
     if(search){
       list = list.filter(t => (t.label||'').toLowerCase().includes(search) || ((t.data||{}).info||'').toLowerCase().includes(search) || ((t.data||{}).client||'').toLowerCase().includes(search));
+    } else {
+      list = list.filter(t => !isFinished(t));
     }
+    const foundFinished = search ? list.filter(isFinished).length : 0;
     list.sort((a,b) => (b.savedAt||'').localeCompare(a.savedAt||''));
     el.innerHTML = '';
     if(list.length===0){
-      el.innerHTML = `<div class="empty-note">${search ? 'Δεν βρέθηκαν tickets για αυτή την αναζήτηση.' : 'Δεν υπάρχουν αποθηκευμένα tickets ακόμα.'}</div>`;
+      el.innerHTML = `<div class="empty-note">${
+        search ? 'Δεν βρέθηκαν tickets για αυτή την αναζήτηση.'
+        : finishedCount ? `Καμία δουλειά στην παραγωγή αυτή τη στιγμή. Οι ${finishedCount} ολοκληρωμένες βρίσκονται με αναζήτηση.`
+        : 'Δεν υπάρχουν αποθηκευμένα tickets ακόμα.'
+      }</div>`;
       return;
     }
-    list.forEach(t=>{
+    if(foundFinished){
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.style.cssText = 'margin-bottom:8px;';
+      note.innerHTML = `Η αναζήτηση περιλαμβάνει και <b>${foundFinished}</b> ολοκληρωμέν${foundFinished===1?'η δουλειά':'ες δουλειές'} (αρχειοθετημένες ή τιμολογημένες). Με το <b>⧉ Αντιγραφή</b> ξαναμπαίνουν στην Παραγωγή.`;
+      el.appendChild(note);
+    }
+    const buildTicketRow = (t) => {
       const div = document.createElement('div');
       div.className = 'ticket-item';
       div.onclick = () => loadTicket(t.id);
@@ -5756,21 +5791,50 @@ async function refreshTicketList(){
       let statusHtml;
       if(t.archived){
         statusHtml = `<span class="order-badge" style="background:#e6e4dc;color:#5f5e5a;">Αρχειοθετημένο</span>`;
+      } else if(t.invoiceStage){
+        statusHtml = `<span class="order-badge" style="background:#eaf1fe;color:#2f6fed;">Τιμολόγηση · ${esc(t.invoiceStage)}</span>`;
       } else if(t.stage && t.stage===doneStage){
         statusHtml = `<span class="order-badge received">Ολοκληρώθηκε</span>`;
       } else {
         statusHtml = `<span class="order-badge received">Σε εξέλιξη${t.stage ? ' · '+esc(t.stage) : ''}</span>`;
       }
       div.innerHTML = `
-        <div class="meta">${esc(t.label)}<div class="sub">${esc(dateStr)}</div></div>
+        <div class="meta"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.label)}</span><span class="sub">${esc(dateStr)}</span></div>
         <div class="btns">
           ${statusHtml}
           <button class="btn" onclick="event.stopPropagation();duplicateTicket('${t.id}')" title="Δημιουργεί νέο ticket με τα ίδια στοιχεία και το βάζει στην Παραγωγή — για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
           <button class="btn" onclick="event.stopPropagation();deleteTicket('${t.id}')">Διαγραφή</button>
         </div>
       `;
-      el.appendChild(div);
-    });
+      return div;
+    };
+
+    if(!ticketsGrouped){
+      list.forEach(t => el.appendChild(buildTicketRow(t)));
+    } else {
+      const groups = {};
+      list.forEach(t=>{
+        const key = ((t.data||{}).client || '').trim() || '(χωρίς πελάτη)';
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(t);
+      });
+      // Busiest customers first — that's usually who you're looking for.
+      const names = Object.keys(groups).sort((a,b)=>{
+        if(groups[b].length !== groups[a].length) return groups[b].length - groups[a].length;
+        return a.localeCompare(b,'el');
+      });
+      names.forEach(name=>{
+        const items = groups[name];
+        const active = items.filter(t=>!t.archived && !t.invoiceStage && t.stage!==doneStage).length;
+        const head = document.createElement('div');
+        head.className = 'ord-group-head';
+        head.innerHTML = `
+          <span class="ord-group-name">${esc(name)}</span>
+          <span class="ord-group-meta"><b>${items.length}</b> δουλει${items.length===1?'ά':'ές'}${active ? ` · <b>${active}</b> σε εξέλιξη` : ''}</span>`;
+        el.appendChild(head);
+        items.forEach(t => el.appendChild(buildTicketRow(t)));
+      });
+    }
   }catch(e){
     console.error('List tickets error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα σύνδεσης: ' + esc(e.message) + '</div>';
@@ -6232,6 +6296,7 @@ async function submitOrder(){
     job: job,
     material: material,
     sheets: document.getElementById('ordSheets').value.trim(),
+    unit: document.getElementById('ordUnit').value,
     supplier: document.getElementById('ordSupplier').value.trim(),
     notes: document.getElementById('ordNotes').value.trim(),
     status: 'pending',
@@ -6245,6 +6310,7 @@ async function submitOrder(){
     document.getElementById('ordJob').value = '';
     document.getElementById('ordMaterial').value = '';
     document.getElementById('ordSheets').value = '';
+    document.getElementById('ordUnit').value = 'φύλλα';
     document.getElementById('ordSupplier').value = '';
     document.getElementById('ordNotes').value = '';
     document.getElementById('ordDate').value = todayISO();
@@ -6254,6 +6320,17 @@ async function submitOrder(){
     console.error('Order submit error:', e);
     statusMsg('Σφάλμα καταχώρησης: ' + e.message);
   }
+}
+
+// Same idea as the orders board: grouped by customer you can see everything one
+// client has had made, rather than a chronological mix of everyone's work.
+let ticketsGrouped = false;
+
+
+function toggleTicketGrouping(){
+  ticketsGrouped = !ticketsGrouped;
+  document.getElementById('tkGroupBtn').classList.toggle('solid', ticketsGrouped);
+  refreshTicketList();
 }
 
 // Grouping answers a different question from the flat list: not "what is
@@ -6286,13 +6363,16 @@ async function markOrderReceived(id){
       // If this order was for a paper that exists in the paper database, and a
       // sheet count was given, automatically add it to the Αποθήκη stock.
       const sheets = num(order.sheets);
+      // Roll goods arrive in metres and finished items in pieces, so the stock
+      // entry has to carry the order's own unit rather than assume sheets.
+      const unit = order.unit || 'φύλλα';
       if(order.material && paperByName[order.material] && sheets>0){
-        if(!record.stock[order.material]) record.stock[order.material] = { qty:0, unit:'φύλλα' };
+        if(!record.stock[order.material]) record.stock[order.material] = { qty:0, unit };
         record.stock[order.material].qty += sheets;
-        record.stock[order.material].unit = 'φύλλα';
+        record.stock[order.material].unit = unit;
         record.stockLog = record.stockLog || [];
         record.stockLog.unshift({
-          id: 'stk'+Date.now(), paper: order.material, type:'add', qty: sheets, unit:'φύλλα',
+          id: 'stk'+Date.now(), paper: order.material, type:'add', qty: sheets, unit,
           note: `Παραλαβή παραγγελίας${order.supplier ? ' από '+order.supplier : ''}${order.job ? ' — '+order.job : ''}`,
           date: new Date().toISOString()
         });
@@ -6306,6 +6386,18 @@ async function markOrderReceived(id){
     refreshOrdersList();
   }catch(e){
     console.error('Mark received error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function updateOrderUnit(id, value){
+  try{
+    const record = await jbGetRecord();
+    if(record.orders[id]) record.orders[id].unit = value;
+    await jbPutRecord(record);
+    refreshOrdersList();
+  }catch(e){
+    console.error('Update order unit error:', e);
     statusMsg('Σφάλμα: ' + e.message);
   }
 }
@@ -6404,7 +6496,8 @@ async function deleteOrder(id){
     const linkedToStock = order.status==='received' && order.material && paperByName[order.material] && sheets>0;
     let alsoRemoveStock = false;
     if(linkedToStock){
-      alsoRemoveStock = confirm(`Αυτή η παραγγελία είχε ήδη παραληφθεί και πρόσθεσε ${sheets} φύλλα στο απόθεμα του "${order.material}".\n\nΝα αφαιρεθούν αυτά τα ${sheets} φύλλα και από την Αποθήκη;`);
+      const u = order.unit || 'φύλλα';
+      alsoRemoveStock = confirm(`Αυτή η παραγγελία είχε ήδη παραληφθεί και πρόσθεσε ${sheets} ${u} στο απόθεμα του "${order.material}".\n\nΝα αφαιρεθούν αυτά τα ${sheets} ${u} και από την Αποθήκη;`);
     }
 
     delete record.orders[id];
@@ -6483,7 +6576,10 @@ async function refreshOrdersList(){
           <div class="meta" style="margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
             <span><b>${esc(fmtDate(o.date))}</b>${received ? ' → <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</span>
             <span style="display:flex;align-items:center;gap:4px;">Προμ.: <input list="supplierOptions" value="${esc(o.supplier||'')}" placeholder="-- συμπλήρωσε --" style="width:150px;font-size:11.5px;padding:2px 5px;${missingInfo?'border-color:#c0392b;':''}" onchange="updateOrderSupplier('${o.id}', this.value)"></span>
-            <span style="display:flex;align-items:center;gap:4px;">Φύλλα: <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:65px;font-size:11.5px;padding:2px 5px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρουν τα φύλλα που ήρθαν, διόρθωσέ το εδώ"></span>
+            <span style="display:flex;align-items:center;gap:4px;">Ποσ.: <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:65px;font-size:11.5px;padding:2px 5px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρει η ποσότητα που ήρθε, διόρθωσέ την εδώ">
+              <select style="font-size:11.5px;padding:2px 4px;width:78px;" onchange="updateOrderUnit('${o.id}', this.value)">
+                ${['φύλλα','μέτρα','τεμάχια'].map(u=>`<option value="${u}"${(o.unit||'φύλλα')===u?' selected':''}>${u}</option>`).join('')}
+              </select></span>
           </div>
           ${o.notes ? `<div class="meta" style="margin-top:3px;font-size:10.5px;">${esc(o.notes)}</div>` : ''}
         </div>
@@ -6516,14 +6612,18 @@ async function refreshOrdersList(){
       names.forEach(name=>{
         const items = groups[name];
         const pending = items.filter(o=>o.status!=='received');
-        const sheets = pending.reduce((s,o)=>s+num(o.sheets),0);
+        // Don't add metres to sheets — summarise per unit.
+        const byUnit = {};
+        pending.forEach(o=>{ const u=o.unit||'φύλλα'; byUnit[u]=(byUnit[u]||0)+num(o.sheets); });
+        const sheets = Object.entries(byUnit).filter(([,v])=>v>0)
+          .map(([u,v])=>`<b>${v.toLocaleString('el-GR')}</b> ${u}`).join(' · ');
         const head = document.createElement('div');
         head.className = 'ord-group-head';
         head.innerHTML = `
           <span class="ord-group-name">${esc(name)}</span>
           <span class="ord-group-meta">${
             pending.length
-              ? `<b>${pending.length}</b> εκκρεμ${pending.length===1?'εί':'ούν'}${sheets>0 ? ` · <b>${sheets.toLocaleString('el-GR')}</b> φύλλα σε αναμονή` : ''}`
+              ? `<b>${pending.length}</b> εκκρεμ${pending.length===1?'εί':'ούν'}${sheets ? ` · ${sheets} σε αναμονή` : ''}`
               : 'όλα παραλήφθηκαν'
           }</span>`;
         el.appendChild(head);
@@ -8029,7 +8129,11 @@ async function toggleLabelPopover(ticketId, anchorEl){
 
     const pop = document.createElement('div');
     pop.id = 'labelPopover';
-    pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:10px;z-index:2000;min-width:190px;';
+    // Sized to the longest label name rather than a fixed width — the point of
+    // this list is reading which labels exist, and truncated names defeat it.
+    // Wide enough for real label names; anything longer wraps rather than being
+    // cut, because the point of this list is reading which labels exist.
+    pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:10px;z-index:2000;width:300px;';
     const rect = anchorEl.getBoundingClientRect();
     pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
     pop.style.left = (rect.left + window.scrollX) + 'px';
@@ -8037,8 +8141,8 @@ async function toggleLabelPopover(ticketId, anchorEl){
     pop.innerHTML = labels.map(l => `
       <div style="display:flex;align-items:center;gap:6px;padding:4px;font-size:12px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0;">
-          <input type="checkbox" ${assigned.includes(l.id)?'checked':''} data-lbl="${esc(l.id)}">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(l.name)}</span>
+          <input type="checkbox" ${assigned.includes(l.id)?'checked':''} data-lbl="${esc(l.id)}" style="flex:none;width:15px;height:15px;min-width:15px;margin:0;">
+          <span style="flex:1;min-width:0;text-align:left;line-height:1.3;overflow-wrap:anywhere;">${esc(l.name)}</span>
         </label>
         <input type="color" value="${l.color}" data-lbl-color="${esc(l.id)}" style="width:22px;height:22px;padding:0;border:none;cursor:pointer;flex:none;" title="Αλλαγή χρώματος">
         <button class="del-link" data-lbl-delete="${esc(l.id)}" style="flex:none;" title="Διαγραφή ετικέτας">×</button>
