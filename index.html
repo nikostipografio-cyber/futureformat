@@ -1329,6 +1329,7 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">👥 Πελάτες</div>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" onclick="syncClientsFromRecords()" title="Μαζεύει πελάτες που έχουν γραφτεί σε Job Tickets ή προσφορές αλλά λείπουν από τη λίστα">🔄 Συγχρονισμός</button>
           <input id="clientsSearch" placeholder="Αναζήτηση πελάτη..." style="max-width:260px;" oninput="refreshClientsList()">
           <button class="btn" onclick="toggleClientsBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
         </div>
@@ -5106,6 +5107,10 @@ async function splitTicketPaperRowToChild(rowId){
   const parentId = currentTicketId;
   const parentInfo = document.getElementById('tkInfo').value;
   const parentQty = document.getElementById('tkQty').value;
+  const parentClient = document.getElementById('tkClient').value;
+  const parentSchema = document.getElementById('tkSchema').value;
+  const parentSelides = document.getElementById('tkSelides').value;
+  const parentProcRows = tkProcRows.map(p => ({ label: p.label, details: p.details }));
 
   // Save the parent ticket first, so its (possibly newly-assigned) linkGroupId
   // persists — the row STAYS here, only a copy goes to the new ticket.
@@ -5118,10 +5123,33 @@ async function splitTicketPaperRowToChild(rowId){
   currentTicketIsChild = true;
   updateDeadlineFieldVisibility();
   document.getElementById('tkInfo').value = [parentInfo, rowLabel].filter(Boolean).join(' — ');
-  document.getElementById('tkQty').value = parentQty;
+  // A row with its own quantity is a separate item, so that figure travels with
+  // it; otherwise the child would inherit the whole order's quantity.
+  document.getElementById('tkQty').value = num(row.qty) > 0 ? row.qty : parentQty;
+  document.getElementById('tkClient').value = parentClient;
+  document.getElementById('tkSchema').value = parentSchema;
+  document.getElementById('tkSelides').value = parentSelides;
   tkPaperRows = [];
-  addTkPaperRow({ tipos: row.tipos, xarti: row.xarti, xroma: row.xroma, fyllaNet: row.fyllaNet, fyllaXtra: row.fyllaXtra, fylla: row.fylla, sxima: row.sxima, tatgab: row.tatgab, opseis: row.opseis });
-  tkProcRows = []; addTkProcRow();
+  addTkPaperRow({
+    tipos: row.tipos, xarti: row.xarti, xroma: row.xroma, qty: row.qty,
+    fyllaNet: row.fyllaNet, fyllaXtra: row.fyllaXtra, fylla: row.fylla,
+    sxima: row.sxima, tatgab: row.tatgab, opseis: row.opseis
+    // leftover/consumed deliberately not copied: those stock movements belong
+    // to the parent and must not be able to happen twice.
+  });
+  // Bring the processing tasks across so nothing has to be retyped — the
+  // operator deletes whatever doesn't apply to this piece. Timers start clean,
+  // since they measured the parent's run.
+  tkProcRows = [];
+  const parentProc = parentProcRows.filter(p => (p.label||'').trim() || (p.details||'').trim());
+  if(parentProc.length){
+    parentProc.forEach(p => addTkProcRow({ label: p.label, details: p.details }));
+  } else {
+    addTkProcRow();
+  }
+  // The child holds a single item, so the per-row quantity column has no place
+  // there — its quantity lives in the header field instead.
+  setTicketMultiItem(false);
   recalcTicketPackaging();
 
   try{
@@ -5660,6 +5688,18 @@ async function saveTicket(){
     // Write ONLY this ticket — a colleague saving a different ticket at the
     // same moment is no longer overwritten.
     await jbMergePath(SLICE_MAIN, ['tickets', id], ticketObj);
+
+    // A client typed straight into a ticket has to join the list too, otherwise
+    // it never appears in the Πελάτες tab or in any client dropdown.
+    const tClient = (data.client || '').trim();
+    if(tClient && !(record.clients || []).includes(tClient)){
+      record.clients = record.clients || [];
+      record.clients.push(tClient);
+      record.clients.sort((a,b)=>a.localeCompare(b,'el'));
+      await jbMergePath(SLICE_MAIN, ['clients'], record.clients);
+      clientsCache = record.clients;   // keep the dropdown in step immediately
+      refreshClientOptions();
+    }
 
     // Linked tickets are all part of the SAME order — the PARENT's delivery
     // date propagates to its production-only children (children have no date
@@ -9326,6 +9366,40 @@ async function deleteClient(name){
   }catch(e){
     console.error('Delete client error:', e);
     alert('Σφάλμα διαγραφής: ' + e.message);
+  }
+}
+
+// Clients typed straight into tickets before this was wired up never reached
+// the list. This gathers them in one pass, adding only what's missing.
+async function syncClientsFromRecords(){
+  try{
+    const record = await jbGetRecord();
+    const existing = new Set((record.clients||[]).map(n=>(n||'').trim()).filter(Boolean));
+    const found = new Set();
+    Object.values(record.tickets||{}).forEach(t=>{
+      const n = ((t.data||{}).client || '').trim();
+      if(n) found.add(n);
+    });
+    Object.values(record.offers||{}).forEach(o=>{
+      const n = ((o.data||{}).client || o.label || '').trim();
+      if(n) found.add(n);
+    });
+    const missing = [...found].filter(n => !existing.has(n)).sort((a,b)=>a.localeCompare(b,'el'));
+    if(missing.length === 0){
+      statusMsg('Όλοι οι πελάτες είναι ήδη στη λίστα — δεν χρειάστηκε καμία προσθήκη.');
+      return;
+    }
+    const preview = missing.slice(0,15).map(n=>'• '+n).join('\n');
+    if(!confirm(`Βρέθηκαν ${missing.length} πελάτες που λείπουν από τη λίστα:\n\n${preview}${missing.length>15 ? `\n… και άλλοι ${missing.length-15}` : ''}\n\nΝα προστεθούν;`)) return;
+    record.clients = [...(record.clients||[]), ...missing].sort((a,b)=>a.localeCompare(b,'el'));
+    await jbMergePath(SLICE_MAIN, ['clients'], record.clients);
+    clientsCache = record.clients;
+    refreshClientOptions();
+    refreshClientsList();
+    statusMsg(`Προστέθηκαν ${missing.length} πελάτες ✓`);
+  }catch(e){
+    console.error('Sync clients error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
   }
 }
 
