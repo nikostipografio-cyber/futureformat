@@ -70,12 +70,16 @@
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .topbar h1{font-size:21px;margin:0;font-weight:600;}
   .topbar .actions{display:flex;gap:10px;}
-  button.btn{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);display:inline-flex;align-items:center;gap:6px;}
+  /* Slim and wide rather than chunky: toolbars hold a lot of these, and the
+     height is what makes a row of them feel heavy. */
+  button.btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.5;}
   .pdf-dropdown-item{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink);white-space:nowrap;}
   .pdf-dropdown-item:hover{background:var(--page);}
   .pdf-dropdown-item:not(:last-child){border-bottom:1px solid var(--line);}
   /* Per-row quantity, styled like the main quantity box at the top so it reads as
      the same kind of figure. Only shown when the ticket holds several items. */
+  .gang-tag{display:inline-block;font-size:12px;margin-right:3px;vertical-align:middle;}
+  tr.gang-run td{background:#f4f8ff;}
   .tk-qty-cell{font-weight:800;font-size:15px;text-align:center;border:2px solid var(--ink);background:#f0efe9;}
   .tk-qty-cell:focus{background:#fff;}
   .tk-multi-col{display:none;}
@@ -109,6 +113,19 @@
   .client-row.open .client-caret{transform:rotate(90deg);}
   .client-row.open{background:var(--page);}
   .client-detail{padding:14px 18px;border-top:1px solid var(--line);}
+  .client-detail h4.ci-toggle{cursor:pointer;display:flex;align-items:center;gap:8px;
+    user-select:none;padding:2px 0;}
+  .client-detail h4.ci-toggle:hover{color:var(--ink);}
+  .ci-caret{font-size:8px;transition:transform 0.12s;display:inline-block;}
+  .client-detail h4.ci-toggle.open .ci-caret{transform:rotate(90deg);}
+  .ci-summary{font-weight:400;text-transform:none;letter-spacing:0;font-size:11.5px;
+    color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ci-sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--muted);margin:10px 0 6px;}
+  .ci-extra{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;
+    border-top:1px dashed var(--line);padding-top:8px;margin-top:6px;}
+  .ci-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 14px;
+    background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:6px;}
   .client-detail h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);}
   .client-detail h4:not(:first-child){margin-top:18px;}
   .cd-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -129,6 +146,17 @@
   .cd-amount{font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;}
   .sec-count{font-size:10.5px;font-weight:700;color:#2f6fed;background:#eaf1fe;
     border:1px solid #c6d9fb;border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:2px;}
+  /* Menu rows, not buttons — the element+class selector is needed to beat the
+     generic .btn styling they inherit. */
+  button.board-menu-item{display:block;width:100%;text-align:left;border:none;background:none;
+    color:var(--ink);font-weight:500;padding:8px 10px;border-radius:6px;font-size:12.5px;}
+  button.board-menu-item:hover{background:var(--page);}
+  button.board-menu-item.solid{background:var(--ink);color:#fff;}
+  /* Cards that don't match the search step back rather than disappear, so you
+     can still see which column a match sits in. */
+  .board-searching .kanban-card{opacity:0.22;filter:saturate(0.3);}
+  .board-searching .kanban-card.search-hit{opacity:1;filter:none;
+    box-shadow:0 0 0 2px #a3690a, 0 6px 16px rgba(163,105,10,0.3);}
   .board-zoom-chip{display:none;font-size:11px;font-weight:700;color:var(--muted);
     background:var(--page);border:1px solid var(--line);border-radius:20px;
     padding:3px 10px;cursor:pointer;font-variant-numeric:tabular-nums;}
@@ -148,6 +176,9 @@
   button.btn.solid{background:var(--blue);color:#fff;}
   button.btn:hover{opacity:0.85;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden;}
+  /* The board header holds a dropdown that has to escape the card, so this one
+     card doesn't clip its children. */
+  .card.board-card{overflow:visible;}
   .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);}
   .card-head .title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
   .card-body{padding:16px;}
@@ -220,6 +251,17 @@
   .legend .swatch{width:13px;height:13px;border-radius:3px;border:1px solid var(--line-strong);}
   .totals{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:0 16px 16px;}
   .totcard{background:var(--ink);border:1px solid var(--ink);border-radius:8px;padding:10px 12px;}
+  /* A dedicated card for the offer's headline figure, so it isn't buried in a
+     table footer among the working numbers. */
+  .offer-total-card{display:none;background:var(--ink);border-radius:9px;padding:9px 14px;
+    margin-bottom:16px;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  body.multi-item-mode .offer-total-card{display:flex;}
+  .offer-total-card .otc-label{color:rgba(255,255,255,0.68);font-size:10px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.06em;}
+  .offer-total-card .otc-value{color:#fff;font-size:19px;font-weight:800;letter-spacing:-0.3px;line-height:1.2;}
+  .offer-total-card .otc-note{color:rgba(255,255,255,0.6);font-size:11px;margin-top:1px;}
+  .offer-total-card .otc-side{text-align:right;color:rgba(255,255,255,0.78);font-size:11.5px;line-height:1.5;}
+  .offer-total-card .otc-side b{color:#fff;}
 
   .pk-section{border-radius:10px;padding:14px 16px 4px;margin-bottom:14px;}
   .pk-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:10px;}
@@ -449,6 +491,21 @@
   .impo-card .sub{color:var(--muted);font-size:12.5px;margin-bottom:14px;}
   .impo-svgwrap{display:flex;justify-content:center;margin-bottom:14px;}
   .impo-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;margin-bottom:16px;}
+  /* A gang run has a wide sheet and a real table to read, so it gets more room
+     and a single column instead of the two-up layout used for one piece. */
+  .ff-toast{background:#1c7a4f;color:#fff;border-radius:10px;padding:12px 34px 12px 14px;
+    box-shadow:0 6px 22px rgba(0,0,0,0.22);pointer-events:auto;position:relative;
+    opacity:0;transform:translateY(12px);transition:opacity 0.25s ease,transform 0.25s ease;}
+  .ff-toast.in{opacity:1;transform:translateY(0);}
+  .ff-toast-done{background:#2f6fed;}
+  .ff-toast-title{font-size:13.5px;font-weight:800;line-height:1.3;}
+  .ff-toast-body{font-size:12px;margin-top:3px;opacity:0.92;line-height:1.45;}
+  .ff-toast-x{position:absolute;top:6px;right:8px;background:none;border:none;color:#fff;
+    font-size:17px;line-height:1;cursor:pointer;opacity:0.7;padding:2px 4px;}
+  .ff-toast-x:hover{opacity:1;}
+  .item-approved{accent-color:#1c7a4f;}
+  tr.item-not-approved{opacity:0.45;}
+  tr.item-not-approved input{color:var(--muted);}
   .impo-stats .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0;}
   .impo-stats .row .l{color:var(--muted);}
   .impo-stats .row .v{font-weight:700;}
@@ -464,8 +521,6 @@
   body.multi-item-mode .book-only{display:none !important;}
   .offer-type-switch{display:flex;gap:6px;}
   .offer-type-switch .ot-btn{padding:5px 12px;font-size:11.5px;}
-  button.mi-only-btn{display:none;}
-  body.multi-item-mode button.mi-only-btn{display:inline-flex;}
   .impo-margins{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;margin-bottom:14px;padding:10px;background:var(--page);border-radius:8px;}
   .impo-margin-field label{display:block;font-size:9.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
   .impo-margin-field input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line-strong);border-radius:5px;}
@@ -556,7 +611,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 </div>
 <div class="app-shell" id="appShell" style="display:none;">
-  <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Μενού">☰</button>
+  <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Μενού">≡</button>
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar(true)"></div>
   <div class="sidebar" id="sidebar">
     <div class="sidebar-brand"><span class="icon">🖨</span><span class="label">Future Format</span></div>
@@ -641,8 +696,7 @@ function toggleMobileSidebar(forceClose){
           <div class="pdf-dropdown-item" onclick="toggleEnglishPdfBtn();closePdfDropdown();"><span id="englishPdfCheck">☐</span> Αγγλικά PDF</div>
         </div>
       </div>
-      <button class="btn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
-      <button class="btn mi-only-btn" onclick="convertOfferToMultipleTickets()" title="Δημιουργεί ένα ξεχωριστό Job Ticket για κάθε είδος του Flat Work">Μετατροπή σε Πολλαπλά Job Tickets</button>
+      <button class="btn" id="convertOneBtn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
     </div>
@@ -650,7 +704,7 @@ function toggleMobileSidebar(forceClose){
   <div class="card">
     <div class="card-head"><div class="title">Στοιχεία Προσφοράς</div>
       <div class="offer-type-switch">
-        <button class="btn ot-btn solid" data-otype="book" onclick="setOfferType('book')">📖 Βιβλίο / Έντυπο</button>
+        <button class="btn ot-btn solid" data-otype="book" onclick="setOfferType('book')">Βιβλίο / Έντυπο</button>
         <button class="btn ot-btn" data-otype="multi" onclick="setOfferType('multi')">▤ Πολλαπλά Είδη</button>
       </div>
     </div>
@@ -674,8 +728,8 @@ function toggleMobileSidebar(forceClose){
         <div class="field"><label>Τίτλος Έργου</label><input id="fTitle" placeholder="π.χ. Notepad Α5"></div>
       </div>
       <div class="fieldgrid c4">
-        <div class="field"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()" style="font-weight:700;"></div>
-        <div class="field"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. 21*29"></div>
+        <div class="field book-only"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()" style="font-weight:700;"></div>
+        <div class="field book-only"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. 21*29"></div>
         <div class="field book-only"><label>Σελίδες</label><input id="fPages" placeholder="π.χ. 288+4"></div>
         <div class="field"><label>Χρόνος Παρ. (μέρες)</label><input id="fDeadline" value="15-20 Εργάσιμες ημέρες"></div>
         <div class="field"><label>Ημ/νία Προσφοράς</label><input id="fOfferDate" type="date"></div>
@@ -725,13 +779,19 @@ function toggleMobileSidebar(forceClose){
       </div>
       <div class="empty-note" id="npStatus"></div>
     </div>
+    <div id="gangBar" class="mi-col" style="display:none;align-items:center;gap:10px;padding:8px 16px;background:#eaf1fe;border-top:1px solid #c6d9fb;">
+      <span id="gangBarText" style="font-size:12.5px;font-weight:600;color:#2f6fed;"></span>
+      <button class="btn" onclick="clearGangPicks()">Καθαρισμός</button>
+    </div>
     <div class="card-body" style="padding:0;">
       <table>
         <thead>
           <tr>
+            <th style="width:3%" class="mi-col" title="🧩 συνεκτύπωση · ✓ εγκεκριμένο από τον πελάτη" style="font-size:9px;">🧩 ✓</th>
             <th style="width:7%" id="flatMaterialHead">Χαρτιά</th>
             <th style="width:13%">Τύπος χαρτιού</th>
             <th style="width:6%">Ποσότητα</th>
+            <th style="width:6%" class="mi-col" title="Σχήμα του τεμαχίου σε cm — χρησιμοποιείται από την προσομοίωση μοντάζ και τη συνεκτύπωση">Σχήμα</th>
             <th style="width:6%">Τεμ/Φύλ</th>
             <th style="width:6%">Φύλλα</th>
             <th style="width:6%">Xtra Φλ</th>
@@ -750,7 +810,7 @@ function toggleMobileSidebar(forceClose){
           </tr>
         </thead>
         <tbody id="flatBody"></tbody>
-        <tfoot><tr><td colspan="16" style="text-align:right;">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="16" style="text-align:right;" id="flatTotalLabel">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
       </table>
     </div>
   </div>
@@ -833,7 +893,7 @@ function toggleMobileSidebar(forceClose){
         <div id="materialsSummaryList"></div>
         <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
           <button class="btn solid" onclick="createOrdersFromSummary()">Δημιουργία Εκκρεμών Παραγγελιών</button>
-          <button class="btn" onclick="emailMaterialsOrder()">📧 Αποστολή Email Παραγγελίας</button>
+          <button class="btn" onclick="emailMaterialsOrder()">Αποστολή Email Παραγγελίας</button>
         </div>
         <div class="empty-note" id="materialsSummaryStatus" style="margin-top:6px;"></div>
       </div>
@@ -857,6 +917,15 @@ function toggleMobileSidebar(forceClose){
     <div class="totcard"><div class="lbl">Συνολικό Κόστος</div><div class="val" id="sumGrand">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Περιθώριο %</div><input class="val" id="fMarkup" type="number" step="1" placeholder="π.χ. 60" oninput="onMarkupInput()" title="Προσαύξηση επί του κόστους. Γράψε ποσοστό και βγαίνει η τιμή — ή γράψε τιμή και βγαίνει το ποσοστό."></div>
     <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" id="fManualTotal" type="number" step="0.01" placeholder="π.χ. 3100" oninput="onManualTotalInput()"><div class="lbl" id="profitNote" style="margin-top:3px;color:#7ee2a8;"></div></div>
+  </div>
+
+  <div class="offer-total-card" id="offerTotalCard">
+    <div>
+      <div class="otc-label" id="otcLabel">Σύνολο Προσφοράς</div>
+      <div class="otc-value" id="otcValue">0,00 €</div>
+      <div class="otc-note" id="otcNote"></div>
+    </div>
+    <div class="otc-side" id="otcSide"></div>
   </div>
 
   <input type="hidden" id="fApprovedQty" value="">
@@ -915,7 +984,7 @@ function toggleMobileSidebar(forceClose){
           <div class="field"><label>Πελάτης</label><input id="tkClient" list="clientOptions" placeholder="Διάλεξε ή γράψε πελάτη" title="Χρησιμεύει για να βρίσκεις όλες τις δουλειές ενός πελάτη"></div>
           <div class="field" id="tkDeadlineField"><label>Deadline (Ημερομηνία Παράδοσης)</label><input id="tkDeadline" type="date"></div>
           <div class="field" id="tkDeadlineChildNote" style="display:none;"><label>Deadline (Ημερομηνία Παράδοσης)</label><div class="empty-note" style="padding:8px 0;">Καθορίζεται από το κύριο ticket της παραγγελίας (δείτε πιο πάνω) — αυτό εδώ χρησιμοποιείται μόνο στην Παραγωγή.</div></div>
-          <div class="field"><label>Σχήμα</label><input id="tkSchema"></div>
+          <div class="field" id="tkSchemaField"><label>Σχήμα</label><input id="tkSchema"></div>
           <div class="field"><label>Σελίδες</label><input id="tkSelides" placeholder="π.χ. 288+4"></div>
         </div>
       </div>
@@ -933,7 +1002,8 @@ function toggleMobileSidebar(forceClose){
         <table>
           <thead><tr>
             <th style="width:7%">Τύπος</th>
-            <th style="width:8%" class="tk-multi-col" title="Πόσα τεμάχια αφορά αυτή η γραμμή">Ποσότητα</th>
+            <th style="width:7%" class="tk-multi-col" title="Πόσα τεμάχια αφορά αυτή η γραμμή">Ποσότητα</th>
+            <th style="width:7%" class="tk-multi-col" title="Κλειστό σχήμα αυτού του είδους">Σχήμα Είδους</th>
             <th style="width:15%">Χαρτί</th><th style="width:8%">Χρώμα</th>
             <th style="width:8%">Καθαρά Φύλλα</th><th style="width:7%">Έξτρα</th><th style="width:9%">Σύνολο Φύλλων</th>
             <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
@@ -1045,7 +1115,13 @@ function toggleMobileSidebar(forceClose){
         </div>
         <input type="hidden" id="tkPalletWeight">
         <div class="field" style="margin-top:12px;"><label>Εναλλακτικό κείμενο ετικέτας κουτιού (αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkBoxLabelText" rows="2" placeholder="π.χ. αφήστε κενό για το κανονικό Πελάτης — Τίτλος Έργου"></textarea></div>
-        <div class="field" style="margin-top:12px;"><label>Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkPalletAddress" rows="2" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea></div>
+        <div class="field" style="margin-top:12px;">
+          <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <span>Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</span>
+            <button class="btn" style="padding:2px 9px;font-size:11px;" onclick="fillPalletAddressFromClient(event)" title="Συμπλήρωση από την καρτέλα του πελάτη">📍 Διεύθυνση πελάτη</button>
+          </label>
+          <textarea id="tkPalletAddress" rows="3" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea>
+        </div>
         <div style="display:flex;gap:10px;margin-top:12px;">
           <button class="btn" onclick="printBoxLabels()">🏷️ Εκτύπωση Ετικετών Κουτιών</button>
           <button class="btn" onclick="printPalletLabels()">🏷️ Εκτύπωση Ετικετών Παλετών</button>
@@ -1059,7 +1135,7 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">Αποθηκευμένα Job Tickets</div>
         <div class="tk-list-tools" style="display:flex;gap:8px;align-items:center;">
-          <button class="btn" id="tkGroupBtn" onclick="toggleTicketGrouping()" title="Ομαδοποίηση ανά πελάτη — όλες οι δουλειές του καθενός μαζί">👥 Ανά Πελάτη</button>
+          <button class="btn solid" id="tkGroupBtn" onclick="toggleTicketGrouping()" title="Ομαδοποίηση ανά πελάτη — όλες οι δουλειές του καθενός μαζί">👥 Ανά Πελάτη</button>
           <input id="ticketSearch" placeholder="Αναζήτηση (και σε ολοκληρωμένες)..." style="max-width:260px;" oninput="refreshTicketList()" title="Χωρίς αναζήτηση βλέπεις μόνο ό,τι τρέχει στην Παραγωγή. Γράψε κάτι για να βρεις και αρχειοθετημένες ή τιμολογημένες δουλειές.">
           <button class="btn solid" onclick="newTicket();switchView('ticketform')">+ Νέο Ticket</button>
         </div>
@@ -1131,7 +1207,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn ord-filter-btn solid" data-filter="all" onclick="setOrdersFilter('all')">Όλες</button>
           <button class="btn ord-filter-btn" data-filter="pending" onclick="setOrdersFilter('pending')">Εκκρεμείς</button>
           <button class="btn ord-filter-btn" data-filter="received" onclick="setOrdersFilter('received')">Παραλήφθηκαν</button>
-          <button class="btn" id="ordGroupBtn" onclick="toggleOrdersGrouping()" title="Ομαδοποίηση ανά προμηθευτή — τι περιμένουμε από τον καθένα">🏢 Ανά Προμηθευτή</button>
+          <button class="btn solid" id="ordGroupBtn" onclick="toggleOrdersGrouping()" title="Ομαδοποίηση ανά προμηθευτή — τι περιμένουμε από τον καθένα">🏢 Ανά Προμηθευτή</button>
           <input id="ordSearch" placeholder="Αναζήτηση δουλειάς / υλικού..." style="flex:1;min-width:200px;" oninput="refreshOrdersList()">
           <button class="btn" style="color:#c0392b;border-color:#c0392b;display:none;" id="ordersBulkDeleteBtn" onclick="deleteSelectedOrders()">🗑 Διαγραφή Επιλεγμένων (<span id="ordersSelectedCount">0</span>)</button>
         </div>
@@ -1154,7 +1230,7 @@ function toggleMobileSidebar(forceClose){
           <button class="ord-filter-btn solid" data-ffilter="all" onclick="setForecastFilter('all')">Όλες</button>
           <button class="ord-filter-btn" data-ffilter="invoiced" onclick="setForecastFilter('invoiced')">Τιμολογημένες</button>
         </div>
-        <button class="btn" style="height:38px;" onclick="toggleBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
+        <button class="btn" style="height:38px;" onclick="toggleBulkImportPanel()">Μαζική Εισαγωγή</button>
         <button class="btn solid" style="height:38px;" onclick="toggleNewForecastPanel()">+ Νέα Εγκεκριμένη Δουλειά</button>
       </div></div>
       <div id="newForecastPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
@@ -1205,20 +1281,33 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewProduction" style="display:none;">
-    <div class="card">
+    <div class="card board-card">
       <div class="card-head">
         <div class="title">Παραγωγή</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn ord-filter-btn solid" data-pview="board" onclick="setProductionView('board')">📋 Πίνακας</button>
-          <button class="btn ord-filter-btn" data-pview="calendar" onclick="setProductionView('calendar')">📅 Ημερολόγιο</button>
+          <button class="btn ord-filter-btn solid" data-pview="board" onclick="setProductionView('board')">Πίνακας</button>
+          <button class="btn ord-filter-btn" data-pview="calendar" onclick="setProductionView('calendar')">Ημερολόγιο</button>
+          <input id="boardSearch" placeholder="🔎 Αναζήτηση κάρτας..." style="max-width:220px;" oninput="filterProductionBoard(this.value)">
           <span class="board-zoom-chip" id="prodZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('production',100)">100%</span>
-          <button class="btn" onclick="openBoardColourPicker('production', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">🎨 Φόντο</button>
-          <button class="btn" onclick="addProductionStage()">+ Νέα Στήλη</button>
-          <button class="btn" id="bulkSelectToggleBtn" onclick="toggleBulkSelectMode()">☑ Πολλαπλή Επιλογή</button>
-          <button class="btn" id="archiveToggleBtn" onclick="toggleArchiveView()">📦 Αρχειοθετημένα</button>
+          <span style="position:relative;">
+            <button class="btn" id="boardSettingsBtn" onclick="toggleBoardSettings(event)" title="Ρυθμίσεις πίνακα">Ρυθμίσεις</button>
+            <div id="boardSettingsMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;z-index:4000;min-width:230px;">
+              <button class="btn board-menu-item" onclick="closeBoardSettings();addProductionStage()">Νέα στήλη</button>
+              <button class="btn board-menu-item" onclick="closeBoardSettings();openBoardColourPicker('production', event)">Χρώμα φόντου</button>
+              <button class="btn board-menu-item" id="bulkSelectToggleBtn" onclick="closeBoardSettings();toggleBulkSelectMode()">Πολλαπλή Επιλογή</button>
+              <button class="btn board-menu-item" id="archiveToggleBtn" onclick="closeBoardSettings();toggleArchiveView()">Αρχειοθετημένα</button>
+              <div style="border-top:1px solid var(--line);margin:5px 0;"></div>
+              <div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:12px;color:var(--muted);">
+                Μέγεθος καρτών
+                <button class="btn" style="padding:2px 8px;" onclick="stepBoardZoom('production',-1)">−</button>
+                <button class="btn" style="padding:2px 8px;" onclick="setBoardZoom('production',100)">100%</button>
+                <button class="btn" style="padding:2px 8px;" onclick="stepBoardZoom('production',1)">+</button>
+              </div>
+            </div>
+          </span>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική. Για μεγαλύτερες ή μικρότερες κάρτες: <b>Ctrl + ροδέλα ποντικιού</b> πάνω στον πίνακα. Δεξί κλικ στο φόντο αλλάζει χρώμα.</div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική. Με την <b>αναζήτηση</b> βρίσκεις κάρτα σε όποια στήλη κι αν είναι. Για μεγαλύτερες ή μικρότερες κάρτες: <b>Ctrl + ροδέλα ποντικιού</b>. Τα υπόλοιπα (χρώμα φόντου, πολλαπλή επιλογή, αρχειοθετημένα) στο ⚙ Ρυθμίσεις.</div>
       <div class="card-body" id="archiveList" style="display:none;"></div>
       <div id="bulkSelectBar" style="display:none;padding:10px 16px;border-top:1px solid var(--line);background:var(--page);align-items:center;gap:12px;">
         <span id="bulkSelectCount" style="font-size:12.5px;font-weight:600;">0 επιλεγμένα</span>
@@ -1245,7 +1334,7 @@ function toggleMobileSidebar(forceClose){
           <span style="width:12px;"></span>
           <button class="btn ord-filter-btn solid" data-ptrange="all" onclick="setProdTimeRange('all')">Όλα</button>
           <button class="btn ord-filter-btn" data-ptrange="30" onclick="setProdTimeRange('30')">Τελευταίες 30 μέρες</button>
-          <button class="btn" onclick="exportProdTimeCsv()">⬇ Εξαγωγή CSV</button>
+          <button class="btn" onclick="exportProdTimeCsv()">Εξαγωγή CSV</button>
         </div>
       </div>
       <div class="card-body" style="color:var(--muted);font-size:12px;">Στοιχεία από τα χρονόμετρα Make Ready / Production σε όλα τα αποθηκευμένα Job Tickets, ομαδοποιημένα ανά όνομα εργασίας.</div>
@@ -1257,8 +1346,8 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">🏬 Αποθήκη — Κίνηση Χαρτιού</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn" onclick="toggleStockBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
-          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">🗑 Μηδενισμός Αποθήκης</button>
+          <button class="btn" onclick="toggleStockBulkImportPanel()">Μαζική Εισαγωγή</button>
+          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">Μηδενισμός Αποθήκης</button>
         </div>
       </div>
       <div id="stockBulkImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
@@ -1310,7 +1399,7 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">📊 Απολογιστικά Παραγγελιών Χαρτιού</div>
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="stockReportYear" onchange="refreshStockReport()" style="max-width:140px;"><option value="">Όλα τα έτη</option></select>
-          <button class="btn" onclick="exportStockReportCsv()">⬇ Εξαγωγή CSV</button>
+          <button class="btn" onclick="exportStockReportCsv()">Εξαγωγή CSV</button>
         </div>
       </div>
       <div class="card-body">
@@ -1389,11 +1478,11 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">🧾 Τιμολόγηση</div>
         <div style="display:flex;gap:8px;">
           <span class="board-zoom-chip" id="invZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('invoicing',100)">100%</span>
-          <button class="btn" onclick="openBoardColourPicker('invoicing', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">🎨 Φόντο</button>
+          <button class="btn" onclick="openBoardColourPicker('invoicing', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">Φόντο</button>
           <button class="btn" onclick="addInvoicingColumn()">+ Νέα Στήλη</button>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Οι δουλειές έρχονται εδώ όταν πατήσεις «🧾 Τιμολόγηση» στην τελευταία στήλη της Παραγωγής. Σύρε τις κάρτες ανάμεσα στις στήλες. Κλικ σε μια κάρτα ανοίγει το ticket.</div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Οι δουλειές έρχονται εδώ όταν πατήσεις «🧾 Τιμολόγηση» στην τελευταία στήλη της Παραγωγής. Σύρε τις κάρτες ανάμεσα στις στήλες. Κλικ σε μια κάρτα ανοίγει το ticket. <b>Δεξί κλικ σε κάρτα</b> την επιστρέφει στην Παραγωγή.</div>
     </div>
     <div id="invoicingBoard" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:50px;align-items:flex-start;scroll-behavior:smooth;"></div>
   </div>
@@ -1402,9 +1491,11 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">👥 Πελάτες</div>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" onclick="exportClientsCsv()" title="Κατεβάζει τους πελάτες που έχεις ήδη, με ό,τι στοιχεία υπάρχουν">⬇ Εξαγωγή Πελατών</button>
+          <button class="btn" onclick="toggleClientImport()" title="Εισαγωγή διευθύνσεων από Excel">📋 Εισαγωγή από Excel</button>
           <button class="btn" onclick="syncClientsFromRecords()" title="Μαζεύει πελάτες που έχουν γραφτεί σε Job Tickets ή προσφορές αλλά λείπουν από τη λίστα">🔄 Συγχρονισμός</button>
           <input id="clientsSearch" placeholder="Αναζήτηση πελάτη..." style="max-width:260px;" oninput="refreshClientsList()">
-          <button class="btn" onclick="toggleClientsBulkImportPanel()">📋 Μαζική Εισαγωγή</button>
+          <button class="btn" onclick="toggleClientsBulkImportPanel()">Μαζική Εισαγωγή</button>
         </div>
       </div>
       <div id="clientsBulkImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
@@ -1417,6 +1508,19 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div class="empty-note" id="clientsBulkImportStatus" style="margin-top:8px;"></div>
       </div>
+      <div class="card-body" id="clientImportPanel" style="display:none;border-bottom:1px solid var(--line);">
+        <div class="empty-note" style="margin-bottom:10px;line-height:1.6;">
+          Στο Excel βάλε τους πελάτες σε στήλες με αυτή τη σειρά και <b>αντίγραψε τα κελιά</b> (χωρίς επικεφαλίδες):<br>
+          <b>Πελάτης · Διεύθυνση · Τηλέφωνο · ΑΦΜ</b> — αρκούν οι δύο πρώτες, οι υπόλοιπες προαιρετικές.<br>
+          Για διεύθυνση σε πολλές γραμμές μέσα σε ένα κελί, χώρισε τα μέρη με <b>κόμμα</b> — θα μπουν σε ξεχωριστές γραμμές στην ετικέτα.
+        </div>
+        <textarea id="clientImportText" rows="7" placeholder="Επικόλλησε εδώ (Ctrl+V)" style="width:100%;font-family:monospace;font-size:12px;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn solid" onclick="previewClientImport()">Έλεγχος αντιστοίχισης</button>
+          <button class="btn" onclick="toggleClientImport()">Κλείσιμο</button>
+        </div>
+        <div id="clientImportPreview" style="margin-top:12px;"></div>
+      </div>
       <div class="card-body" id="clientsList"></div>
     </div>
   </div>
@@ -1426,6 +1530,23 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">👤 Λογαριασμός</div><button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="signOutUser()">Αποσύνδεση</button></div>
       <div class="card-body">
         <div class="empty-note" id="currentUserEmail">Συνδεδεμένος/η</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">🏷 Αυτόματα Labels</div>
+        <button class="btn" onclick="toggleCardBody('labelRulesBody', this)">Εμφάνιση</button>
+      </div>
+      <div class="card-body" id="labelRulesBody" style="display:none;">
+        <div class="empty-note" style="margin-bottom:10px;">Αν ο τίτλος ενός Job Ticket περιέχει τη λέξη που θα ορίσεις, το label μπαίνει μόνο του — σε νέα tickets και σε όσα υπάρχουν ήδη.</div>
+        <div id="labelRulesList"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;">
+          <div class="field" style="flex:1;min-width:180px;"><label>Αν ο τίτλος περιέχει</label>
+            <input id="newRuleText" placeholder="π.χ. AVENUE"></div>
+          <div class="field" style="flex:1;min-width:180px;"><label>Βάλε το label</label>
+            <select id="newRuleLabel"></select></div>
+          <button class="btn solid" onclick="addLabelRule()">+ Προσθήκη Κανόνα</button>
+          <button class="btn" onclick="applyLabelRulesToAll(true)" title="Εφαρμογή σε όλα τα υπάρχοντα tickets">Εφαρμογή τώρα σε όλα</button>
+        </div>
       </div>
     </div>
     <div class="card" id="userRolesCard">
@@ -1481,7 +1602,7 @@ function toggleMobileSidebar(forceClose){
           <div class="field"><label>Project URL</label><input id="jbBin" placeholder="https://xxxxx.supabase.co" oninput="onJbChange()"></div>
           <div class="field"><label>API Key (anon public)</label><input id="jbKey" placeholder="από Project Settings → API" oninput="onJbChange()"></div>
         </div>
-        <button class="btn" onclick="testSupabaseConnection()">🔌 Δοκιμή Σύνδεσης</button>
+        <button class="btn" onclick="testSupabaseConnection()">Δοκιμή Σύνδεσης</button>
         <div class="empty-note" id="jbStatus">Το πρόγραμμα συνδέεται αυτόματα με την κοινόχρηστη βάση — δεν χρειάζεται να συμπληρώσεις τίποτα εδώ κανονικά. Αυτά τα πεδία χρειάζονται μόνο αν κάποια στιγμή θελήσεις να αλλάξεις βάση.</div>
       </div>
       </div>
@@ -1490,9 +1611,9 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">💾 Αντίγραφο Ασφαλείας</div></div>
       <div class="card-body">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button class="btn solid" onclick="exportFullBackup()">⬇ Λήψη Πλήρους Αντιγράφου</button>
+          <button class="btn solid" onclick="exportFullBackup()">Λήψη Πλήρους Αντιγράφου</button>
           <input type="file" id="restoreFileInput" accept=".json" style="max-width:260px;">
-          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="restoreFromBackup()">⬆ Επαναφορά από Αρχείο</button>
+          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="restoreFromBackup()">Επαναφορά από Αρχείο</button>
         </div>
         <div class="empty-note" style="margin-top:8px;">Κατέβασε τακτικά ένα αντίγραφο (π.χ. μία φορά τη βδομάδα) και κράτησέ το κάπου ασφαλές. Η "Επαναφορά" <b>αντικαθιστά εντελώς</b> όλα τα τρέχοντα δεδομένα — χρησιμοποίησέ την μόνο αν κάτι χάθηκε ή χάλασε.</div>
         <div class="empty-note" id="backupStatus" style="margin-top:4px;"></div>
@@ -1521,7 +1642,7 @@ function toggleMobileSidebar(forceClose){
     <h3 id="impoTitle">Προσομοίωση Μοντάζ</h3>
     <div class="sub" id="impoSub"></div>
 
-    <div class="impo-margins" style="grid-template-columns:1fr 1fr;">
+    <div class="impo-margins" id="impoShapeRow" style="grid-template-columns:1fr 1fr;">
       <div class="impo-margin-field" id="impoSchemaGroup"><label>Σχήμα (πχ 21x29)</label><input id="impoSchema" type="text" oninput="recalcCurrentImposition()"></div>
       <div class="impo-margin-field"><label>Προσανατολισμός τεμαχίου</label>
         <select id="impoOrientation" onchange="recalcCurrentImposition()">
@@ -1559,7 +1680,7 @@ function toggleMobileSidebar(forceClose){
     </div>
 
     <div class="impo-svgwrap" id="impoSvgWrap"></div>
-    <div style="display:flex;gap:16px;justify-content:center;font-size:10.5px;color:var(--muted);margin-bottom:10px;">
+    <div id="impoLegend" style="display:flex;gap:16px;justify-content:center;font-size:10.5px;color:var(--muted);margin-bottom:10px;">
       <span><span style="display:inline-block;width:10px;height:10px;background:#8ecf9c;border:1px solid #3a3a3a;vertical-align:middle;margin-right:4px;"></span>Τεμάχιο</span>
       <span><span style="display:inline-block;width:10px;height:10px;background:#efe9d8;border:1px solid #c9c2a8;vertical-align:middle;margin-right:4px;"></span>Μη εκτυπώσιμη ζώνη (περιθώρια)</span>
       <span><span style="display:inline-block;width:10px;height:10px;background:#fbe4df;border:1px solid #c8564a;vertical-align:middle;margin-right:4px;"></span>Φύρα (εντός εκτυπώσιμης)</span>
@@ -2267,8 +2388,6 @@ function paperCost(row, totalSheets){
 }
 
 function flatRowTotalCost(r, baseQty){
-  const manual = num(r.manualPrice);
-  if(manual > 0) return manual;
   const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
   const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
   const totalSheets = sheets + num(r.xtra);
@@ -2284,7 +2403,7 @@ let fabricRows = [], fabricSeq = 0;
 
 function addFlatRow(vals){
   const id = flatSeq++;
-  flatRows.push(Object.assign({id, material:'', paperName:'', qty:'', piecesPerSheet:'', xtra:'', priceKg:'', priceSheet:'', printType:'', color:'', sides:1, plateSets:'', pricePerSide:'', simShape:'', manualPrice:''}, vals||{}));
+  flatRows.push(Object.assign({id, material:'', paperName:'', qty:'', piecesPerSheet:'', xtra:'', priceKg:'', priceSheet:'', printType:'', color:'', sides:1, plateSets:'', pricePerSide:'', simShape:'', manualPrice:'', gangPick:false, itemApproved:false}, vals||{}));
   renderFlat();
 }
 function removeFlatRow(id){ flatRows = flatRows.filter(r=>r.id!==id); renderFlat(); }
@@ -2325,15 +2444,23 @@ function onPaperPick(kind, id, value){
 }
 
 function renderFlat(){
+  updateGangBar();
   const body = document.getElementById('flatBody');
   body.innerHTML = '';
   flatRows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', r.id);
+    // When some items are approved, the rest are dimmed — you can still edit
+    // them, but it's obvious they're not part of the order.
+    if(flatRows.some(x=>x.itemApproved) && !r.itemApproved) tr.classList.add('item-not-approved');
     tr.innerHTML = `
+      <td class="mi-col" style="text-align:center;white-space:nowrap;">
+        <input type="checkbox" class="gang-pick" data-id="${r.id}" ${r.gangPick ? 'checked' : ''} onchange="onGangPick(${r.id}, this.checked)" title="Επιλογή για συνεκτύπωση" style="width:15px;height:15px;min-width:15px;margin:0;">
+        <input type="checkbox" class="item-approved" data-id="${r.id}" ${r.itemApproved ? 'checked' : ''} onchange="onItemApproved(${r.id}, this.checked)" title="Εγκρίθηκε από τον πελάτη" style="width:15px;height:15px;min-width:15px;margin:0 0 0 3px;accent-color:#1c7a4f;"></td>
       <td><input list="flatMaterialOptions" value="${r.material}" placeholder="Εξώφυλλο..." oninput="flatRows.find(x=>x.id===${r.id}).material=this.value"></td>
       <td><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('flat',${r.id},this.value)"></td>
       <td><input type="number" value="${r.qty}" placeholder="${document.getElementById('hdrQty').value || ''}" oninput="flatRows.find(x=>x.id===${r.id}).qty=this.value;recalcFlatRow(${r.id})"></td>
+      <td class="mi-col"><input class="c-simshape" value="${esc(r.simShape||'')}" placeholder="π.χ. 9x5" oninput="flatRows.find(x=>x.id===${r.id}).simShape=this.value" title="Σχήμα τεμαχίου σε cm"></td>
       <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου (μοντάζ)" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
       <td><div class="auto c-sheets">0</div></td>
       <td><input type="number" value="${r.xtra}" oninput="flatRows.find(x=>x.id===${r.id}).xtra=this.value;recalcFlatRow(${r.id})"></td>
@@ -2365,9 +2492,11 @@ function recalcFlatRow(id){
   const totalSheets = sheets + num(r.xtra);
   const pCost = paperCost(r, totalSheets);
   const printCost = num(r.plateSets) * num(r.pricePerSide);
-  const manual = num(r.manualPrice);
-  const total = manual > 0 ? manual : pCost + printCost;
+  // "Συνολικό Κόστος" is what the job costs us. The hand-typed figure in the
+  // next column is what we charge — mixing the two made the column show a
+  // selling price with processing added on top, which is neither.
   const procCost = r.material ? assignedTaskCostForItem(r.material) : 0;
+  const total = pCost + printCost;
   tr.querySelector('.c-sheets').textContent = sheets;
   tr.querySelector('.c-totalsheets').textContent = totalSheets;
   tr.querySelector('.c-papercost').textContent = fmt(pCost);
@@ -2377,15 +2506,95 @@ function recalcFlatRow(id){
 }
 
 function recalcFlatRowByMaterial(material){
-  flatRows.filter(r=>r.material===material).forEach(r=>recalcFlatRow(r.id));
+  flatRows.filter(r=>sameItemName(r.material, material)).forEach(r=>recalcFlatRow(r.id));
+}
+
+// Surfaces the mismatch instead of leaving the per-row figures quietly short.
+function refreshOrphanProcWarning(){
+  const el = document.getElementById('gangBar');
+  if(!el) return;
+  let warn = document.getElementById('orphanProcWarn');
+  const orphans = (typeof orphanProcTasks === 'function') ? orphanProcTasks() : [];
+  const multi = (document.getElementById('fMultiItem')||{}).checked;
+  if(!multi || !orphans.length){
+    if(warn) warn.remove();
+    return;
+  }
+  if(!warn){
+    warn = document.createElement('div');
+    warn.id = 'orphanProcWarn';
+    warn.style.cssText = 'padding:8px 16px;background:#fdf0f2;border-top:1px solid #f0c8ce;'
+      + 'font-size:12.5px;color:#b3243c;font-weight:600;';
+    el.parentNode.insertBefore(warn, el.nextSibling);
+  }
+  const names = [...new Set(orphans.map(t=>String(t.itemMaterial).trim()))];
+  warn.innerHTML = `⚠ ${orphans.length} επεξεργασί${orphans.length===1?'α είναι ανατεθειμένη':'ες είναι ανατεθειμένες'} σε είδος που δεν υπάρχει `
+    + `(${names.map(esc).join(', ')}). Το κόστος τους μετράει στο σύνολο αλλά δεν εμφανίζεται σε καμία γραμμή — `
+    + `διόρθωσε την ανάθεση στις Επεξεργασίες.`;
+}
+
+// The offer's headline number, kept away from the working figures so it reads
+// as the answer rather than another calculated cell.
+function updateOfferTotalCard(multi, priceTotal, costTotal, pricedRows){
+  const card = document.getElementById('offerTotalCard');
+  if(!card) return;
+  if(!multi) return;                       // the card is hidden by CSS anyway
+  const partial = (typeof approvedItems === 'function') ? approvedItems() : null;
+  const value = partial ? approvedItemsTotal() : priceTotal;
+  const profit = value - costTotal;
+  const margin = costTotal > 0 ? (profit / costTotal * 100) : 0;
+
+  document.getElementById('otcLabel').textContent =
+    partial ? `Σύνολο Εγκεκριμένων (${partial.length} από ${flatRows.length} είδη)` : 'Σύνολο Προσφοράς';
+  document.getElementById('otcValue').textContent = fmt(value);
+  document.getElementById('otcNote').textContent =
+    partial ? `Πλήρης προσφορά: ${fmt(priceTotal)}`
+            : (pricedRows ? `${pricedRows} από ${flatRows.length} είδη με χειροκίνητη τιμή` : 'Αυτόματος υπολογισμός από το κόστος');
+  document.getElementById('otcSide').innerHTML =
+    `Κόστος <b>${fmt(costTotal)}</b><br>`
+    + `Κέρδος <b>${fmt(profit)}</b>`
+    + (costTotal > 0 ? ` <span style="opacity:0.75;">(${margin.toFixed(0)}%)</span>` : '');
 }
 
 function recalcFlatTotal(){
-  let grandTotal = 0;
+  refreshOrphanProcWarning();
+  const baseQty = num(document.getElementById('hdrQty').value);
+  const multi = (document.getElementById('fMultiItem')||{}).checked;
+
+  let costTotal = 0, priceTotal = 0, pricedRows = 0;
   flatRows.forEach(r=>{
-    grandTotal += flatRowTotalCost(r, num(document.getElementById('hdrQty').value));
+    const cost = flatRowTotalCost(r, baseQty)
+               + (r.material ? assignedTaskCostForItem(r.material) : 0);
+    costTotal += cost;
+    const manual = num(r.manualPrice);
+    if(manual > 0){ priceTotal += manual; pricedRows++; }
+    else { priceTotal += cost; }
   });
-  document.getElementById('flatTotal').textContent = fmt(grandTotal);
+
+  // With items priced by hand, this line is what the customer is being asked to
+  // pay — showing a cost total underneath it would be the more useful number to
+  // hide, so the cost moves to the caption.
+  const el = document.getElementById('flatTotal');
+  const label = document.getElementById('flatTotalLabel');
+  updateOfferTotalCard(multi, priceTotal, costTotal, pricedRows);
+  // In a multi-item offer this line IS the offer's price, so it stops looking
+  // like another calculated cell and reads as the answer.
+  const partial = multi && (typeof approvedItems === 'function') && approvedItems();
+  if(partial){
+    // Part of the offer was accepted, so the headline is what will actually be
+    // invoiced; the full quote stays visible beside it as the record.
+    const approvedSum = approvedItemsTotal();
+    el.textContent = fmt(approvedSum);
+    if(label) label.innerHTML = `Σύνολο εγκεκριμένων <span style="font-weight:400;color:var(--muted);font-size:11px;">`
+      + `(${partial.length} από ${flatRows.length} είδη · πλήρης προσφορά ${fmt(priceTotal)})</span>`;
+  } else if(multi && pricedRows > 0){
+    el.textContent = fmt(priceTotal);
+    if(label) label.innerHTML = `Σύνολο Flat Work <span style="font-weight:400;color:var(--muted);font-size:11px;">`
+      + `(τιμές ${pricedRows} από ${flatRows.length} ειδών · κόστος ${fmt(costTotal)})</span>`;
+  } else {
+    el.textContent = fmt(costTotal);
+    if(label) label.textContent = 'Σύνολο Flat Work';
+  }
   updateGrand();
 }
 
@@ -2530,7 +2739,9 @@ function removeFabricRow(id){ fabricRows = fabricRows.filter(r=>r.id!==id); rend
 
 function parseDimFromText(s){
   if(!s) return null;
-  const m = String(s).replace(/,/g,'.').match(/([0-9]+(?:\.[0-9]+)?)\s*[xΧχ×*]\s*([0-9]+(?:\.[0-9]+)?)/);
+  // Latin x/X, Greek Χ/χ, the multiplication sign and a plain asterisk — people
+  // type all of these, often with the wrong keyboard layout.
+  const m = String(s).replace(/,/g,'.').match(/([0-9]+(?:\.[0-9]+)?)\s*[xXΧχ×*]\s*([0-9]+(?:\.[0-9]+)?)/);
   if(!m) return null;
   return { w: parseFloat(m[1]), h: parseFloat(m[2]) };
 }
@@ -2568,6 +2779,9 @@ function bestFitLayout(sheetW, sheetH, pieceW, pieceH, margins, orientation){
 
 function closeImpositionModal(){
   document.getElementById('impoOverlay').classList.remove('show');
+  // A shape edited inside the modal belongs to the row, so the table has to show
+  // the new value rather than the one it was drawn with.
+  if(currentImpoKind === 'flat') renderFlat();
 }
 
 function showImpositionModal(layout, opts){
@@ -2748,6 +2962,9 @@ function recalcCurrentImposition(){
 }
 
 function openEmptyImpositionModal(title, message){
+  ['impoShapeRow','impoMarginsGroup','impoLegend'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
   document.getElementById('impoTitle').textContent = title;
   document.getElementById('impoSub').textContent = '';
   document.getElementById('impoSvgWrap').innerHTML = `<div class="empty-note" style="text-align:center;padding:30px 0;">${esc(message)}</div>`;
@@ -2758,6 +2975,9 @@ function openEmptyImpositionModal(title, message){
 function simulateFabricFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'fabric';
+  ['impoShapeRow','impoMarginsGroup','impoLegend'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display = '';
+  });
   document.getElementById('impoSignatureGroup').style.display = 'none';
   document.querySelectorAll('.impo-cut-field').forEach(el=>{ el.style.display = ''; });
   document.getElementById('impoSchemaGroup').style.display = 'none';
@@ -2801,9 +3021,110 @@ function simulateFabricFit(id, keepModalOpen){
   showImpositionModal(layout, { title, countLabel: 'Μοτίβα ανά τρέχον μέτρο', extraStat, isFabric:true, lengthPerRow: lengthDim });
 }
 
+// ===== Συνεκτύπωση (gang run) =====
+// Several different items share one sheet. The sheet is divided into horizontal
+// bands; each item takes whole bands, fitting as many pieces per band as its
+// width allows. Bands are how a printer actually gangs work — the layout stays
+// cuttable in straight lines, unlike a free-form packing.
+function onGangPick(rowId, on){
+  const r = flatRows.find(x=>x.id===rowId);
+  if(r) r.gangPick = on;
+  updateGangBar();
+}
+
+// A customer often approves only part of a multi-item offer. Marking the items
+// that were accepted keeps the offer as a record of what was quoted, while the
+// forecast and the job tickets follow only what was actually ordered.
+function onItemApproved(rowId, on){
+  const r = flatRows.find(x=>x.id===rowId);
+  if(r) r.itemApproved = on;
+  renderFlat();
+  updateGrand();
+}
+
+// If the gang simulation has been run, its sheet count is the obvious default;
+// otherwise fall back to the largest single item's requirement.
+function suggestedGangSheets(gangItems){
+  const baseQty = num(document.getElementById('hdrQty').value);
+  return gangItems.reduce((m,r)=>{
+    const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
+    return Math.max(m, pps>0 ? ceilSafe(qty/pps) : 0);
+  }, 0);
+}
+
+function refreshApprovedBar(){
+  const anchor = document.getElementById('gangBar');
+  if(!anchor) return;
+  let el = document.getElementById('approvedBar');
+  const marked = flatRows.filter(r=>r.itemApproved);
+  const multi = (document.getElementById('fMultiItem')||{}).checked;
+  if(!multi || !marked.length){
+    if(el) el.remove();
+    ['convertOneBtn'].forEach(id=>{
+      const b = document.getElementById(id); if(b) b.classList.remove('solid');
+    });
+    return;
+  }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'approvedBar';
+    el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 16px;background:#e9f4ee;'
+      + 'border-top:1px solid #bfe0cd;font-size:12.5px;font-weight:600;color:#1c7a4f;';
+    anchor.parentNode.insertBefore(el, anchor);
+  }
+  // There's only one conversion button now, so no advice is needed — the bar
+  // just states what was approved and what it comes to.
+  el.innerHTML = `✓ Εγκρίθηκαν <b>${marked.length}</b> από ${flatRows.length} είδη · `
+    + `<b>${fmt(approvedItemsTotal())}</b>`
+    + `<span style="font-weight:400;color:var(--muted);margin-left:6px;">— η πρόβλεψη, οι παραγγελίες υλικών και το Job Ticket θα αφορούν μόνο αυτά</span>`;
+  const one = document.getElementById('convertOneBtn');
+  if(one) one.classList.toggle('solid', true);
+}
+
+function approvedItems(){
+  const marked = flatRows.filter(r=>r.itemApproved);
+  return marked.length ? marked : null;   // nothing marked means the whole offer
+}
+
+function approvedItemsTotal(){
+  const marked = approvedItems();
+  const baseQty = num(document.getElementById('hdrQty').value);
+  const rows = marked || flatRows;
+  return rows.reduce((s,r)=>{
+    const manual = num(r.manualPrice);
+    return s + (manual > 0 ? manual
+      : flatRowTotalCost(r, baseQty) + (r.material ? assignedTaskCostForItem(r.material) : 0));
+  }, 0);
+}
+
+function clearGangPicks(){
+  flatRows.forEach(r=>{ r.gangPick = false; });
+  renderFlat();
+  updateGangBar();
+}
+
+function updateGangBar(){
+  refreshApprovedBar();
+  const bar = document.getElementById('gangBar');
+  if(!bar) return;
+  const picked = flatRows.filter(r=>r.gangPick);
+  const multi = (document.getElementById('fMultiItem')||{}).checked;
+  const show = multi && picked.length > 0;
+  bar.style.display = show ? 'flex' : 'none';
+  if(show){
+    document.getElementById('gangBarText').textContent =
+      picked.length === 1
+        ? '1 είδος επιλεγμένο — διάλεξε τουλάχιστον 2 για συνεκτύπωση'
+        : `🧩 ${picked.length} είδη σημειωμένα για συνεκτύπωση — θα τυπωθούν μαζί σε ένα φύλλο`;
+  }
+}
+
 function simulateFlatFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'flat';
+  ['impoShapeRow','impoMarginsGroup','impoLegend'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display = '';
+  });
   document.getElementById('impoSignatureGroup').style.display = 'none';
   document.querySelectorAll('.impo-cut-field').forEach(el=>{ el.style.display = ''; });
   document.getElementById('impoSchemaGroup').style.display = '';
@@ -2990,6 +3311,9 @@ function checkSignatureFit(target, p, dim, rawLayout, margins, orientation){
 function simulateBookFit(id, keepModalOpen){
   currentImpoRowId = id;
   currentImpoKind = 'book';
+  ['impoShapeRow','impoMarginsGroup','impoLegend'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display = '';
+  });
   document.getElementById('impoSignatureGroup').style.display = 'contents';
   // The cut gap falls between two-page units (the fold sits inside the pair),
   // so these fields apply here just as they do in flat work.
@@ -3339,24 +3663,58 @@ function procTaskCalc(t, overrideQty){
   return { hours, cost, total };
 }
 
+// Tasks point at an item by its name, so the comparison has to be forgiving
+// about stray spaces and letter case — otherwise a task silently stops counting
+// against the item it belongs to.
+function sameItemName(a, b){
+  return String(a||'').trim().toLocaleLowerCase('el') === String(b||'').trim().toLocaleLowerCase('el');
+}
+
+// If several rows share a name there is no way to tell which one a task meant,
+// so its cost is split between them. That keeps the per-row figures adding up
+// to the offer total instead of counting the same work once per row.
+function itemNameShare(material){
+  const n = flatRows.filter(r => sameItemName(r.material, material)).length;
+  return n > 1 ? n : 1;
+}
+
 function assignedTaskCostForItem(material){
+  if(!String(material||'').trim()) return 0;
+  const share = itemNameShare(material);
   let sum = 0;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
-      if(t.itemMaterial && t.itemMaterial===material) sum += procTaskCalc(t).total;
+      if(t.itemMaterial && sameItemName(t.itemMaterial, material)) sum += procTaskCalc(t).total;
     });
   });
-  return sum;
+  return sum / share;
 }
 
 function assignedTaskNamesForItem(material){
   const names = [];
+  if(!String(material||'').trim()) return names;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
-      if(t.itemMaterial && t.itemMaterial===material && t.name) names.push(t.name);
+      if(t.itemMaterial && sameItemName(t.itemMaterial, material) && t.name) names.push(t.name);
     });
   });
   return names;
+}
+
+// A task can end up pointing at an item that was renamed or deleted. Its cost
+// still counts in the offer total but belongs to no row, which is exactly the
+// kind of silent mismatch that makes per-row figures look wrong.
+function orphanProcTasks(){
+  const orphans = [];
+  procCategories.forEach(cat=>{
+    cat.tasks.forEach(t=>{
+      const target = String(t.itemMaterial||'').trim();
+      if(!target) return;
+      if(!procTaskIsActive(t)) return;
+      if(!flatRows.some(r => sameItemName(r.material, target))) orphans.push(t);
+    });
+  });
+  return orphans;
 }
 
 function onProcTaskItemInput(catId, taskId, value){
@@ -3685,7 +4043,10 @@ function recalcProcTask(catId, taskId){
   row.querySelector('.c-cost').textContent = fmt(cost);
   row.querySelector('.c-total').textContent = fmt(total);
   recalcProcTotal();
-  if(t.itemMaterial) recalcFlatRowByMaterial(t.itemMaterial);
+  // Refresh every item row, not just the one this task points at now: a task
+  // that was moved to another item — or unassigned entirely — has to stop
+  // counting against the row it used to belong to.
+  flatRows.forEach(r => recalcFlatRow(r.id));
 }
 
 function recalcProcTotal(){
@@ -3697,17 +4058,18 @@ function recalcProcTotal(){
 
 function computeTotals(baseQty){
   let flatPaper = 0, flatPrint = 0;
+  // Every row contributes its real cost. Hand-typed item prices are a selling
+  // decision and are collected separately, so the markup can't be applied on
+  // top of a price that already includes profit.
+  let itemsManualPrice = 0, hasItemPrices = false;
   flatRows.forEach(r=>{
-    const manual = num(r.manualPrice);
-    if(manual > 0){
-      flatPaper += manual;
-      return;
-    }
     const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const totalSheets = sheets + num(r.xtra);
     flatPaper += paperCost(r, totalSheets);
     flatPrint += num(r.plateSets) * num(r.pricePerSide);
+    const manual = num(r.manualPrice);
+    if(manual > 0){ itemsManualPrice += manual; hasItemPrices = true; }
   });
 
   let bookPaper = 0, bookPrint = 0;
@@ -3726,12 +4088,19 @@ function computeTotals(baseQty){
 
   const materials = flatPaper + bookPaper + fabricTotal;
   const printing = flatPrint + bookPrint;
-  return { materials, printing, procTotal, grand: materials + printing + procTotal };
+  return { materials, printing, procTotal, grand: materials + printing + procTotal,
+           itemsManualPrice, hasItemPrices };
 }
 
 // Pricing works in both directions: set a markup and get the price, or set the
 // price and see what markup it implies. Whichever you touch drives the other.
+// The two price fields are linked, and one of them is the one the user is
+// steering. Remembering which lets the other follow when the cost changes —
+// otherwise a price set from a markup silently goes stale after any edit.
+let priceDrivenBy = 'markup';
+
 function onMarkupInput(){
+  priceDrivenBy = 'markup';
   const cost = computeTotals(num(document.getElementById('hdrQty').value)).grand;
   const pct = num(document.getElementById('fMarkup').value);
   const raw = document.getElementById('fMarkup').value;
@@ -3744,6 +4113,7 @@ function onMarkupInput(){
 }
 
 function onManualTotalInput(){
+  priceDrivenBy = 'price';
   const cost = computeTotals(num(document.getElementById('hdrQty').value)).grand;
   const price = num(document.getElementById('fManualTotal').value);
   const raw = document.getElementById('fManualTotal').value;
@@ -3753,6 +4123,43 @@ function onManualTotalInput(){
     document.getElementById('fMarkup').value = '';
   }
   updateGrand();
+}
+
+function syncOfferPriceFields(cost, totals){
+  const markupEl = document.getElementById('fMarkup');
+  const priceEl = document.getElementById('fManualTotal');
+  if(!markupEl || !priceEl) return;
+  if(document.activeElement === markupEl || document.activeElement === priceEl) return; // don't fight the typist
+
+  // With per-item prices typed in, the offer price is simply their sum plus the
+  // marked-up cost of any item left on automatic — the markup no longer applies
+  // to items that already have a price.
+  if(totals && totals.hasItemPrices){
+    // Partial approval means the offer's price is the approved subset — that is
+    // the figure that becomes the forecast and eventually the invoice.
+    const partialRows = (typeof approvedItems === 'function') ? approvedItems() : null;
+    if(partialRows){ priceEl.value = approvedItemsTotal().toFixed(2); return; }
+    const baseQty = num(document.getElementById('hdrQty').value);
+    let autoCost = 0;
+    flatRows.forEach(r=>{
+      if(num(r.manualPrice) > 0) return;
+      autoCost += flatRowTotalCost(r, baseQty)
+                + (r.material ? assignedTaskCostForItem(r.material) : 0);
+    });
+    const pct = num(markupEl.value);
+    priceEl.value = (totals.itemsManualPrice + autoCost * (1 + pct/100)).toFixed(2);
+    return;
+  }
+
+  if(priceDrivenBy === 'markup'){
+    const raw = markupEl.value;
+    if(raw === '' || !(cost > 0)) return;
+    priceEl.value = (cost * (1 + num(raw)/100)).toFixed(2);
+  } else {
+    const price = num(priceEl.value);
+    if(!(price > 0) || !(cost > 0)) return;
+    markupEl.value = Math.round((price - cost) / cost * 100);
+  }
 }
 
 function refreshProfitNote(){
@@ -3823,6 +4230,10 @@ function setApprovedQty(qty){
 function updateGrand(){
   const baseQty = num(document.getElementById('hdrQty').value);
   const t = computeTotals(baseQty);
+
+  // Keep the final price in step with the cost. Whichever field the user is
+  // driving stays untouched; the other one is recalculated.
+  syncOfferPriceFields(t.grand, t);
 
   document.getElementById('sumMaterials').textContent = fmt(t.materials);
   document.getElementById('sumPrinting').textContent = fmt(t.printing);
@@ -4046,7 +4457,12 @@ function computeMaterialsSummary(){
   const baseQty = num(document.getElementById('hdrQty').value);
   const byMaterial = {};
 
-  flatRows.forEach(r=>{
+  // Only order paper for work that was actually approved — otherwise a partly
+  // accepted offer would tie up stock for items nobody bought.
+  const approvedRows = (typeof approvedItems === 'function') ? approvedItems() : null;
+  const flatForOrder = approvedRows || flatRows;
+
+  flatForOrder.forEach(r=>{
     if(!r.paperName) return;
     const qty = num(r.qty) || baseQty;
     const pps = num(r.piecesPerSheet);
@@ -4326,9 +4742,9 @@ function labelPrintCss(){
     .lb-main-box{flex:1;min-width:0;padding:0 3mm;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;}
     /* Addresses run to three or four lines; clamping at two silently cut them
        off. Uppercase reads better across a warehouse. */
-    .lb-main{font-size:12pt;font-weight:400;line-height:1.24;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;word-break:break-word;white-space:pre-line;text-transform:uppercase;}
-    .lb-main.lb-main-sm{font-size:10pt;line-height:1.2;}
-    .lb-main.lb-main-xs{font-size:8.5pt;line-height:1.15;}
+    .lb-main{font-size:12pt;font-weight:400;line-height:1.24;overflow:hidden;display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;word-break:break-word;white-space:pre-line;text-transform:uppercase;}
+    .lb-main.lb-main-sm{font-size:10.5pt;line-height:1.2;}
+    .lb-main.lb-main-xs{font-size:9pt;line-height:1.15;}
     .lb-count-box{width:29mm;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0 1mm;}
     .lb-count-header{display:flex;justify-content:space-between;width:100%;font-size:7pt;letter-spacing:0.5pt;text-transform:uppercase;color:#888;margin-bottom:1.5mm;}
     .lb-count-value{font-size:26pt;font-weight:800;line-height:1;text-align:right;width:100%;}
@@ -4343,11 +4759,22 @@ function labelMainLine(){
 }
 
 // Long addresses get a step down in size rather than being cut off.
+// The recipient's name is the first line of the block, and the one that has to
+// carry across a warehouse — so it's rendered bigger than the address under it.
+// Greek capitals carry no accents — CSS text-transform leaves the tonos in
+// place, which reads as a typo on a printed label.
+function greekUpper(s){
+  const map = {'ά':'Α','έ':'Ε','ή':'Η','ί':'Ι','ό':'Ο','ύ':'Υ','ώ':'Ω',
+               'Ά':'Α','Έ':'Ε','Ή':'Η','Ί':'Ι','Ό':'Ο','Ύ':'Υ','Ώ':'Ω',
+               'ΐ':'Ι','ΰ':'Υ','ϊ':'Ι','ϋ':'Υ','Ϊ':'Ι','Ϋ':'Υ'};
+  return String(s||'').toUpperCase().replace(/[άέήίόύώΆΈΉΊΌΎΏΐΰϊϋΪΫ]/g, ch => map[ch] || ch);
+}
+
 function labelMainClass(text){
   const lines = String(text||'').split('\n').length;
   const chars = String(text||'').length;
-  if(lines >= 4 || chars > 90) return 'lb-main lb-main-xs';
-  if(lines === 3 || chars > 55) return 'lb-main lb-main-sm';
+  if(lines >= 7 || chars > 170) return 'lb-main lb-main-xs';
+  if(lines >= 6 || chars > 130) return 'lb-main lb-main-sm';
   return 'lb-main';
 }
 
@@ -4382,7 +4809,7 @@ function printBoxLabels(){
       <div class="label" style="top:__TOP__mm;">
         <div class="lb-top">
           <div class="lb-main-box">
-            <div class="${mainCls}">${esc(mainLine)}</div>
+            <div class="${mainCls}">${esc(greekUpper(mainLine))}</div>
           </div>
           <div class="lb-count-box">
             <div class="lb-count-header"><span>Qnt</span><span>Pcs</span></div>
@@ -4415,7 +4842,7 @@ function printPalletLabels(){
       <div class="label" style="top:__TOP__mm;">
         <div class="lb-top">
           <div class="lb-main-box">
-            <div class="${mainCls}">${esc(mainLine)}</div>
+            <div class="${mainCls}">${esc(greekUpper(mainLine))}</div>
           </div>
           <div class="lb-count-box">
             <div class="lb-count-header"><span>Qnt</span><span>Box</span></div>
@@ -4575,7 +5002,7 @@ function switchView(view){
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
   if(view==='clients') refreshClientsList();
-  if(view==='settings'){ /* Διαχείριση Μηχανών loads on demand when expanded */ }
+  if(view==='settings'){ refreshLabelRules(); }
 }
 
 function getJbKey(){ return document.getElementById('jbKey').value.trim(); }
@@ -4811,6 +5238,165 @@ async function jbPutRecord(record){
 
 let currentOfferId = null;
 
+// ===== Ειδοποιήσεις παραλαβής χαρτιού =====
+// Paper arriving is news for whoever is pricing or planning, not just for the
+// person at the goods-in door — so it surfaces wherever you happen to be.
+let seenReceivedOrders = null;      // null until the first poll establishes a baseline
+let seenCompletedJobs = null;      // same idea for jobs reaching the last stage
+let receivedPollTimer = null;
+
+function ensureToastHost(){
+  let host = document.getElementById('toastHost');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'toastHost';
+    host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:5000;display:flex;'
+      + 'flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none;max-width:min(380px,90vw);';
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+// Stays until dismissed when it matters; a stock arrival is worth a click.
+function showToast(title, body, onClick, kind){
+  const host = ensureToastHost();
+  const el = document.createElement('div');
+  el.className = 'ff-toast' + (kind ? ' ff-toast-' + kind : '');
+  el.innerHTML = `<div class="ff-toast-title">${esc(title)}</div>`
+    + (body ? `<div class="ff-toast-body">${body}</div>` : '')
+    + '<button class="ff-toast-x" title="Κλείσιμο">×</button>';
+  el.querySelector('.ff-toast-x').addEventListener('click', ev=>{
+    ev.stopPropagation();
+    el.remove();
+  });
+  if(onClick){
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', ()=>{ onClick(); el.remove(); });
+  }
+  host.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('in'));
+  setTimeout(()=>{
+    el.classList.remove('in');
+    setTimeout(()=>el.remove(), 300);
+  }, 12000);
+}
+
+function orderToastBody(o){
+  const qty = num(o.sheets);
+  const unit = o.unit || 'φύλλα';
+  const bits = [];
+  if(qty > 0) bits.push(`<b>${qty.toLocaleString('el-GR')}</b> ${esc(unit)}`);
+  if(o.supplier) bits.push('από ' + esc(o.supplier));
+  if(o.job) bits.push('για ' + esc(o.job));
+  return bits.join(' · ');
+}
+
+// Polling rather than a live channel: the record is small, the shop is a handful
+// of people, and this needs no extra infrastructure to keep working.
+async function pollReceivedOrders(){
+  try{
+    const record = await jbGetRecord();
+
+    // --- paper arriving
+    const received = Object.entries(record.orders || {})
+      .filter(([, o]) => o.status === 'received');
+    const firstOrderPass = seenReceivedOrders === null;
+    if(firstOrderPass){
+      // First pass just records what was already done, so opening the app
+      // doesn't announce every delivery of the past month.
+      seenReceivedOrders = new Set(received.map(([id]) => id));
+    } else {
+      received.forEach(([id, o])=>{
+        if(seenReceivedOrders.has(id)) return;
+        seenReceivedOrders.add(id);
+        showToast(`📦 Παραλήφθηκε: ${o.material || 'υλικό'}`, orderToastBody(o),
+                  ()=>switchView('stock'));
+      });
+    }
+
+    // --- jobs reaching the last production column
+    const stages = record.productionStages || [];
+    const doneStage = stages[stages.length - 1];
+    const done = doneStage
+      ? Object.entries(record.tickets || {})
+          .filter(([, t]) => t.stage === doneStage && !t.archived && !t.invoiceStage)
+      : [];
+    if(seenCompletedJobs === null){
+      seenCompletedJobs = new Set(done.map(([id]) => id));
+    } else {
+      done.forEach(([id, t])=>{
+        if(seenCompletedJobs.has(id)) return;
+        seenCompletedJobs.add(id);
+        const info = t.data || {};
+        const bits = [];
+        if(info.qty) bits.push(`<b>${num(info.qty).toLocaleString('el-GR')}</b> τεμ.`);
+        if(info.client) bits.push(esc(info.client));
+        bits.push('έτοιμη για αρχειοθέτηση ή τιμολόγηση');
+        showToast(`✅ Ολοκληρώθηκε: ${info.info || t.label || 'δουλειά'}`,
+                  bits.join(' · '), ()=>switchView('production'), 'done');
+      });
+    }
+    // A job that moves back out of the last column can be announced again if it
+    // returns — otherwise a re-finished job would pass unnoticed.
+    if(seenCompletedJobs){
+      const stillDone = new Set(done.map(([id]) => id));
+      [...seenCompletedJobs].forEach(id=>{ if(!stillDone.has(id)) seenCompletedJobs.delete(id); });
+    }
+  }catch(e){
+    // A failed poll is not worth interrupting anyone over; the next one retries.
+    console.debug('Poll notifications:', e.message);
+  }
+}
+
+// Two mechanisms, because neither is reliable alone: Supabase Realtime pushes
+// the change within a second when it's enabled on the table, and a timer keeps
+// working if it isn't. The timer slows right down once Realtime proves itself.
+let realtimeConnected = false;
+
+function setPollInterval(ms){
+  if(receivedPollTimer) clearInterval(receivedPollTimer);
+  receivedPollTimer = setInterval(pollReceivedOrders, ms);
+}
+
+function currentPollDelay(){
+  if(document.hidden) return 60000;          // nobody's looking
+  return realtimeConnected ? 30000 : 10000;  // safety net vs. main channel
+}
+
+function tryRealtimeWatch(){
+  try{
+    if(!supabaseAuthClient || typeof supabaseAuthClient.channel !== 'function') return;
+    supabaseAuthClient
+      .channel('ff_app_data')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_data' }, ()=>{
+        // A write landed — read it back and see what's new.
+        pollReceivedOrders();
+      })
+      .subscribe(status=>{
+        const wasConnected = realtimeConnected;
+        realtimeConnected = (status === 'SUBSCRIBED');
+        if(realtimeConnected !== wasConnected) setPollInterval(currentPollDelay());
+      });
+  }catch(e){
+    // Realtime not enabled on the project — polling alone is fine.
+    console.debug('Realtime unavailable:', e.message);
+  }
+}
+
+function startReceivedOrderWatch(){
+  if(receivedPollTimer) return;
+  pollReceivedOrders();
+  setPollInterval(currentPollDelay());
+  tryRealtimeWatch();
+  // Coming back to the tab is exactly when you want to catch up.
+  document.addEventListener('visibilitychange', ()=>{
+    setPollInterval(currentPollDelay());
+    if(!document.hidden) pollReceivedOrders();
+  });
+  // So does clicking back into the window without changing tab.
+  window.addEventListener('focus', ()=>pollReceivedOrders());
+}
+
 function statusMsg(msg){
   const el = document.getElementById('saveStatus');
   el.textContent = msg;
@@ -4932,7 +5518,13 @@ async function saveOffer(){
       : grandTotalValue();
     const total = manualTotal > 0 ? manualTotal : computedTotal;
 
-    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false };
+    // With only part of a multi-item offer accepted, the quoted total stays on
+    // record but the forecast should follow what was actually ordered.
+    const approvedRows = (typeof approvedItems === 'function') ? approvedItems() : null;
+    const approvedTotal = approvedRows ? approvedItemsTotal() : null;
+    const approvedCount = approvedRows ? approvedRows.length : null;
+    const itemCount = flatRows.filter(r=>r.material && r.material.trim()).length;
+    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, approvedTotal, approvedCount, itemCount, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false };
     // Write ONLY this offer, and only touch the client list if it actually changed.
     await jbMergePath(SLICE_OFFERS, ['offers', id], record.offers[id]);
     if(data.client && data.client.trim() && !record.clients.includes(data.client.trim())){
@@ -4997,6 +5589,7 @@ async function deleteOffer(id){
 }
 
 function newOffer(){
+  priceDrivenBy = 'markup';
   document.querySelectorAll('#viewForm input, #viewForm select, #viewForm textarea').forEach(i=>{
     if(i.id !== 'hdrQty') i.value = '';
   });
@@ -5065,6 +5658,25 @@ function setOfferSort(col){
   renderOfferTable();
 }
 
+// A multi-item offer has no single quantity — the header field is hidden while
+// editing it, so showing its leftover default here would be a plain lie.
+function offerListQty(o){
+  const d = o.data || {};
+  if(d.multiItem){
+    const rows = (d.flatRows || []).filter(r => (r.material||'').trim() || (r.paperName||'').trim());
+    const sum = rows.reduce((s,r)=>s + num(r.qty), 0);
+    if(!rows.length) return { value:0, text:'—', title:'' };
+    return {
+      value: sum,
+      text: sum > 0 ? sum.toLocaleString('el-GR') : '—',
+      title: sum > 0
+        ? `Άθροισμα ${rows.length} ειδών: ` + rows.map(r=>`${r.material||r.paperName} ${num(r.qty).toLocaleString('el-GR')}`).join(' · ')
+        : 'Πολλαπλά είδη χωρίς ποσότητες'
+    };
+  }
+  return { value: num(d.qty), text: d.qty ? String(d.qty) : '', title:'' };
+}
+
 function renderOfferTable(){
   const wrap = document.getElementById('offerListTableWrap');
   const pagEl = document.getElementById('offerListPagination');
@@ -5087,7 +5699,7 @@ function renderOfferTable(){
     if(col==='date') return o.date || o.savedAt || '';
     if(col==='client') return o.label||'';
     if(col==='title') return (o.data||{}).title||'';
-    if(col==='qty') return num((o.data||{}).qty);
+    if(col==='qty') return offerListQty(o).value;
     if(col==='approved') return o.approved?1:0;
     if(col==='total') return num(o.total);
     return o.savedAt||'';
@@ -5117,12 +5729,17 @@ function renderOfferTable(){
         <td>${esc(dateStr)}</td>
         <td style="font-weight:600;">${esc(o.label)}</td>
         <td>${esc(d.title||'')}</td>
-        <td style="text-align:right;">${esc(d.qty||'')}</td>
-        <td onclick="event.stopPropagation()"><span class="order-badge${o.approved?' received':''}" style="cursor:pointer;" onclick="toggleOfferApproved('${o.id}')">${o.approved?'Εγκρίθηκε':'Εκκρεμεί'}</span></td>
+        <td style="text-align:right;" title="${esc(offerListQty(o).title)}">${esc(offerListQty(o).text)}</td>
+        <td onclick="event.stopPropagation()"><span class="order-badge${o.approved?' received':''}" style="cursor:pointer;" onclick="toggleOfferApproved('${o.id}')" title="${o.approved && o.approvedCount && o.itemCount && o.approvedCount < o.itemCount ? 'Εγκρίθηκαν ' + o.approvedCount + ' από ' + o.itemCount + ' είδη — ' + fmt(num(o.approvedTotal)) + ' από ' + fmt(num(o.total)) : ''}">${
+  o.approved
+    ? (o.approvedCount && o.itemCount && o.approvedCount < o.itemCount
+        ? `Μερικώς ${o.approvedCount}/${o.itemCount}`
+        : 'Εγκρίθηκε')
+    : 'Εκκρεμεί'}</span></td>
         <td style="text-align:right;">${totalStr}</td>
         <td style="white-space:nowrap;" onclick="event.stopPropagation()">
           <button class="btn" title="Αντιγραφή (νέα προσφορά με ίδια στοιχεία)" onclick="duplicateOffer('${o.id}')" style="padding:5px 8px;">⧉</button>
-          <button class="btn" title="Διαγραφή" onclick="deleteOffer('${o.id}')" style="padding:5px 8px;color:#c0392b;">🗑</button>
+          <button class="btn" title="Διαγραφή" onclick="deleteOffer('${o.id}')" style="padding:5px 8px;color:#c0392b;">×</button>
         </td>
       </tr>
     `;
@@ -5180,7 +5797,7 @@ let currentTicketId = null;
 
 function addTkPaperRow(vals){
   const id = tkPaperSeq++;
-  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', qty:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false, movedToChild:false}, vals||{}));
+  tkPaperRows.push(Object.assign({id, tipos:'', xarti:'', xroma:'', qty:'', fyllaNet:'', fyllaXtra:'', fylla:'', sxima:'', tatgab:'', opseis:'', leftover:'', leftoverPosted:false, consumed:false, movedToChild:false, gangRow:false, itemShape:''}, vals||{}));
   renderTkPaper();
 }
 function removeTkPaperRow(id){ tkPaperRows = tkPaperRows.filter(r=>r.id!==id); renderTkPaper(); }
@@ -5192,6 +5809,14 @@ async function splitTicketPaperRowToChild(rowId){
   }
   const row = tkPaperRows.find(r=>r.id===rowId);
   if(!row) return;
+
+  // Rows that print together on one sheet have to leave together — one ticket
+  // per row would tell production to run the same sheet twice.
+  const group = tkPaperRows.filter(r=>r.gangRow && !r.movedToChild);
+  if(row.gangRow && group.length >= 2){
+    await splitGangRowsToChild();
+    return;
+  }
   // Splitting the same row twice would leave two tickets each entitled to take
   // the same paper out of stock, so it's allowed once.
   if(row.movedToChild){
@@ -5290,6 +5915,10 @@ function setTicketMultiItem(on){
   if(btn) btn.classList.toggle('solid', ticketMultiItem);
   const qtyField = document.getElementById('tkQtyField');
   if(qtyField) qtyField.style.display = ticketMultiItem ? 'none' : '';
+  // With several items on one ticket a single shape at the top means nothing —
+  // each row carries its own.
+  const schemaField = document.getElementById('tkSchemaField');
+  if(schemaField) schemaField.style.display = ticketMultiItem ? 'none' : '';
   renderTkPaper();
 }
 
@@ -5416,14 +6045,137 @@ async function postLeftoverToStock(rowId){
   }
 }
 
+// The gang is one press run, so it splits out as ONE ticket carrying all of its
+// rows — not one ticket per row, which would mean printing the sheet twice.
+// Saved straight away, because the main ticket is still an unsaved form at this
+// point — the two are linked so they read as parts of the same order.
+async function buildSeparateGangTicket(gangRows, gangSheets, client){
+  const names = gangRows.map(r=>r.material || r.paperName).join(' + ');
+  const linkId = currentTicketLinkGroupId || generateLinkGroupId();
+  currentTicketLinkGroupId = linkId;
+
+  const mainInfo = document.getElementById('tkInfo').value;
+  const mainForm = collectTicket();          // keep the half-built main ticket
+  const baseQty = num(document.getElementById('hdrQty').value);
+
+  const rowsHtml = gangRows.map(r=>{
+    const q = num(r.qty) || baseQty;
+    return `${esc(r.material || r.paperName)} — ${q.toLocaleString('el-GR')} τεμ.`;
+  }).join('<br>');
+
+  newTicket();
+  currentTicketLinkGroupId = linkId;
+  currentTicketIsChild = true;
+  updateDeadlineFieldVisibility();
+  document.getElementById('tkInfo').value = `${mainInfo} — ΣΥΝΕΚΤΥΠΩΣΗ: ${names}`;
+  document.getElementById('tkClient').value = client;
+  document.getElementById('tkQty').value = gangSheets;
+  setTicketMultiItem(false);
+  tkPaperRows = [];
+  addTkPaperRow({ tipos:'Συνεκτύπωση', xarti: gangRows[0].paperName || '',
+                  fyllaNet: gangSheets, fylla: gangSheets, tatgab:'ΣΥΝΕΚΤΥΠΩΣΗ' });
+  tkProcRows = [];
+  gangRows.forEach(gr=>{
+    procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
+      if(t.name && procTaskIsActive(t) && sameItemName(t.itemMaterial, gr.material)){
+        addTkProcRow({ label:t.name, details:`${gr.material} — ${(num(gr.qty)||baseQty).toLocaleString('el-GR')} τεμ.` });
+      }
+    }));
+  });
+  addTkProcRow({ label:'ΚΟΠΗ', details:'Χωρισμός ειδών από το φύλλο' });
+  document.getElementById('tkNotes').innerHTML =
+    `<b>ΣΥΝΕΚΤΥΠΩΣΗ — ${gangSheets.toLocaleString('el-GR')} φύλλα</b><br>${rowsHtml}`;
+  recalcTicketPackaging();
+
+  try{
+    const data = collectTicket();
+    const record = await jbGetRecord();
+    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    record.tickets['gang_' + Date.now()] = { label: data.info || 'Συνεκτύπωση', date:'',
+      savedAt:new Date().toISOString(), deadlineDate:'', stage:firstStage, data };
+    await jbPutRecord(record);
+    statusMsg(`Δημιουργήθηκε ξεχωριστό ticket συνεκτύπωσης (${gangSheets} φύλλα) ✓`);
+  }catch(e){
+    console.error('Gang ticket error:', e);
+    statusMsg('Σφάλμα δημιουργίας ticket συνεκτύπωσης: ' + e.message);
+  }
+
+  // restore the main ticket into the form so the user carries on with it
+  applyTicketData(mainForm);
+  currentTicketLinkGroupId = linkId;
+  currentTicketIsChild = false;
+  updateDeadlineFieldVisibility();
+}
+
+async function splitGangRowsToChild(){
+  const rows = tkPaperRows.filter(r=>r.gangRow && !r.movedToChild);
+  if(rows.length < 2){ statusMsg('Δεν υπάρχουν γραμμές συνεκτύπωσης για διαχωρισμό.'); return; }
+  if(!currentTicketId){ statusMsg('Αποθήκευσε πρώτα αυτό το ticket.'); return; }
+  const names = rows.map(r=>r.tipos || r.xarti).join(' + ');
+  const sheets = Math.max(...rows.map(r=>num(r.fylla)));
+  const ans = prompt(`Αυτές οι γραμμές τυπώνονται μαζί σε ένα φύλλο, οπότε φεύγουν σε ΕΝΑ ticket:\n`
+    + rows.map(r=>'• ' + (r.tipos||r.xarti)).join('\n')
+    + `\n\nΠόσα ΦΥΛΛΑ θα τυπωθούν συνολικά;`, String(sheets || ''));
+  if(ans === null) return;
+  const gangSheets = num(ans);
+  if(!(gangSheets > 0)){ statusMsg('Χρειάζεται αριθμός φύλλων.'); return; }
+
+  if(!currentTicketLinkGroupId) currentTicketLinkGroupId = generateLinkGroupId();
+  const parentLinkId = currentTicketLinkGroupId;
+  const parentId = currentTicketId;
+  const parentInfo = document.getElementById('tkInfo').value;
+  const parentClient = document.getElementById('tkClient').value;
+  const parentProc = tkProcRows.map(p=>({ label:p.label, details:p.details }));
+
+  rows.forEach(r=>{ r.movedToChild = true; });
+  renderTkPaper();
+  await saveTicket();
+
+  newTicket();
+  currentTicketLinkGroupId = parentLinkId;
+  currentTicketIsChild = true;
+  updateDeadlineFieldVisibility();
+  document.getElementById('tkInfo').value = [parentInfo, `ΣΥΝΕΚΤΥΠΩΣΗ: ${names}`].join(' — ');
+  document.getElementById('tkClient').value = parentClient;
+  document.getElementById('tkQty').value = gangSheets;
+  setTicketMultiItem(false);
+  tkPaperRows = [];
+  addTkPaperRow({ tipos:'Συνεκτύπωση', xarti: rows[0].xarti, fyllaNet: gangSheets,
+                  fylla: gangSheets, sxima: rows[0].sxima, tatgab:'ΣΥΝΕΚΤΥΠΩΣΗ' });
+  tkProcRows = [];
+  parentProc.filter(p=>(p.label||'').trim()).forEach(p=>addTkProcRow(p));
+  addTkProcRow({ label:'ΚΟΠΗ', details:'Χωρισμός ειδών από το φύλλο' });
+  document.getElementById('tkNotes').innerHTML =
+    `<b>ΣΥΝΕΚΤΥΠΩΣΗ — ${gangSheets.toLocaleString('el-GR')} φύλλα</b><br>`
+    + rows.map(r=>`${esc(r.tipos||r.xarti)} — ${esc(r.qty || '')} τεμ.`).join('<br>');
+  recalcTicketPackaging();
+
+  try{
+    const data = collectTicket();
+    const record = await jbGetRecord();
+    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    record.tickets['gang_' + Date.now()] = { label: data.info || 'Συνεκτύπωση', date:'',
+      savedAt:new Date().toISOString(), deadlineDate:'', stage:firstStage, data };
+    await jbPutRecord(record);
+  }catch(e){
+    console.error('Gang split error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+    return;
+  }
+  await loadTicket(parentId, false);
+  statusMsg(`Δημιουργήθηκε ticket συνεκτύπωσης — ${gangSheets} φύλλα ✓`);
+}
+
 function renderTkPaper(){
   const body = document.getElementById('tkPaperBody');
   body.innerHTML = '';
   tkPaperRows.forEach(r=>{
     const tr = document.createElement('tr');
+    if(r.gangRow) tr.classList.add('gang-run');
     tr.innerHTML = `
       <td><input value="${esc(r.tipos)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value"></td>
       <td class="tk-multi-col"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
+      <td class="tk-multi-col"><input value="${esc(r.itemShape||'')}" placeholder="π.χ. 21x29" oninput="tkPaperRows.find(x=>x.id===${r.id}).itemShape=this.value" title="Κλειστό σχήμα αυτού του είδους"></td>
       <td><input list="paperOptions" value="${esc(r.xarti)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xarti=this.value"></td>
       <td><input value="${esc(r.xroma)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value"></td>
 
@@ -5838,6 +6590,11 @@ async function saveTicket(){
 
     // Write ONLY this ticket — a colleague saving a different ticket at the
     // same moment is no longer overwritten.
+    // Titles carry the customer, so the label follows automatically.
+    const rulesAdd = labelsFromRules(record.labelRules || [], ticketObj);
+    if(rulesAdd.length){
+      ticketObj.labels = [...(ticketObj.labels||[]), ...rulesAdd];
+    }
     await jbMergePath(SLICE_MAIN, ['tickets', id], ticketObj);
 
     // A client typed straight into a ticket has to join the list too, otherwise
@@ -6137,7 +6894,8 @@ function printTicket(){
   // and needs the room, while sides and montage are a few characters each.
   const paperCols = [
     { key:'tipos',    head:'Τύπος',          cls:'tipos', w:13 },
-    ...(ticketMultiItem ? [{ key:'qty', head:'Ποσότητα', cls:'qty', suffix:' τεμ.', w:13 }] : []),
+    ...(ticketMultiItem ? [{ key:'qty', head:'Ποσότητα', cls:'qty', suffix:' τεμ.', w:13 },
+                           { key:'itemShape', head:'Σχήμα', w:9 }] : []),
     { key:'xarti',    head:'Χαρτί',          w:30 },
     { key:'xroma',    head:'Χρώμα',          w:9 },
     { key:'fylla',    head:'Σύνολο Φύλλων',  w:10 },
@@ -6219,7 +6977,30 @@ function printTicket(){
   setTimeout(()=>{ document.title = prevTitle; }, 1000);
 }
 
-function convertOfferToTicket(){
+async function convertOfferToTicket(){
+  const partial = (typeof approvedItems === 'function') ? approvedItems() : null;
+  if(partial && partial.length < flatRows.filter(r=>r.material && r.material.trim()).length){
+    if(!confirm(`Θα δημιουργηθεί ένα Job Ticket μόνο για τα ${partial.length} εγκεκριμένα είδη:\n`
+      + partial.map(r=>'• ' + (r.material || r.paperName)).join('\n')
+      + '\n\nΤα υπόλοιπα δεν περνούν στην παραγωγή. Συνέχεια;')) return;
+  }
+
+  // If items were marked for a gang run, the choice belongs here — one press run
+  // can have its own ticket from the start, rather than being split out later.
+  const gangRows = (partial || flatRows).filter(r=>r.gangPick && (r.material || r.paperName));
+  let gangSheets = 0;
+  if(gangRows.length >= 2){
+    const suggested = (typeof suggestedGangSheets === 'function') ? suggestedGangSheets(gangRows) : '';
+    const ans = prompt(
+      `${gangRows.length} είδη είναι σημειωμένα για συνεκτύπωση:\n`
+      + gangRows.map(r=>'• ' + (r.material || r.paperName)).join('\n')
+      + `\n\nΘες ΞΕΧΩΡΙΣΤΟ Job Ticket για την εκτύπωσή τους;\n`
+      + `Γράψε πόσα ΦΥΛΛΑ θα τυπωθούν συνολικά — ή άφησέ το κενό για να μείνουν όλα σε μία καρτέλα.`,
+      String(suggested || ''));
+    if(ans === null) return;
+    gangSheets = num(ans);
+  }
+
   const client = document.getElementById('fClient').value;
   const title = document.getElementById('fTitle').value;
   const baseQty = num(document.getElementById('hdrQty').value);
@@ -6232,6 +7013,7 @@ function convertOfferToTicket(){
   document.getElementById('tkSchema').value = schemaClosedVal;
   document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
   document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
+  window.__pendingGangNote = null;
   // Remember the offer this job came from, so the invoicing board can jump back to it.
   document.getElementById('tkOfferId').value = currentOfferId || '';
 
@@ -6242,14 +7024,33 @@ function convertOfferToTicket(){
   document.getElementById('tkUnitThickness').value = document.getElementById('pkPieceThickness').value;
 
   tkPaperRows = [];
-  flatRows.filter(r=>r.material || r.paperName).forEach(r=>{
+  // A partly approved offer only sends the accepted items into production.
+  // Rows picked for a gang run carry that through, so the ticket shows they
+  // share one press run instead of looking like separate jobs.
+  const gangGroupRows = ((typeof approvedItems === 'function' && approvedItems()) || flatRows)
+    .filter(r=>r.gangPick && (r.material || r.paperName));
+  const isGanged = r => gangGroupRows.length >= 2 && gangGroupRows.includes(r);
+
+  ((typeof approvedItems === "function" && approvedItems()) || flatRows)
+    .filter(r=>r.material || r.paperName).forEach(r=>{
     const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const xtra = num(r.xtra);
     const totalSheets = sheets + xtra;
-    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty) || '', fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: r.sides || '' });
+    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty) || '',
+      fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: r.sides || '',
+      tatgab: isGanged(r) ? 'ΣΥΝΕΚΤΥΠΩΣΗ' : '', gangRow: isGanged(r),
+      // Each item keeps its own closed size, since a multi-item ticket has no
+      // single shape to speak of.
+      itemShape: r.simShape || schemaClosedVal || '',
+      // With a separate press ticket, these rows stay for the full picture but
+      // their paper is consumed there — not twice.
+      movedToChild: isGanged(r) && gangSheets > 0 });
   });
-  bookRows.filter(r=>r.material || r.paperName).forEach(r=>{
+  // In a multi-item offer the book table is hidden and irrelevant — its default
+  // "Σώμα" row would otherwise arrive on the ticket as a phantom paper line.
+  const skipBook = (document.getElementById('fMultiItem')||{}).checked;
+  (skipBook ? [] : bookRows).filter(r=>r.material || r.paperName).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
@@ -6273,6 +7074,12 @@ function convertOfferToTicket(){
   recalcTicketPackaging();
 
   currentTicketId = null;
+  // A multi-item offer becomes a multi-item ticket: quantity and shape live on
+  // the rows, not in the header.
+  setTicketMultiItem(!!(document.getElementById('fMultiItem')||{}).checked);
+  if(gangSheets > 0 && gangRows.length >= 2){
+    await buildSeparateGangTicket(gangRows, gangSheets, client);
+  }
   switchView('ticketform');
   markTicketDirty();
   statusMsg('Δημιουργήθηκε νέο Job Ticket από την προσφορά — έλεγξε/συμπλήρωσε τα στοιχεία παραγωγής.');
@@ -6297,115 +7104,6 @@ async function renderLinkedTicketsIndicator(){
   }catch(e){
     console.error('Linked tickets indicator error:', e);
     wrap.style.display = 'none';
-  }
-}
-
-async function convertOfferToMultipleTickets(){
-  const items = flatRows.filter(r => r.material && r.material.trim() && r.paperName && r.paperName.trim());
-  if(items.length===0){ statusMsg('Δεν βρέθηκαν είδη στο Flat Work για μετατροπή.'); return; }
-  if(!confirm(`Θα δημιουργηθεί ένα κύριο Job Ticket με όλα τα είδη, και ${items.length} ξεχωριστά, συνδεδεμένα tickets — ένα ανά είδος, για ανεξάρτητη παρακολούθηση στην Παραγωγή. Συνέχεια;`)) return;
-
-  const client = document.getElementById('fClient').value;
-  const title = document.getElementById('fTitle').value;
-  const schemaClosedVal = document.getElementById('fSchemaClosed').value;
-  const baseQty = num(document.getElementById('hdrQty').value);
-  const batchLinkId = generateLinkGroupId();
-
-  // 1) Build the MAIN ticket — same as a regular full conversion, holds the real date.
-  newTicket();
-  currentTicketLinkGroupId = batchLinkId;
-  currentTicketIsChild = false;
-  updateDeadlineFieldVisibility();
-  document.getElementById('tkInfo').value = withJobDateCode([client, title].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
-  document.getElementById('tkQty').value = baseQty;
-  document.getElementById('tkSchema').value = schemaClosedVal;
-  document.getElementById('tkSchemaClosed').value = schemaClosedVal;
-  document.getElementById('tkSelides').value = document.getElementById('fPages').value.trim();
-  document.getElementById('tkClient').value = document.getElementById('fClient').value.trim();
-  // Remember the offer this job came from, so the invoicing board can jump back to it.
-  document.getElementById('tkOfferId').value = currentOfferId || '';
-  document.getElementById('tkUnitWeight').value = document.getElementById('pkUnitWeight').value;
-  document.getElementById('tkUnitThickness').value = document.getElementById('pkPieceThickness').value;
-
-  tkPaperRows = [];
-  flatRows.filter(r=>r.material || r.paperName).forEach(r=>{
-    const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
-    const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
-    const xtra = num(r.xtra);
-    const totalSheets = sheets + xtra;
-    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty)||'', fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
-  });
-  bookRows.filter(r=>r.material || r.paperName).forEach(r=>{
-    const pages = num(r.pages), pps = num(r.pagesPerSheet);
-    const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-    const xtra = num(r.xtra)*signatures;
-    const totalSheets = sheets + xtra;
-    const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
-    addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: sidesEkt||'' });
-  });
-  if(tkPaperRows.length===0) addTkPaperRow();
-
-  tkProcRows = [];
-  procCategories.filter(procCategoryApplies).forEach(cat => cat.tasks.forEach(t => {
-    if(t.name && procTaskIsActive(t)){
-      const est = procTaskCalc(t, baseQty);
-      addTkProcRow({ label: t.name, details: '', estimatedSeconds: est.hours * 3600 });
-    }
-  }));
-  if(tkProcRows.length===0) addTkProcRow();
-
-  document.getElementById('tkNotes').innerHTML = esc(document.getElementById('fNotes').value).replace(/\n/g,'<br>');
-  recalcTicketPackaging();
-
-  try{
-    const parentData = collectTicket();
-    const record = await jbGetRecord();
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
-    const parentId = 'ofr_' + Date.now() + '_main';
-    record.tickets[parentId] = { label: parentData.info || 'Χωρίς τίτλο', date:'', savedAt: new Date().toISOString(), deadlineDate:'', stage: firstStage, data: parentData };
-
-    // 2) One linked, production-only CHILD ticket per item — a copy, so the
-    // main ticket keeps the full picture while each item can move independently.
-    items.forEach((r, i)=>{
-      const qty = num(r.qty) || baseQty;
-      newTicket();
-      currentTicketLinkGroupId = batchLinkId;
-      currentTicketIsChild = true;
-      updateDeadlineFieldVisibility();
-      document.getElementById('tkInfo').value = withJobDateCode([client, r.material].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
-      document.getElementById('tkQty').value = qty;
-      document.getElementById('tkSchema').value = schemaClosedVal;
-      document.getElementById('tkSchemaClosed').value = schemaClosedVal;
-
-      const pps = num(r.piecesPerSheet);
-      const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
-      const xtra = num(r.xtra);
-      const totalSheets = sheets + xtra;
-      tkPaperRows = [];
-      addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty)||'', fyllaNet: sheets||'', fyllaXtra: xtra||'', fylla: totalSheets||'', opseis: r.sides||'' });
-
-      tkProcRows = [];
-      procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
-        if(t.name && procTaskIsActive(t) && t.itemMaterial===r.material){
-          const est = procTaskCalc(t, qty);
-          addTkProcRow({ label: t.name, details:'', estimatedSeconds: est.hours*3600 });
-        }
-      }));
-      if(tkProcRows.length===0) addTkProcRow();
-      recalcTicketPackaging();
-
-      const childData = collectTicket();
-      const childId = 'ofr_' + Date.now() + '_' + i;
-      record.tickets[childId] = { label: childData.info || 'Χωρίς τίτλο', date:'', savedAt: new Date().toISOString(), deadlineDate:'', stage: firstStage, data: childData };
-    });
-
-    await jbPutRecord(record);
-    await loadTicket(parentId, false);
-    statusMsg(`Δημιουργήθηκε το κύριο Job Ticket (με όλα τα είδη) + ${items.length} ξεχωριστά, συνδεδεμένα tickets ✓`);
-  }catch(e){
-    console.error('Multi-ticket conversion error:', e);
-    statusMsg('Σφάλμα δημιουργίας tickets: ' + e.message);
   }
 }
 
@@ -6438,7 +7136,7 @@ async function setOfferApproved(id, approved){
     if(approved && !wasApproved){
       // Νewly approved — add to Forecasting exactly once, and remember the link.
       const data = offer.data || {};
-      const amount = num(offer.total) || num(offer.computedTotal) || 0;
+      const amount = num(offer.approvedTotal) || num(offer.total) || num(offer.computedTotal) || 0;
       const fcId = 'fc' + Date.now();
       record.forecast[fcId] = { client: offer.label || data.client || '', job: data.title || '', amount, month: '', notes: 'Αυτόματα από έγκριση προσφοράς', status: 'pending', invoicedDate: '' };
       offer.forecastId = fcId;
@@ -6549,7 +7247,7 @@ async function submitOrder(){
 
 // Same idea as the orders board: grouped by customer you can see everything one
 // client has had made, rather than a chronological mix of everyone's work.
-let ticketsGrouped = false;
+let ticketsGrouped = true;   // grouped by client is the useful default
 
 
 function toggleTicketGrouping(){
@@ -6561,7 +7259,7 @@ function toggleTicketGrouping(){
 // Grouping answers a different question from the flat list: not "what is
 // outstanding" but "what am I waiting on from each supplier" — the view you want
 // before picking up the phone.
-let ordersGrouped = false;
+let ordersGrouped = true;    // grouped by supplier is the useful default
 
 function toggleOrdersGrouping(){
   ordersGrouped = !ordersGrouped;
@@ -6584,6 +7282,8 @@ async function markOrderReceived(id){
     if(order){
       order.status = 'received';
       order.receivedDate = todayISO();
+      if(typeof seenReceivedOrders !== 'undefined' && seenReceivedOrders) seenReceivedOrders.add(id);
+      window.__justReceived = order;
 
       // If this order was for a paper that exists in the paper database, and a
       // sheet count was given, automatically add it to the Αποθήκη stock.
@@ -6608,6 +7308,14 @@ async function markOrderReceived(id){
       }
     }
     await jbPutRecord(record);
+    // The person logging it gets the same notice as everyone else, so the two
+    // never disagree about what arrived.
+    nudgeNotifications();
+    if(window.__justReceived){
+      showToast(`📦 Παραλήφθηκε: ${window.__justReceived.material || 'υλικό'}`,
+                orderToastBody(window.__justReceived), ()=>switchView('stock'));
+      window.__justReceived = null;
+    }
     refreshOrdersList();
   }catch(e){
     console.error('Mark received error:', e);
@@ -7309,6 +8017,7 @@ function showAppAfterLogin(){
   document.getElementById('appShell').style.display = '';
   loadPapers(); loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo();
   checkUserPermissions();
+  startReceivedOrderWatch();   // paper arrivals reach you wherever you are
   supabaseAuthClient.auth.getUser().then(({data})=>{
     const el = document.getElementById('currentUserEmail');
     if(el && data && data.user) el.textContent = 'Συνδεδεμένος/η ως: ' + data.user.email;
@@ -7723,6 +8432,59 @@ function stepBoardZoom(board, dir){
   setBoardZoom(board, next);
 }
 
+// ===== Ρυθμίσεις πίνακα & αναζήτηση =====
+function toggleBoardSettings(ev){
+  if(ev) ev.stopPropagation();
+  const m = document.getElementById('boardSettingsMenu');
+  if(!m) return;
+  const open = m.style.display !== 'none';
+  m.style.display = open ? 'none' : 'block';
+  if(!open){
+    // Clicking anywhere else puts it away, which is what a menu should do.
+    setTimeout(()=>document.addEventListener('click', closeBoardSettings, { once:true }), 0);
+  }
+}
+
+function closeBoardSettings(){
+  const m = document.getElementById('boardSettingsMenu');
+  if(m) m.style.display = 'none';
+}
+
+// Dims what doesn't match instead of removing it, so the column a card sits in
+// stays visible — that's usually the thing you were looking for.
+function filterProductionBoard(term){
+  const board = document.getElementById('productionBoard');
+  if(!board) return;
+  const q = String(term||'').trim().toLocaleLowerCase('el');
+  const cards = board.querySelectorAll('.kanban-card');
+  if(!q){
+    board.classList.remove('board-searching');
+    cards.forEach(c=>c.classList.remove('search-hit'));
+    updateBoardSearchCount(null);
+    return;
+  }
+  board.classList.add('board-searching');
+  let hits = 0;
+  cards.forEach(card=>{
+    const text = card.textContent.toLocaleLowerCase('el');
+    const match = text.includes(q);
+    card.classList.toggle('search-hit', match);
+    if(match) hits++;
+  });
+  updateBoardSearchCount(hits);
+  // Bring the first match into view; searching for something off-screen is the
+  // whole point on a wide board.
+  const first = board.querySelector('.kanban-card.search-hit');
+  if(first) first.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+}
+
+function updateBoardSearchCount(hits){
+  const input = document.getElementById('boardSearch');
+  if(!input) return;
+  input.style.borderColor = hits === 0 ? '#c0392b' : '';
+  input.title = hits === null ? '' : `${hits} κάρτες ταιριάζουν`;
+}
+
 function highlightLinkGroup(groupId){
   document.querySelectorAll('#productionBoard, #invoicingBoard').forEach(board=>{
     board.classList.add('group-focus');
@@ -7759,6 +8521,128 @@ function attachBoardContextMenu(){
       stepBoardZoom(board, ev.deltaY < 0 ? 1 : -1);
     }, { passive:false });
   });
+}
+
+// ===== Αυτόματα Labels =====
+// Recurring customers show up in the title (AVENUE, ΙΤΥΕ…), so the label that
+// production filters by can follow from the name instead of being remembered.
+function ruleMatches(rule, title){
+  const needle = String(rule.text||'').trim().toLocaleLowerCase('el');
+  if(!needle) return false;
+  return String(title||'').toLocaleLowerCase('el').includes(needle);
+}
+
+// Returns the labels a ticket should gain, without touching what's already set
+// by hand — a rule adds, it never takes away.
+function labelsFromRules(rules, ticket){
+  const title = ((ticket.data||{}).info || ticket.label || '');
+  const have = new Set(ticket.labels || []);
+  const add = [];
+  (rules||[]).forEach(r=>{
+    if(r.labelId && ruleMatches(r, title) && !have.has(r.labelId)) add.push(r.labelId);
+  });
+  return add;
+}
+
+async function refreshLabelRules(){
+  const list = document.getElementById('labelRulesList');
+  const sel = document.getElementById('newRuleLabel');
+  if(!list || !sel) return;
+  try{
+    const record = await jbGetRecord();
+    const labels = record.labels || [];
+    const rules = record.labelRules || [];
+
+    sel.innerHTML = labels.length
+      ? labels.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('')
+      : '<option value="">— δεν υπάρχουν labels —</option>';
+
+    if(!rules.length){
+      list.innerHTML = '<div class="empty-note">Δεν υπάρχουν κανόνες ακόμα.</div>';
+      return;
+    }
+    list.innerHTML = rules.map((r,i)=>{
+      const l = labels.find(x=>x.id===r.labelId);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:12.5px;">Αν ο τίτλος περιέχει <b>«${esc(r.text)}»</b></span>
+        <span style="color:var(--muted);">→</span>
+        ${l ? `<span style="background:${esc(l.color)};color:#fff;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:10px;">${esc(l.name)}</span>`
+            : '<span class="empty-note">(το label διαγράφηκε)</span>'}
+        <button class="del-link" style="margin-left:auto;" onclick="deleteLabelRule(${i})">Διαγραφή</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function addLabelRule(){
+  const text = document.getElementById('newRuleText').value.trim();
+  const labelId = document.getElementById('newRuleLabel').value;
+  if(!text){ statusMsg('Γράψε τη λέξη που θα ψάχνει ο κανόνας.'); return; }
+  if(!labelId){ statusMsg('Φτιάξε πρώτα ένα label στην Παραγωγή.'); return; }
+  try{
+    const record = await jbGetRecord();
+    record.labelRules = record.labelRules || [];
+    record.labelRules.push({ text, labelId });
+    await jbMergePath(SLICE_MAIN, ['labelRules'], record.labelRules);
+    document.getElementById('newRuleText').value = '';
+    refreshLabelRules();
+    await applyLabelRulesToAll(true, record.labelRules);
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function deleteLabelRule(idx){
+  try{
+    const record = await jbGetRecord();
+    const rules = record.labelRules || [];
+    if(!rules[idx]) return;
+    if(!confirm(`Διαγραφή κανόνα «${rules[idx].text}»;\n\nΤα labels που έχουν ήδη μπει παραμένουν.`)) return;
+    rules.splice(idx,1);
+    await jbMergePath(SLICE_MAIN, ['labelRules'], rules);
+    refreshLabelRules();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// Runs quietly whenever the board loads, and loudly from the settings button.
+// Only writes when something actually changed, so it costs nothing on a board
+// that's already in order.
+// Takes the rules as an argument when the caller already has them: re-reading
+// straight after a write can come back before the write has landed, and the
+// brand-new rule would silently do nothing.
+async function applyLabelRulesToAll(announce, knownRules){
+  try{
+    const record = await jbGetRecord();
+    const rules = knownRules || record.labelRules || [];
+    if(!rules.length){
+      if(announce) statusMsg('Δεν υπάρχουν κανόνες για εφαρμογή.');
+      return 0;
+    }
+    let changed = 0;
+    for(const [id, t] of Object.entries(record.tickets || {})){
+      const add = labelsFromRules(rules, t);
+      if(!add.length) continue;
+      t.labels = [...(t.labels||[]), ...add];
+      await jbMergePath(SLICE_MAIN, ['tickets', id], t);
+      changed++;
+    }
+    if(announce){
+      if(changed){
+        showToast(`🏷 Μπήκαν labels σε ${changed} Job Ticket${changed===1?'':'s'}`,
+                  'Δες τα στην Παραγωγή', ()=>switchView('production'));
+        statusMsg(`Μπήκαν labels σε ${changed} Job Tickets ✓`);
+      } else {
+        const total = Object.keys(record.tickets||{}).length;
+        statusMsg(`Κανένα ticket δεν ταιριάζει με τους κανόνες (ελέγχθηκαν ${total}). Έλεγξε ότι η λέξη υπάρχει στον τίτλο.`);
+      }
+    }
+    if(changed) refreshProductionBoard();
+    return changed;
+  }catch(e){
+    console.error('Label rules error:', e);
+    if(announce) statusMsg('Σφάλμα: ' + e.message);
+    return 0;
+  }
 }
 
 async function refreshProductionBoard(){
@@ -8046,6 +8930,8 @@ async function refreshProductionBoard(){
     // Measured after the columns are in place: an empty board has no height to
     // preserve, and the whole point is to keep the scrollbar where it was.
     applyBoardZoom('production');
+    const searchTerm = (document.getElementById('boardSearch')||{}).value;
+    if(searchTerm) filterProductionBoard(searchTerm);
 
     if(changed) await jbPutRecord(record);
   }catch(e){
@@ -8105,6 +8991,12 @@ async function deleteColumnDivider(stage, dividerId){
   }
 }
 
+// After we change something others are waiting on, re-check straight away so a
+// second change lands without waiting for the next tick.
+function nudgeNotifications(){
+  if(typeof pollReceivedOrders === 'function') setTimeout(pollReceivedOrders, 400);
+}
+
 async function moveCardToPosition(ticketId, targetStage, beforeEntry, skipRefresh){
   try{
     const record = await jbGetRecord();
@@ -8132,6 +9024,7 @@ async function moveCardToPosition(ticketId, targetStage, beforeEntry, skipRefres
     if(record.tickets[ticketId]){
       record.tickets[ticketId].stage = targetStage;
       await jbMergePath(SLICE_MAIN, ['tickets', ticketId], record.tickets[ticketId]);
+      nudgeNotifications();
     }
     // Drag-and-drop callers already moved the actual card element in the DOM
     // themselves (instantly, on drop) — rebuilding the whole board on top of
@@ -8335,6 +9228,28 @@ async function openLinkedOffer(ticketId){
   }
 }
 
+async function returnFromInvoicing(id){
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[id];
+    if(!t) return;
+    const name = (t.data||{}).info || t.label || 'αυτή τη δουλειά';
+    const stages = record.productionStages || [];
+    const lastStage = stages[stages.length-1] || 'Ολοκληρώθηκε';
+    if(!confirm(`Επιστροφή στην Παραγωγή:\n«${name}»\n\n`
+      + `Θα ξαναεμφανιστεί στη στήλη «${lastStage}» και στο ημερολόγιο. Συνέχεια;`)) return;
+    delete t.invoiceStage;
+    delete t.invoicedAt;
+    t.stage = lastStage;
+    await jbMergePath(SLICE_MAIN, ['tickets', id], t);
+    statusMsg('Επέστρεψε στην Παραγωγή ✓');
+    refreshInvoicingBoard();
+  }catch(e){
+    console.error('Return from invoicing error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function refreshInvoicingBoard(){
   const boardEl = document.getElementById('invoicingBoard');
   if(!boardEl) return;
@@ -8388,6 +9303,13 @@ async function refreshInvoicingBoard(){
         card.addEventListener('click', e=>{
           if(e.target.closest('.inv-offer')){ openLinkedOffer(t.id); return; }
           loadTicket(t.id, true);
+        });
+        // Work sometimes comes back — a correction, a reprint, an invoice raised
+        // too early. Right-click is where undo lives on the other board too.
+        card.addEventListener('contextmenu', e=>{
+          e.preventDefault();
+          e.stopPropagation();
+          returnFromInvoicing(t.id);
         });
         card.addEventListener('dragstart', e=>{
           e.dataTransfer.setData('text/plain', t.id);
@@ -8479,7 +9401,7 @@ async function refreshArchiveList(){
           <div><div class="name">${esc(info.info || t.label || '')}</div><div class="client">${esc(t.stage||'')}${info.qty?' · '+esc(info.qty)+' τεμ.':''}</div></div>
           <div class="btns">
             <button class="btn" onclick="loadTicket('${t.id}', true)">Άνοιγμα</button>
-            <button class="btn solid" onclick="restoreTicket('${t.id}')">↩ Επαναφορά</button>
+            <button class="btn solid" onclick="restoreTicket('${t.id}')">Επαναφορά</button>
           </div>
         </div>
       `;
@@ -9318,6 +10240,345 @@ function jumpToClient(client){
 // A customer's history is offers AND jobs together: some jobs never had an
 // offer, and pending offers matter as much as approved ones. Jumping off to a
 // filtered list showed only half the picture, so it's all shown in place.
+// ===== Στοιχεία πελάτη =====
+// Kept in a map beside the existing name list rather than replacing it: the old
+// array of names is referenced all over, and a parallel record carries the extra
+// fields without touching any of that.
+// ===== Εισαγωγή διευθύνσεων από Excel =====
+// Paste rather than file upload: the operator sees exactly what matched before
+// anything is written, and there's no spreadsheet format to get wrong.
+// Exports what's actually on file, so an outside list can be narrowed down to
+// the customers this shop really uses.
+async function exportClientsCsv(){
+  try{
+    const record = await jbGetRecord();
+    const names = (record.clients || []).slice().sort((a,b)=>a.localeCompare(b,'el'));
+    const info = record.clientInfo || {};
+
+    // how much work each customer actually has here — useful for deciding who
+    // is worth keeping in the list
+    const offerCount = {}, jobCount = {};
+    Object.values(record.offers || {}).forEach(o=>{
+      const n = ((o.data||{}).client || o.label || '').trim();
+      if(n) offerCount[n.toLocaleLowerCase('el')] = (offerCount[n.toLocaleLowerCase('el')]||0) + 1;
+    });
+    Object.values(record.tickets || {}).forEach(t=>{
+      const n = ((t.data||{}).client || '').trim();
+      if(n) jobCount[n.toLocaleLowerCase('el')] = (jobCount[n.toLocaleLowerCase('el')]||0) + 1;
+    });
+
+    const q = s => `"${String(s==null?'':s).replace(/"/g,'""').replace(/\n/g,' | ')}"`;
+    let csv = 'Πελάτης,Διεύθυνση,Τηλέφωνο,ΑΦΜ,Προσφορές,Δουλειές\n';
+    names.forEach(n=>{
+      const i = info[n] || info[Object.keys(info).find(k=>sameItemName(k,n))] || {};
+      const key = n.trim().toLocaleLowerCase('el');
+      csv += [q(n), q(i.address), q(i.phone), q(i.vat),
+              offerCount[key]||0, jobCount[key]||0].join(',') + '\n';
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pelates_' + todayISO() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    statusMsg(`Εξήχθησαν ${names.length} πελάτες ✓`);
+  }catch(e){
+    console.error('Export clients error:', e);
+    statusMsg('Σφάλμα εξαγωγής: ' + e.message);
+  }
+}
+
+function toggleClientImport(){
+  const p = document.getElementById('clientImportPanel');
+  if(!p) return;
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+  if(p.style.display !== 'none') document.getElementById('clientImportText').focus();
+}
+
+function parseClientImport(text){
+  const cols = ['name','address','phone','vat'];
+  return String(text||'').split(/\r?\n/)
+    .map(l=>l.trim()).filter(Boolean)
+    .map(line=>{
+      // Excel gives tabs; a pasted CSV gives semicolons or commas. Tabs and
+      // semicolons are unambiguous, so commas are only used if neither appears.
+      const sep = line.includes('\t') ? '\t' : (line.includes(';') ? ';' : null);
+      const parts = sep ? line.split(sep) : [line];
+      const row = {};
+      cols.forEach((k,i)=>{ row[k] = (parts[i]||'').trim().replace(/^"|"$/g,''); });
+      // multi-part address in one cell reads better on a label as separate lines
+      if(row.address) row.address = row.address.split(/\s*,\s*/).filter(Boolean).join('\n');
+      return row;
+    })
+    .filter(r=>r.name);
+}
+
+async function previewClientImport(){
+  const box = document.getElementById('clientImportPreview');
+  const rows = parseClientImport(document.getElementById('clientImportText').value);
+  if(!rows.length){ box.innerHTML = '<div class="empty-note">Δεν βρέθηκαν γραμμές — επικόλλησε τα κελιά από το Excel.</div>'; return; }
+  const record = await jbGetRecord();
+  const existing = record.clients || [];
+
+  rows.forEach(r=>{
+    const hit = existing.find(cn => sameItemName(cn, r.name));
+    r.matched = hit || null;                    // the name already on file
+    r.isNew = !hit;
+  });
+  const matched = rows.filter(r=>r.matched).length;
+  const fresh = rows.length - matched;
+
+  box.innerHTML = `
+    <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">
+      ${rows.length} γραμμές · <span style="color:#1c7a4f;">${matched} ταιριάζουν με υπάρχοντες πελάτες</span>
+      ${fresh ? ` · <span style="color:#a3690a;">${fresh} νέοι θα προστεθούν</span>` : ''}
+    </div>
+    <table class="gang-table" style="width:100%;">
+      <thead><tr><th>Πελάτης</th><th>Αντιστοίχιση</th><th>Διεύθυνση</th><th>Τηλ.</th></tr></thead>
+      <tbody>${rows.slice(0,40).map(r=>`<tr>
+        <td>${esc(r.name)}</td>
+        <td>${r.matched
+              ? `<span style="color:#1c7a4f;font-weight:700;">✓ ${esc(r.matched)}</span>`
+              : '<span style="color:#a3690a;font-weight:700;">νέος</span>'}</td>
+        <td style="font-size:11.5px;">${esc(r.address).replace(/\n/g,'<br>')}</td>
+        <td style="font-size:11.5px;">${esc(r.phone)}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    ${rows.length > 40 ? `<div class="empty-note">…και άλλες ${rows.length-40} γραμμές</div>` : ''}
+    <button class="btn solid" style="margin-top:12px;" onclick="applyClientImport()">✓ Εισαγωγή ${rows.length} εγγραφών</button>`;
+  window.__clientImportRows = rows;
+}
+
+async function applyClientImport(){
+  const rows = window.__clientImportRows || [];
+  if(!rows.length) return;
+  const fresh = rows.filter(r=>r.isNew).length;
+  if(!confirm(`Θα ενημερωθούν τα στοιχεία ${rows.length} πελατών`
+    + (fresh ? `, και θα προστεθούν ${fresh} νέοι στη λίστα` : '')
+    + '.\n\nΤα υπάρχοντα στοιχεία αντικαθίστανται μόνο εκεί που το Excel έχει τιμή. Συνέχεια;')) return;
+  try{
+    const record = await jbGetRecord();
+    record.clients = record.clients || [];
+    record.clientInfo = record.clientInfo || {};
+    rows.forEach(r=>{
+      const key = r.matched || r.name.trim();   // keep the spelling already on file
+      if(!record.clients.some(cn=>sameItemName(cn, key))) record.clients.push(key);
+      const prev = record.clientInfo[key] || {};
+      // blank cells leave what's already there alone
+      const patch = {};
+      ['address','phone','vat'].forEach(f=>{ if(r[f]) patch[f] = r[f]; });
+      record.clientInfo[key] = Object.assign({}, prev, patch);
+    });
+    record.clients.sort((a,b)=>a.localeCompare(b,'el'));
+    await jbMergePath(SLICE_MAIN, ['clients'], record.clients);
+    await jbMergePath(SLICE_MAIN, ['clientInfo'], record.clientInfo);
+    clientsCache = record.clients;
+    refreshClientOptions();
+    refreshClientsList();
+    document.getElementById('clientImportText').value = '';
+    document.getElementById('clientImportPreview').innerHTML = '';
+    toggleClientImport();
+    showToast(`👥 Ενημερώθηκαν ${rows.length} πελάτες`, fresh ? `${fresh} νέοι προστέθηκαν` : '', ()=>switchView('clients'));
+  }catch(e){
+    console.error('Client import error:', e);
+    statusMsg('Σφάλμα εισαγωγής: ' + e.message);
+  }
+}
+
+// The address is already on the customer's card, so the label shouldn't need
+// retyping — one click brings it across, and it stays editable for one-offs.
+// The label needs a whole delivery block, not just a street: whoever receives
+// the pallet needs the company name, and the driver needs a phone number.
+function palletBlock(client, address, phone){
+  return [client, address, phone ? 'Τηλ. ' + phone : ''].filter(Boolean).join('\n');
+}
+
+async function fillPalletAddressFromClient(ev){
+  const client = (document.getElementById('tkClient').value || '').trim();
+  if(!client){ statusMsg('Συμπλήρωσε πρώτα τον Πελάτη στα Στοιχεία Job Ticket.'); return; }
+  try{
+    const record = await jbGetRecord();
+    const info = getClientInfo(record, client);
+    const options = [];
+    if(info && info.address){
+      options.push({ label:'Κύρια', name: client, address:info.address, phone:info.phone || '' });
+    }
+    // An extra address is usually a different company — a warehouse, a branch,
+    // a third party — so its own name goes on the label, not the customer's.
+    ((info && info.extraAddresses) || []).forEach(x=>{
+      if(!x.address) return;
+      options.push({ label: x.label || 'Άλλη', name: x.label || client,
+                     address: x.address, phone: x.phone || info.phone || '' });
+    });
+
+    if(!options.length){
+      statusMsg(`Ο πελάτης «${client}» δεν έχει καταχωρημένη διεύθυνση — πρόσθεσέ την στην καρτέλα Πελάτες.`);
+      return;
+    }
+    if(options.length === 1){ applyPalletAddress(client, options[0]); return; }
+    openPalletAddressPicker(client, options, ev);
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+function applyPalletAddress(client, opt){
+  const el = document.getElementById('tkPalletAddress');
+  if(el.value.trim() && !confirm('Να αντικατασταθεί η διεύθυνση που υπάρχει ήδη;')) return;
+  el.value = palletBlock(opt.name || client, opt.address, opt.phone);
+  markTicketDirty();
+  statusMsg(`Μπήκε η διεύθυνση «${opt.name || opt.label}» ✓`);
+}
+
+// More than one place to deliver means the operator has to choose; a small
+// list beats a prompt with numbers to type.
+function openPalletAddressPicker(client, options, ev){
+  closeAllKanbanPopovers();
+  const pop = document.createElement('div');
+  pop.id = 'boardColourPopover';          // reuses the shared close handling
+  pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:9px;'
+    + 'box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px;z-index:4000;width:300px;max-height:320px;overflow:auto;';
+  pop.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:4px 8px;">Διάλεξε διεύθυνση</div>`
+    + options.map((o,i)=>`<button class="btn board-menu-item" data-i="${i}">
+        <b>${esc(o.name)}</b><br><span style="font-weight:400;font-size:11.5px;color:var(--muted);">${esc(o.address).replace(/\n/g,', ')}${o.phone ? ' · ' + esc(o.phone) : ''}</span>
+      </button>`).join('');
+  document.body.appendChild(pop);
+  const r = ev && ev.target && ev.target.getBoundingClientRect
+    ? ev.target.getBoundingClientRect() : { left:120, bottom:120 };
+  pop.style.left = Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - 315) + 'px';
+  pop.style.top = (window.scrollY + (r.bottom || r.top) + 6) + 'px';
+  pop.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      applyPalletAddress(client, options[+b.getAttribute('data-i')]);
+      pop.remove();
+    });
+  });
+}
+
+function clientInfoKey(name){ return String(name||'').trim(); }
+
+function getClientInfo(record, name){
+  const info = (record.clientInfo || {});
+  const key = clientInfoKey(name);
+  if(info[key]) return info[key];
+  // tolerate case and spacing differences, exactly like the label matching
+  const hit = Object.keys(info).find(k => sameItemName(k, key));
+  return hit ? info[hit] : null;
+}
+
+async function saveClientInfo(name, patch, quiet){
+  try{
+    const record = await jbGetRecord();
+    record.clientInfo = record.clientInfo || {};
+    const key = clientInfoKey(name);
+    record.clientInfo[key] = Object.assign({}, record.clientInfo[key] || {}, patch);
+    await jbMergePath(SLICE_MAIN, ['clientInfo', key], record.clientInfo[key]);
+    if(!quiet) statusMsg('Αποθηκεύτηκε ✓');
+  }catch(e){
+    console.error('Client info error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+function toggleClientInfoBlock(headEl){
+  const block = headEl.nextElementSibling;
+  if(!block) return;
+  const open = block.style.display !== 'none';
+  block.style.display = open ? 'none' : '';
+  headEl.classList.toggle('open', !open);
+}
+
+function clientInfoFormHtml(name, info){
+  const v = f => esc((info && info[f]) || '');
+  const id = s => `ci_${s}_${btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'')}`;
+  const esn = esc(name).replace(/'/g,"\\'");
+  // A customer can deliver to more than one place — a warehouse, a branch, a
+  // fair stand — so extra addresses sit alongside the main one, each named.
+  const extras = (info && info.extraAddresses) || [];
+  const extraHtml = extras.map((x,i)=>`
+    <div class="ci-extra">
+      <div class="field" style="flex:0 0 170px;"><label title="Μπαίνει ως πρώτη γραμμή στην ετικέτα, στη θέση της επωνυμίας του πελάτη">Επωνυμία παραλήπτη</label>
+        <input id="${id('xl'+i)}" value="${esc(x.label||'')}" placeholder="π.χ. ALUMINCO AE"></div>
+      <div class="field" style="flex:1;min-width:200px;"><label>Διεύθυνση</label>
+        <textarea id="${id('xa'+i)}" rows="2">${esc(x.address||'')}</textarea></div>
+      <div class="field" style="flex:0 0 130px;"><label>Τηλέφωνο</label>
+        <input id="${id('xp'+i)}" value="${esc(x.phone||'')}"></div>
+      <button class="del-link" style="align-self:center;" onclick="removeClientAddress('${esn}', ${i})">Διαγραφή</button>
+    </div>`).join('');
+
+  return `<div class="ci-grid">
+    <div class="field" style="grid-column:1 / -1;"><label>Κύρια διεύθυνση παράδοσης</label>
+      <textarea id="${id('addr')}" rows="3" placeholder="Οδός, Αριθμός&#10;ΤΚ, Πόλη">${v('address')}</textarea></div>
+    <div class="field"><label>Τηλέφωνο</label><input id="${id('phone')}" value="${v('phone')}"></div>
+    <div class="field"><label>ΑΦΜ</label><input id="${id('vat')}" value="${v('vat')}"></div>
+    <div style="grid-column:1 / -1;" data-extra-count="${extras.length}">
+      ${extras.length ? `<div class="ci-sub">Επιπλέον διευθύνσεις</div>${extraHtml}` : ''}
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn solid" onclick="saveClientInfoFromForm('${esn}')">Αποθήκευση Στοιχείων</button>
+        <button class="btn" onclick="addClientAddress('${esn}')">+ Άλλη διεύθυνση</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function collectExtraAddresses(name, count){
+  const id = s => `ci_${s}_${btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'')}`;
+  const val = s => { const el = document.getElementById(id(s)); return el ? el.value.trim() : ''; };
+  const out = [];
+  for(let i=0;i<count;i++){
+    const address = val('xa'+i);
+    if(!address) continue;                       // an empty one is a deletion
+    out.push({ label: val('xl'+i), address, phone: val('xp'+i) });
+  }
+  return out;
+}
+
+function extraCount(){
+  const holder = document.querySelector('.ci-grid [data-extra-count]');
+  return holder ? parseInt(holder.getAttribute('data-extra-count'), 10) || 0 : 0;
+}
+
+async function addClientAddress(name){
+  await saveClientInfoFromForm(name, true);
+  const record = await jbGetRecord();
+  const info = getClientInfo(record, name) || {};
+  const list = (info.extraAddresses || []).concat([{ label:'', address:'', phone:'' }]);
+  await saveClientInfo(name, { extraAddresses: list });
+  reopenClientRow(name);
+}
+
+async function removeClientAddress(name, idx){
+  const record = await jbGetRecord();
+  const info = getClientInfo(record, name) || {};
+  const list = (info.extraAddresses || []).slice();
+  if(!list[idx]) return;
+  if(list[idx].address && !confirm(`Διαγραφή διεύθυνσης «${list[idx].label || 'χωρίς όνομα'}»;`)) return;
+  list.splice(idx, 1);
+  await saveClientInfo(name, { extraAddresses: list });
+  reopenClientRow(name);
+}
+
+// Redraw the open row so the new field appears without losing the reader's place.
+async function reopenClientRow(name){
+  const row = Array.from(document.querySelectorAll('.client-row'))
+    .find(r => r.getAttribute('data-client') === name);
+  if(!row) { refreshClientsList(); return; }
+  toggleClientDetail(row, name);          // close
+  await toggleClientDetail(row, name);    // and open again, rebuilt
+  // Whoever just edited an address is still editing, so unfold it for them.
+  const head = row.nextElementSibling && row.nextElementSibling.querySelector('.ci-toggle');
+  if(head && head.nextElementSibling.style.display === 'none') toggleClientInfoBlock(head);
+}
+
+async function saveClientInfoFromForm(name, quiet){
+  const id = s => `ci_${s}_${btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'')}`;
+  const val = s => { const el = document.getElementById(id(s)); return el ? el.value.trim() : ''; };
+  await saveClientInfo(name, {
+    address: val('addr'), phone: val('phone'), vat: val('vat'),
+    extraAddresses: collectExtraAddresses(name, extraCount())
+  }, quiet);
+}
+
 async function toggleClientDetail(rowEl, client){
   const detailRow = rowEl.nextElementSibling;
   if(!detailRow || !detailRow.classList.contains('client-detail-row')) return;
@@ -9428,7 +10689,23 @@ async function toggleClientDetail(rowEl, client){
 
     const approved = offers.filter(o=>o.approved).length;
     const partCount = tickets.length - topLevel.length;
+    // The address block is reference data you set once; the work is what you
+    // opened the card to see. So it starts folded away.
+    const info = getClientInfo(record, client);
+    const hasInfo = !!(info && (info.address || info.phone || info.vat || (info.extraAddresses||[]).length));
+    const infoSummary = hasInfo
+      ? [ (info.address||'').split('\n')[0], info.phone,
+          (info.extraAddresses||[]).length ? `+${info.extraAddresses.length} διεύθ.` : '' ]
+          .filter(Boolean).join(' · ')
+      : 'δεν έχουν καταχωρηθεί';
     cell.innerHTML = `<div class="client-detail">
+      <h4 class="ci-toggle" onclick="toggleClientInfoBlock(this)">
+        <span class="ci-caret">▶</span> Στοιχεία Πελάτη
+        <span class="ci-summary">${esc(infoSummary)}</span>
+      </h4>
+      <div class="ci-block" style="display:none;">
+        ${clientInfoFormHtml(client, info)}
+      </div>
       <h4>Προσφορές — ${offers.length} συνολικά${offers.length ? ` (${approved} εγκεκριμένες, ${offers.length-approved} εκκρεμείς)` : ''}</h4>
       ${offers.length ? offers.map(offerRow).join('') : '<div class="empty-note">Καμία προσφορά για αυτόν τον πελάτη.</div>'}
       <h4>Δουλειές / Παραγγελίες — ${topLevel.length}${partCount ? ` (+ ${partCount} επιμέρους μέρη)` : ''}</h4>
