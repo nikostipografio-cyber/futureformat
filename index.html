@@ -89,6 +89,60 @@
   .kanban-invoice-btn:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
   .inv-offer{background:#eaf1fe;color:#2f6fed;border:1px solid #c6d9fb;}
   .inv-offer:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
+  /* Small colour swatches: the note itself carries the meaning, so the control
+     stays out of the way until it's needed. */
+  /* A small chip says a card belongs to a bigger order; the connection itself is
+     revealed on hover rather than cluttering the board all the time. */
+  .link-chip{font-size:9.5px;font-weight:700;color:#2f6fed;background:#eaf1fe;
+    border:1px solid #c6d9fb;border-radius:10px;padding:1px 6px;white-space:nowrap;}
+  .group-focus .kanban-card{opacity:0.32;filter:saturate(0.4);transition:opacity 0.12s,box-shadow 0.12s;}
+  .group-focus .kanban-card.group-match{opacity:1;filter:none;
+    box-shadow:0 0 0 2px #2f6fed, 0 6px 16px rgba(47,111,237,0.28);}
+  .group-focus .kanban-card.group-match .link-chip{background:#2f6fed;color:#fff;border-color:#2f6fed;}
+  .board-zoom{display:inline-flex;align-items:center;gap:0;}
+  .board-zoom .btn{padding:5px 9px;border-radius:0;min-width:30px;}
+  .board-zoom .btn:first-child{border-radius:7px 0 0 7px;}
+  .board-zoom .btn:last-child{border-radius:0 7px 7px 0;}
+  /* Zoom is driven by Ctrl + wheel; this is a read-out, shown only when the board
+     isn't at 100% so it doesn't add noise to the normal view. */
+  .client-caret{display:inline-block;width:12px;font-size:9px;color:var(--muted);transition:transform 0.12s;}
+  .client-row.open .client-caret{transform:rotate(90deg);}
+  .client-row.open{background:var(--page);}
+  .client-detail{padding:14px 18px;border-top:1px solid var(--line);}
+  .client-detail h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);}
+  .client-detail h4:not(:first-child){margin-top:18px;}
+  .cd-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border:1px solid var(--line);border-radius:7px;padding:7px 11px;margin-bottom:5px;cursor:pointer;}
+  .cd-item:hover{border-color:var(--line-strong);background:var(--page);}
+  .cd-item .t{font-weight:600;font-size:13px;display:flex;align-items:center;gap:2px;}
+  .cd-item .s{font-size:11px;color:var(--muted);}
+  .cd-item.cd-part{margin-left:26px;background:transparent;border-style:dashed;}
+  .cd-item.cd-part .t{font-weight:500;font-size:12.5px;}
+  .cd-branch{color:var(--muted);font-weight:400;margin-right:2px;}
+  .cd-parts{font-size:10px;font-weight:700;color:#2f6fed;background:#eaf1fe;border:1px solid #c6d9fb;
+    border-radius:10px;padding:1px 8px;margin-left:8px;vertical-align:1px;cursor:pointer;white-space:nowrap;}
+  .cd-parts:hover{background:#2f6fed;color:#fff;border-color:#2f6fed;}
+  .cd-parts.open{background:#2f6fed;color:#fff;border-color:#2f6fed;}
+  .cd-caret{display:inline-block;font-size:8px;transition:transform 0.12s;}
+  .cd-parts.open .cd-caret{transform:rotate(90deg);}
+  .cd-right{display:flex;align-items:center;gap:10px;white-space:nowrap;}
+  .cd-amount{font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;}
+  .sec-count{font-size:10.5px;font-weight:700;color:#2f6fed;background:#eaf1fe;
+    border:1px solid #c6d9fb;border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:2px;}
+  .board-zoom-chip{display:none;font-size:11px;font-weight:700;color:var(--muted);
+    background:var(--page);border:1px solid var(--line);border-radius:20px;
+    padding:3px 10px;cursor:pointer;font-variant-numeric:tabular-nums;}
+  .board-zoom-chip.on{display:inline-block;}
+  .board-swatch{width:28px;height:24px;border-radius:5px;border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--line-strong);cursor:pointer;padding:0;}
+  .board-swatch:hover{box-shadow:0 0 0 2px var(--ink);}
+  .board-swatch.sel{box-shadow:0 0 0 3px var(--ink);}
+  /* On a dark tint the column headings need to lift off the background. */
+  .board-dark .kanban-col-head{color:#e8e8e6;}
+  .board-dark .kanban-col{background:rgba(255,255,255,0.07);}
+  .note-colour{width:20px;height:20px;border-radius:50%;border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--line-strong);cursor:pointer;padding:0;flex:none;}
+  .note-colour:hover{box-shadow:0 0 0 2px var(--ink);}
   .own-ticket-btn{border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;font-size:10px;padding:2px 3px;margin-right:2px;opacity:0.55;width:22px;height:22px;line-height:1;}
   .own-ticket-btn:hover{opacity:1;background:#eaf1fe;border-color:#2f6fed;}
   button.btn.solid{background:var(--blue);color:#fff;}
@@ -202,6 +256,9 @@
   .ticket-item:hover{background:var(--page);border-color:var(--line-strong);}
   .ticket-item .meta{font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px;min-width:0;}
   .ticket-item .meta .sub{color:var(--muted);font-size:12px;font-weight:400;white-space:nowrap;flex:none;}
+  .ticket-item.ticket-part{margin-left:28px;background:transparent;border-style:dashed;padding-top:9px;padding-bottom:9px;}
+  .ticket-item.ticket-part .meta{font-weight:500;font-size:14px;}
+  .tk-branch{color:var(--muted);font-weight:400;margin-right:2px;flex:none;}
   .ticket-item .btns{display:flex;gap:8px;align-items:center;flex:none;}
 
   .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:6px;}
@@ -905,13 +962,20 @@ function toggleMobileSidebar(forceClose){
         <div style="display:flex;gap:6px;margin-bottom:6px;">
           <button type="button" class="btn" style="font-weight:800;padding:4px 10px;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold')" title="Έντονα">B</button>
           <button type="button" class="btn" style="padding:4px 10px;background:#fff59d;" onmousedown="event.preventDefault()" onclick="toggleNotesHighlight()" title="Επισήμανση">🖊 Highlight</button>
+          <span style="display:flex;gap:4px;align-items:center;margin-left:4px;">
+            <span style="font-size:11px;color:var(--muted);">Χρώμα:</span>
+            <button type="button" class="note-colour" style="background:#1a1c20;" onmousedown="event.preventDefault()" onclick="setNotesColour('#1a1c20')" title="Μαύρο (κανονικό)"></button>
+            <button type="button" class="note-colour" style="background:#c0392b;" onmousedown="event.preventDefault()" onclick="setNotesColour('#c0392b')" title="Κόκκινο — προσοχή"></button>
+            <button type="button" class="note-colour" style="background:#2f6fed;" onmousedown="event.preventDefault()" onclick="setNotesColour('#2f6fed')" title="Μπλε — πληροφορία"></button>
+            <button type="button" class="note-colour" style="background:#1c7a4f;" onmousedown="event.preventDefault()" onclick="setNotesColour('#1c7a4f')" title="Πράσινο — εντάξει"></button>
+          </span>
         </div>
         <div id="tkNotes" contenteditable="true" style="min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;"></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head"><div class="title">📎 Επισυναπτόμενα Αρχεία (PDF/Φωτογραφίες)</div>
+      <div class="card-head"><div class="title">📎 Επισυναπτόμενα Αρχεία (PDF/Φωτογραφίες) <span id="tkAttachCount" class="sec-count" style="display:none;"></span></div>
         <button class="btn" id="tkAttachToggle" onclick="toggleTicketSection('tkAttachBody','tkAttachToggle')">▶ Εμφάνιση</button>
       </div>
       <div class="card-body" id="tkAttachBody" style="display:none;">
@@ -1147,12 +1211,14 @@ function toggleMobileSidebar(forceClose){
         <div style="display:flex;gap:8px;">
           <button class="btn ord-filter-btn solid" data-pview="board" onclick="setProductionView('board')">📋 Πίνακας</button>
           <button class="btn ord-filter-btn" data-pview="calendar" onclick="setProductionView('calendar')">📅 Ημερολόγιο</button>
+          <span class="board-zoom-chip" id="prodZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('production',100)">100%</span>
+          <button class="btn" onclick="openBoardColourPicker('production', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">🎨 Φόντο</button>
           <button class="btn" onclick="addProductionStage()">+ Νέα Στήλη</button>
           <button class="btn" id="bulkSelectToggleBtn" onclick="toggleBulkSelectMode()">☑ Πολλαπλή Επιλογή</button>
           <button class="btn" id="archiveToggleBtn" onclick="toggleArchiveView()">📦 Αρχειοθετημένα</button>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική.</div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική. Για μεγαλύτερες ή μικρότερες κάρτες: <b>Ctrl + ροδέλα ποντικιού</b> πάνω στον πίνακα. Δεξί κλικ στο φόντο αλλάζει χρώμα.</div>
       <div class="card-body" id="archiveList" style="display:none;"></div>
       <div id="bulkSelectBar" style="display:none;padding:10px 16px;border-top:1px solid var(--line);background:var(--page);align-items:center;gap:12px;">
         <span id="bulkSelectCount" style="font-size:12.5px;font-weight:600;">0 επιλεγμένα</span>
@@ -1322,6 +1388,8 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">🧾 Τιμολόγηση</div>
         <div style="display:flex;gap:8px;">
+          <span class="board-zoom-chip" id="invZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('invoicing',100)">100%</span>
+          <button class="btn" onclick="openBoardColourPicker('invoicing', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">🎨 Φόντο</button>
           <button class="btn" onclick="addInvoicingColumn()">+ Νέα Στήλη</button>
         </div>
       </div>
@@ -4502,6 +4570,7 @@ function switchView(view){
   if(view==='forecast') refreshForecastList();
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
+  if(view==='production' || view==='invoicing'){ attachBoardContextMenu(); bindBoardZoomResize(); }
   if(view==='productiontime') refreshProdTimeList();
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
@@ -4813,6 +4882,25 @@ function toggleEnglishPdfBtn(){
   syncOfferToggleButtons();
 }
 
+// Job names lead with a reverse date code (260804 = 4/8/2026), matching how
+// offers are numbered, so lists sort chronologically by name alone.
+function jobDateCode(dateStr){
+  const src = (dateStr || new Date().toISOString().slice(0,10));
+  const [y,m,d] = src.split('-');
+  if(!y || !m || !d) return '';
+  return y.slice(2) + m + d;
+}
+
+// Adds the code only when it isn't there already, so re-converting or renaming
+// can't produce "260804 - 260804 - ...".
+function withJobDateCode(name, dateStr){
+  const code = jobDateCode(dateStr);
+  const clean = (name || '').trim();
+  if(!code) return clean;
+  if(/^\d{6}\s*-\s*/.test(clean)) return clean;
+  return clean ? `${code} - ${clean}` : code;
+}
+
 async function saveOffer(){
   try{
     const data = collectOffer();
@@ -5104,6 +5192,12 @@ async function splitTicketPaperRowToChild(rowId){
   }
   const row = tkPaperRows.find(r=>r.id===rowId);
   if(!row) return;
+  // Splitting the same row twice would leave two tickets each entitled to take
+  // the same paper out of stock, so it's allowed once.
+  if(row.movedToChild){
+    statusMsg('Αυτή η γραμμή έχει ήδη ξεχωριστό ticket — δες τα συνδεδεμένα (🔗) στην κορυφή.');
+    return;
+  }
   const rowLabel = row.tipos || row.xarti || 'αυτή τη γραμμή';
   if(!confirm(`Δημιουργία ξεχωριστού, συνδεδεμένου Job Ticket για "${rowLabel}"; Η γραμμή παραμένει κανονικά και εδώ (πλήρης εικόνα) — το νέο ticket θα κινείται ανεξάρτητα στην Παραγωγή, μόνο για αυτό το κομμάτι.`)) return;
 
@@ -5132,7 +5226,7 @@ async function splitTicketPaperRowToChild(rowId){
   currentTicketLinkGroupId = parentLinkId;
   currentTicketIsChild = true;
   updateDeadlineFieldVisibility();
-  document.getElementById('tkInfo').value = [parentInfo, rowLabel].filter(Boolean).join(' — ');
+  document.getElementById('tkInfo').value = [parentInfo, rowLabel].filter(Boolean).join(' — ');  // parent already carries the date code
   // A row with its own quantity is a separate item, so that figure travels with
   // it; otherwise the child would inherit the whole order's quantity.
   document.getElementById('tkQty').value = num(row.qty) > 0 ? row.qty : parentQty;
@@ -5495,6 +5589,13 @@ function applyTicketData(d, topLevelDeadline){
   recalcTicketPackaging();
   ticketAttachments = d.attachments || [];
   renderTicketAttachments();
+  // A ticket with files attached should say so on opening — a collapsed section
+  // hides the very thing the operator needs to look at.
+  if(ticketAttachments.length) openTicketSection('tkAttachBody','tkAttachToggle');
+  // Same reasoning for packaging: if someone worked it out, show it.
+  if(num(d.tkPiecesPerBox) > 0 || num(d.tkBoxesPerPallet) > 0 || num(d.tkPackQty) > 0){
+    openTicketSection('tkPackBody','tkPackToggle','pkControls');
+  }
   currentTicketLinkGroupId = d.linkGroupId || null;
   currentTicketIsChild = d.isLinkChild === true;
   updateDeadlineFieldVisibility();
@@ -5505,6 +5606,12 @@ function applyTicketData(d, topLevelDeadline){
 let ticketAttachments = [];
 
 function renderTicketAttachments(){
+  const head = document.getElementById('tkAttachCount');
+  if(head){
+    const n = ticketAttachments.length;
+    head.textContent = n ? `${n} ${n===1?'αρχείο':'αρχεία'}` : '';
+    head.style.display = n ? 'inline-block' : 'none';
+  }
   const el = document.getElementById('tkAttachmentList');
   if(ticketAttachments.length===0){
     el.innerHTML = '<div class="empty-note">Δεν υπάρχουν ακόμα επισυναπτόμενα.</div>';
@@ -5618,6 +5725,16 @@ async function deleteTicketAttachment(idx){
   }
 }
 
+// Colour applies to the selection, or — with nothing selected — to whatever is
+// typed next, which is how people expect a text editor to behave.
+function setNotesColour(colour){
+  const el = document.getElementById('tkNotes');
+  el.focus();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, colour);
+  markTicketDirty();
+}
+
 function toggleNotesHighlight(){
   document.getElementById('tkNotes').focus();
   const sel = window.getSelection();
@@ -5643,6 +5760,13 @@ function toggleTicketSection(bodyId, btnId, extraId){
     const extra = document.getElementById(extraId);
     if(extra) extra.style.display = showing ? 'none' : 'flex';
   }
+}
+
+function openTicketSection(bodyId, btnId, extraId){
+  const body = document.getElementById(bodyId);
+  const btn = document.getElementById(btnId);
+  if(!body || !btn) return;
+  if(body.style.display === 'none') toggleTicketSection(bodyId, btnId, extraId);
 }
 
 function collapseTicketSections(){
@@ -5696,9 +5820,19 @@ async function saveTicket(){
   try{
     const data = collectTicket();
     const id = currentTicketId || ('t' + Date.now());
-    const label = data.info || 'Χωρίς τίτλο';
     const savedAt = new Date().toISOString();
     const record = await jbGetRecord();
+    // Tickets typed from scratch get the same leading date code as converted
+    // ones. An existing ticket keeps the date it was first created with.
+    if((data.info || '').trim()){
+      const existingTicket = record.tickets[id];
+      const codeDate = (existingTicket && existingTicket.savedAt)
+        ? existingTicket.savedAt.slice(0,10)
+        : savedAt.slice(0,10);
+      data.info = withJobDateCode(data.info, codeDate);
+      document.getElementById('tkInfo').value = data.info;
+    }
+    const label = data.info || 'Χωρίς τίτλο';
     const existing = record.tickets[id] || {};
     const ticketObj = { ...existing, label, date: data.deadline || '', savedAt, data, deadlineDate: data.deadline || '' };
 
@@ -5840,9 +5974,9 @@ async function refreshTicketList(){
       note.innerHTML = `Η αναζήτηση περιλαμβάνει και <b>${foundFinished}</b> ολοκληρωμέν${foundFinished===1?'η δουλειά':'ες δουλειές'} (αρχειοθετημένες ή τιμολογημένες). Με το <b>⧉ Αντιγραφή</b> ξαναμπαίνουν στην Παραγωγή.`;
       el.appendChild(note);
     }
-    const buildTicketRow = (t) => {
+    const buildTicketRow = (t, partCount = 0, isPart = false, parentName = '') => {
       const div = document.createElement('div');
-      div.className = 'ticket-item';
+      div.className = 'ticket-item' + (isPart ? ' ticket-part' : '');
       div.onclick = () => loadTicket(t.id);
       const dateStr = t.date ? t.date : (t.savedAt ? t.savedAt.slice(0,10) : '');
       let statusHtml;
@@ -5855,8 +5989,14 @@ async function refreshTicketList(){
       } else {
         statusHtml = `<span class="order-badge received">Σε εξέλιξη${t.stage ? ' · '+esc(t.stage) : ''}</span>`;
       }
+      // A part shows only what distinguishes it; the parent above already carries
+      // the order name, so repeating it in full would just be noise.
+      const shown = isPart && parentName && (t.label||'').startsWith(parentName + ' — ')
+        ? (t.label || '').slice(parentName.length + 3)
+        : t.label;
       div.innerHTML = `
-        <div class="meta"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.label)}</span><span class="sub">${esc(dateStr)}</span></div>
+        <div class="meta">${isPart ? '<span class="tk-branch">└</span>' : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(shown)}</span>${
+          partCount ? `<span class="cd-parts" style="cursor:default;">${partCount} μέρ${partCount===1?'ος':'η'}</span>` : ''}<span class="sub">${esc(dateStr)}</span></div>
         <div class="btns">
           ${statusHtml}
           <button class="btn" onclick="event.stopPropagation();duplicateTicket('${t.id}')" title="Δημιουργεί νέο ticket με τα ίδια στοιχεία και το βάζει στην Παραγωγή — για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
@@ -5866,8 +6006,36 @@ async function refreshTicketList(){
       return div;
     };
 
+    // Parts of an order sit under their parent — and stay open here, because this
+    // list is where you go looking for a specific ticket.
+    const appendNested = (items, target) => {
+      const kidsOf = {};
+      const tops = [];
+      items.forEach(t=>{
+        const d = t.data || {};
+        if(d.linkGroupId && d.isLinkChild) (kidsOf[d.linkGroupId] = kidsOf[d.linkGroupId] || []).push(t);
+        else tops.push(t);
+      });
+      // A part whose parent isn't in this list (filtered out, or deleted) would
+      // otherwise disappear, so it stands on its own.
+      Object.entries(kidsOf).forEach(([gid, kids])=>{
+        if(!tops.some(t=>(t.data||{}).linkGroupId === gid)){
+          kids.forEach(k=>tops.push(k));
+          delete kidsOf[gid];
+        }
+      });
+      tops.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+      tops.forEach(t=>{
+        const gid = (t.data||{}).linkGroupId;
+        const kids = gid ? (kidsOf[gid] || []) : [];
+        target.appendChild(buildTicketRow(t, kids.length));
+        kids.sort((a,b)=>(a.savedAt||'').localeCompare(b.savedAt||''))
+            .forEach(k => target.appendChild(buildTicketRow(k, 0, true, t.label)));
+      });
+    };
+
     if(!ticketsGrouped){
-      list.forEach(t => el.appendChild(buildTicketRow(t)));
+      appendNested(list, el);
     } else {
       const groups = {};
       list.forEach(t=>{
@@ -5889,7 +6057,7 @@ async function refreshTicketList(){
           <span class="ord-group-name">${esc(name)}</span>
           <span class="ord-group-meta"><b>${items.length}</b> δουλει${items.length===1?'ά':'ές'}${active ? ` · <b>${active}</b> σε εξέλιξη` : ''}</span>`;
         el.appendChild(head);
-        items.forEach(t => el.appendChild(buildTicketRow(t)));
+        appendNested(items, el);
       });
     }
   }catch(e){
@@ -6058,7 +6226,7 @@ function convertOfferToTicket(){
   const schemaClosedVal = document.getElementById('fSchemaClosed').value;
 
   newTicket();
-  document.getElementById('tkInfo').value = [client, title].filter(Boolean).join(' — ');
+  document.getElementById('tkInfo').value = withJobDateCode([client, title].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
   document.getElementById('tkQty').value = baseQty;
   document.getElementById('tkDeadline').value = ''; // real calendar date — set separately, not the same as the offer's "χρόνος παράδοσης" estimate
   document.getElementById('tkSchema').value = schemaClosedVal;
@@ -6148,7 +6316,7 @@ async function convertOfferToMultipleTickets(){
   currentTicketLinkGroupId = batchLinkId;
   currentTicketIsChild = false;
   updateDeadlineFieldVisibility();
-  document.getElementById('tkInfo').value = [client, title].filter(Boolean).join(' — ');
+  document.getElementById('tkInfo').value = withJobDateCode([client, title].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
   document.getElementById('tkQty').value = baseQty;
   document.getElementById('tkSchema').value = schemaClosedVal;
   document.getElementById('tkSchemaClosed').value = schemaClosedVal;
@@ -6205,7 +6373,7 @@ async function convertOfferToMultipleTickets(){
       currentTicketLinkGroupId = batchLinkId;
       currentTicketIsChild = true;
       updateDeadlineFieldVisibility();
-      document.getElementById('tkInfo').value = [client, r.material].filter(Boolean).join(' — ');
+      document.getElementById('tkInfo').value = withJobDateCode([client, r.material].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
       document.getElementById('tkQty').value = qty;
       document.getElementById('tkSchema').value = schemaClosedVal;
       document.getElementById('tkSchemaClosed').value = schemaClosedVal;
@@ -7350,6 +7518,249 @@ function showCardContextMenu(e, ticketId, cardEl, stage, currentDividerId){
   setTimeout(()=>{ document.addEventListener('click', closeCardContextMenuOnClickOutside); }, 0);
 }
 
+// Boards can be tinted so Production and Invoicing are distinguishable at a
+// glance across the shop — the choice is shared, like the columns themselves.
+const BOARD_COLOURS = [
+  // Row 1 — pale tints that keep white cards readable
+  { name:'Ουδέτερο',      value:'' },
+  { name:'Γκρι',          value:'#eceef1' },
+  { name:'Μπλε',          value:'#e8f0fb' },
+  { name:'Γαλάζιο',       value:'#e4f4f8' },
+  { name:'Πράσινο',       value:'#e9f4ee' },
+  { name:'Φυστικί',       value:'#eef5e3' },
+  { name:'Κίτρινο',       value:'#fdf6e3' },
+  { name:'Πορτοκαλί',     value:'#fdefe3' },
+  // Row 2 — warmer and cooler pales
+  { name:'Ροζ',           value:'#fbeef1' },
+  { name:'Κοραλί',        value:'#fdeceb' },
+  { name:'Μωβ',           value:'#f0ecfa' },
+  { name:'Λιλά',          value:'#f6ecf7' },
+  { name:'Μπεζ',          value:'#f5efe6' },
+  { name:'Άμμος',         value:'#f2eade' },
+  { name:'Μέντα',         value:'#e5f5f0' },
+  { name:'Κρεμ',          value:'#faf6ec' },
+  // Row 3 — stronger tints for boards that must stand apart
+  { name:'Έντονο μπλε',   value:'#cfe0f7' },
+  { name:'Έντονο πράσινο',value:'#cfe8d9' },
+  { name:'Έντονο κίτρινο',value:'#f7e9bf' },
+  { name:'Έντονο ροζ',    value:'#f7d9e2' },
+  { name:'Έντονο μωβ',    value:'#ded4f2' },
+  { name:'Έντονο γκρι',   value:'#d8dbe0' },
+  // Row 4 — dark, for a clear visual break
+  { name:'Σκούρο γκρι',   value:'#2b2f36' },
+  { name:'Σκούρο μπλε',   value:'#24303f' }
+];
+
+function applyBoardColour(board, colour){
+  const el = document.getElementById(board === 'invoicing' ? 'invoicingBoard' : 'productionBoard');
+  if(!el) return;
+  if(colour){
+    el.style.background = colour;
+    el.style.padding = '14px';
+    el.style.borderRadius = '10px';
+    // Keep card text legible when a dark tint is chosen.
+    el.classList.toggle('board-dark', isDarkColour(colour));
+  } else {
+    el.style.background = '';
+    el.style.padding = '';
+    el.style.paddingBottom = '50px';
+    el.style.borderRadius = '';
+    el.classList.remove('board-dark');
+  }
+}
+
+function isDarkColour(hex){
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+  if(!m) return false;
+  const n = parseInt(m[1],16);
+  const [r,g,b] = [(n>>16)&255, (n>>8)&255, n&255];
+  return (0.299*r + 0.587*g + 0.114*b) < 140;
+}
+
+async function setBoardColour(board, colour){
+  applyBoardColour(board, colour);
+  try{
+    const record = await jbGetRecord();
+    record.boardColours = record.boardColours || {};
+    record.boardColours[board] = colour;
+    await jbMergePath(SLICE_MAIN, ['boardColours'], record.boardColours);
+  }catch(e){
+    console.error('Board colour error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function openBoardColourPicker(board, ev){
+  if(ev) ev.preventDefault();
+  closeAllKanbanPopovers();
+  const record = await jbGetRecord().catch(()=>({}));
+  const current = (record.boardColours||{})[board] || '';
+  const pop = document.createElement('div');
+  pop.id = 'boardColourPopover';
+  pop.style.cssText = 'position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:10px;z-index:2000;width:326px;';
+  pop.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Χρώμα φόντου πίνακα</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">
+      ${BOARD_COLOURS.map(cl=>`
+        <button type="button" class="board-swatch${cl.value===current?' sel':''}" data-colour="${cl.value}" title="${esc(cl.name)}"
+          style="background:${cl.value || 'transparent'};${cl.value ? '' : 'background-image:linear-gradient(45deg,transparent 45%,#c33 45%,#c33 55%,transparent 55%);'}"></button>`).join('')}
+    </div>`;
+  document.body.appendChild(pop);
+  const rect = ev && ev.target && ev.target.getBoundingClientRect
+    ? ev.target.getBoundingClientRect()
+    : { left: (ev?ev.clientX:100), bottom: (ev?ev.clientY:100) };
+  pop.style.left = Math.min(window.scrollX + rect.left, window.scrollX + window.innerWidth - 342) + 'px';
+  pop.style.top = (window.scrollY + (rect.bottom || rect.top) + 6) + 'px';
+  pop.querySelectorAll('.board-swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      setBoardColour(board, btn.getAttribute('data-colour'));
+      pop.remove();
+    });
+  });
+}
+
+// Right-clicking the empty board area is the quickest way to reach the tint,
+// so it opens the same picker as the toolbar button. Cards and columns keep
+// their own menus — only bare background counts.
+// Parts of one order need to read as a set even when they sit in different
+// columns. A stripe colour derived from the group id does that at a glance —
+// same colour means same order, and it stays the same on every render.
+const LINK_GROUP_COLOURS = ['#2f6fed','#c0392b','#1c7a4f','#a3690a','#7b3fb5','#0d8b9c','#c2185b','#5d6d1f'];
+
+function linkGroupColour(groupId){
+  const s = String(groupId || '');
+  let h = 0;
+  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+  return LINK_GROUP_COLOURS[h % LINK_GROUP_COLOURS.length];
+}
+
+// "μέρος 2/3" is only meaningful if we know the whole set, so count the group
+// once per render rather than per card.
+function buildLinkGroupIndex(tickets){
+  const groups = {};
+  tickets.forEach(t=>{
+    const g = (t.data||{}).linkGroupId;
+    if(!g) return;
+    (groups[g] = groups[g] || []).push(t);
+  });
+  Object.values(groups).forEach(list=>{
+    list.sort((a,b)=>{
+      const ap = (a.data||{}).isLinkChild ? 1 : 0, bp = (b.data||{}).isLinkChild ? 1 : 0;
+      if(ap!==bp) return ap-bp;                       // the main ticket leads
+      return String(a.id).localeCompare(String(b.id));
+    });
+  });
+  return groups;
+}
+
+// Board zoom is a per-screen preference, not shared data: the big wall display
+// and a laptop want different sizes, so it lives in local storage.
+const BOARD_ZOOM_STEPS = [50, 60, 70, 80, 90, 100, 110, 125, 150];
+
+function boardZoomKey(board){ return 'ff_board_zoom_' + board; }
+
+function getBoardZoom(board){
+  const v = parseInt(localStorage.getItem(boardZoomKey(board)) || '100', 10);
+  return BOARD_ZOOM_STEPS.includes(v) ? v : 100;
+}
+
+function applyBoardZoom(board){
+  const el = document.getElementById(board === 'invoicing' ? 'invoicingBoard' : 'productionBoard');
+  const label = document.getElementById(board === 'invoicing' ? 'invZoomLabel' : 'prodZoomLabel');
+  if(!el) return;
+  const z = getBoardZoom(board);
+  // Zoom scales the laid-out box, so shrinking the cards would drag the
+  // horizontal scrollbar up the page. The board is measured unzoomed and then
+  // given a matching minimum height, with a viewport-based floor in case the
+  // measurement comes back as zero (board hidden, or not yet laid out).
+  el.style.zoom = '';
+  el.style.minHeight = '';
+  const naturalHeight = el.getBoundingClientRect().height;
+  if(z !== 100){
+    const factor = z / 100;
+    // The floor is a fallback only: if the board could actually be measured, its
+    // own height is what must be preserved — forcing it taller would push the
+    // scrollbar down instead.
+    const target = naturalHeight > 40
+      ? naturalHeight
+      : Math.max(0, window.innerHeight - el.getBoundingClientRect().top - 90);
+    el.style.zoom = factor;
+    if(target > 0) el.style.minHeight = (target / factor) + 'px';
+  }
+  if(label){
+    label.textContent = z + '%';
+    label.classList.toggle('on', z !== 100);
+  }
+}
+
+function setBoardZoom(board, pct){
+  const z = BOARD_ZOOM_STEPS.includes(pct) ? pct : 100;
+  localStorage.setItem(boardZoomKey(board), String(z));
+  applyBoardZoom(board);
+}
+
+// The floor above depends on the window, so the boards are re-pinned on resize.
+let boardZoomResizeBound = false;
+function bindBoardZoomResize(){
+  if(boardZoomResizeBound) return;
+  boardZoomResizeBound = true;
+  let t = null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(t);
+    t = setTimeout(()=>{
+      ['production','invoicing'].forEach(b=>{
+        const el = document.getElementById(b === 'invoicing' ? 'invoicingBoard' : 'productionBoard');
+        if(el && el.offsetParent !== null) applyBoardZoom(b);
+      });
+    }, 150);
+  });
+}
+
+function stepBoardZoom(board, dir){
+  const cur = getBoardZoom(board);
+  const i = BOARD_ZOOM_STEPS.indexOf(cur);
+  const next = BOARD_ZOOM_STEPS[Math.min(BOARD_ZOOM_STEPS.length-1, Math.max(0, i + dir))];
+  setBoardZoom(board, next);
+}
+
+function highlightLinkGroup(groupId){
+  document.querySelectorAll('#productionBoard, #invoicingBoard').forEach(board=>{
+    board.classList.add('group-focus');
+    board.querySelectorAll('.kanban-card').forEach(el=>{
+      el.classList.toggle('group-match', el.getAttribute('data-group') === groupId);
+    });
+  });
+}
+
+function clearLinkGroupHighlight(){
+  document.querySelectorAll('#productionBoard, #invoicingBoard').forEach(board=>{
+    board.classList.remove('group-focus');
+    board.querySelectorAll('.group-match').forEach(el=>el.classList.remove('group-match'));
+  });
+}
+
+let boardMenuAttached = false;
+function attachBoardContextMenu(){
+  if(boardMenuAttached) return;
+  boardMenuAttached = true;
+  [['productionBoard','production'], ['invoicingBoard','invoicing']].forEach(([id, board])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('contextmenu', ev=>{
+      if(ev.target.closest('.kanban-card, .kanban-col-head, .col-divider')) return;
+      ev.preventDefault();
+      openBoardColourPicker(board, ev);
+    });
+    // Ctrl + wheel zooms the board, the gesture people already use for zooming.
+    // passive:false so the browser's own page zoom can be suppressed.
+    el.addEventListener('wheel', ev=>{
+      if(!ev.ctrlKey && !ev.metaKey) return;
+      ev.preventDefault();
+      stepBoardZoom(board, ev.deltaY < 0 ? 1 : -1);
+    }, { passive:false });
+  });
+}
+
 async function refreshProductionBoard(){
   const boardEl = document.getElementById('productionBoard');
   const key = getJbKey(), bin = getJbBin();
@@ -7361,6 +7772,7 @@ async function refreshProductionBoard(){
     const record = await jbGetRecord();
     const stages = record.productionStages;
     const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(isTicketActive);
+    const linkGroups = buildLinkGroupIndex(tickets);
 
     // Make sure every ticket has a stage; default new/untouched ones to the first column.
     let changed = false;
@@ -7395,6 +7807,7 @@ async function refreshProductionBoard(){
     }
 
     boardEl.innerHTML = '';
+    applyBoardColour('production', (record.boardColours||{}).production || '');
     stages.forEach((stage, idx)=>{
       const col = document.createElement('div');
       col.className = 'kanban-col';
@@ -7545,12 +7958,22 @@ async function refreshProductionBoard(){
           for(let i=order.indexOf(entry)-1; i>=0; i--){
             if(order[i].type==='divider'){ currentDividerId = order[i].id; break; }
           }
+          const group = info.linkGroupId ? (linkGroups[info.linkGroupId] || []) : [];
+          const groupColour = info.linkGroupId ? linkGroupColour(info.linkGroupId) : '';
+          const partNo = group.length ? group.findIndex(g=>g.id===t.id) + 1 : 0;
+          if(info.linkGroupId){
+            card.classList.add('linked-card');
+            card.setAttribute('data-group', info.linkGroupId);
+          }
+          // The order name is the part before the em dash the split adds, so the
+          // card can show which order it belongs to without repeating it.
+          const orderName = (group[0] ? ((group[0].data||{}).info || group[0].label || '') : '').split(' — ')[0];
           card.innerHTML = `
             <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
               <input type="checkbox" class="kanban-bulk-checkbox" data-id="${t.id}" ${bulkSelectedIds.has(t.id)?'checked':''} style="display:${bulkSelectMode?'inline-block':'none'};margin-right:2px;">
               ${labelsHtml}
               <span class="kanban-date-btn" title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
-              ${info.linkGroupId ? `<span title="Μέρος μεγαλύτερης παραγγελίας" style="font-size:11px;">🔗</span>` : ''}
+              ${info.linkGroupId ? `<span class="link-chip" title="Μέρος της παραγγελίας «${esc(orderName)}» — πέρνα το ποντίκι για να δεις τα υπόλοιπα μέρη">🔗${group.length>1 ? ` ${partNo}/${group.length}` : ''}</span>` : ''}
             </div>
             <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
             <div class="meta">${metaBits.join(' · ')}</div>
@@ -7559,6 +7982,13 @@ async function refreshProductionBoard(){
               <div class="kanban-invoice-btn">🧾 Τιμολόγηση</div>
             </div>` : ''}
           `;
+          if(info.linkGroupId){
+            // Hovering one part lifts the whole order out of the board and fades
+            // everything else, so a set is visible on demand without the board
+            // carrying permanent decoration.
+            card.addEventListener('mouseenter', ()=>highlightLinkGroup(info.linkGroupId));
+            card.addEventListener('mouseleave', clearLinkGroupHighlight);
+          }
           card.addEventListener('click', (e)=>{
             if(e.target.closest('.kanban-invoice-btn')){ sendToInvoicing(t.id); return; }
             if(e.target.closest('.kanban-card-labels, .kanban-archive-btn') && !e.target.classList.contains('kanban-bulk-checkbox')) return;
@@ -7612,6 +8042,10 @@ async function refreshProductionBoard(){
         }
       });
     });
+
+    // Measured after the columns are in place: an empty board has no height to
+    // preserve, and the whole point is to keep the scrollbar where it was.
+    applyBoardZoom('production');
 
     if(changed) await jbPutRecord(record);
   }catch(e){
@@ -7912,6 +8346,7 @@ async function refreshInvoicingBoard(){
       .filter(t => t.invoiceStage && !t.archived);
 
     boardEl.innerHTML = '';
+    applyBoardColour('invoicing', (record.boardColours||{}).invoicing || '');
     stages.forEach((stage, idx)=>{
       const inStage = tickets.filter(t => t.invoiceStage === stage);
       const col = document.createElement('div');
@@ -7979,6 +8414,7 @@ async function refreshInvoicingBoard(){
       });
       boardEl.appendChild(col);
     });
+    applyBoardZoom('invoicing');
   }catch(e){
     console.error('Invoicing board error:', e);
     boardEl.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
@@ -8083,7 +8519,7 @@ function closeLabelPopover(){
   closeAllKanbanPopovers();
 }
 function closeAllKanbanPopovers(){
-  ['labelPopover','datePopover','movePopover'].forEach(id=>{
+  ['labelPopover','datePopover','movePopover','boardColourPopover'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.remove();
   });
@@ -8879,10 +9315,137 @@ function jumpToClient(client){
   setTimeout(()=>{ const s = document.getElementById('offerSearch'); if(s){ s.value = client; offerListPage = 0; renderOfferTable(); } }, 50);
 }
 
-function jumpToClientTickets(client){
-  switchView('ticketlist');
-  closeGlobalSearch();
-  setTimeout(()=>{ const s = document.getElementById('ticketSearch'); if(s){ s.value = client; refreshTicketList(); } }, 50);
+// A customer's history is offers AND jobs together: some jobs never had an
+// offer, and pending offers matter as much as approved ones. Jumping off to a
+// filtered list showed only half the picture, so it's all shown in place.
+async function toggleClientDetail(rowEl, client){
+  const detailRow = rowEl.nextElementSibling;
+  if(!detailRow || !detailRow.classList.contains('client-detail-row')) return;
+  const open = detailRow.style.display !== 'none';
+  if(open){
+    detailRow.style.display = 'none';
+    rowEl.classList.remove('open');
+    return;
+  }
+  rowEl.classList.add('open');
+  detailRow.style.display = '';
+  const cell = detailRow.firstElementChild;
+  cell.innerHTML = '<div class="client-detail"><div class="empty-note">Φόρτωση…</div></div>';
+
+  try{
+    const record = await jbGetRecord();
+    const name = (client||'').trim().toLowerCase();
+
+    const offers = Object.entries(record.offers||{})
+      .map(([id,o])=>({id, ...o}))
+      .filter(o => ((o.data||{}).client || o.label || '').trim().toLowerCase() === name)
+      .sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+
+    const tickets = Object.entries(record.tickets||{})
+      .map(([id,t])=>({id, ...t}))
+      .filter(t => ((t.data||{}).client || '').trim().toLowerCase() === name)
+      .sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+
+    const stages = record.productionStages || [];
+    const doneStage = stages[stages.length-1];
+
+    const offerRow = o => {
+      const d = o.data || {};
+      const status = o.approved
+        ? '<span class="order-badge received">Εγκεκριμένη</span>'
+        : '<span class="order-badge">Εκκρεμεί</span>';
+      return `<div class="cd-item" onclick="loadOffer('${o.id}')">
+        <div>
+          <div class="t">${esc(d.title || o.label || '(χωρίς τίτλο)')}</div>
+          <div class="s">${o.number ? esc(o.number) + ' · ' : ''}${esc(fmtDate(o.date || (o.savedAt||'').slice(0,10)))}</div>
+        </div>
+        <div class="cd-right">${status}<span class="cd-amount">${num(o.total).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span></div>
+      </div>`;
+    };
+
+    const ticketRow = (t, partCount = 0, isPart = false, groupId = '') => {
+      const d = t.data || {};
+      let status;
+      if(t.archived) status = '<span class="order-badge" style="background:#e6e4dc;color:#5f5e5a;">Αρχειοθετημένο</span>';
+      else if(t.invoiceStage) status = `<span class="order-badge" style="background:#eaf1fe;color:#2f6fed;">Τιμολόγηση</span>`;
+      else if(t.stage && t.stage===doneStage) status = '<span class="order-badge received">Ολοκληρώθηκε</span>';
+      else status = `<span class="order-badge received" style="background:#eef7f2;">Σε εξέλιξη · ${esc(t.stage||'—')}</span>`;
+      const bits = [];
+      if(d.qty) bits.push(d.qty + ' τεμ.');
+      if(t.deadlineDate) bits.push('🗓 ' + fmtDate(t.deadlineDate));
+      // A part shows only what distinguishes it — the parent already carries the
+      // order name, so repeating it would just be noise.
+      const parentName = isPart && d.linkGroupId
+        ? ((topLevel.find(p=>(p.data||{}).linkGroupId === d.linkGroupId) || {}).data || {}).info || ''
+        : '';
+      const shown = isPart && parentName && (d.info||'').startsWith(parentName + ' — ')
+        ? (d.info || '').slice(parentName.length + 3)
+        : (d.info || t.label || '(χωρίς τίτλο)');
+      return `<div class="cd-item${isPart ? ' cd-part' : ''}" onclick="loadTicket('${t.id}', false)">
+        <div>
+          <div class="t">${isPart ? '<span class="cd-branch">└</span> ' : ''}${esc(shown)}${
+            partCount ? `<span class="cd-parts" onclick="event.stopPropagation();toggleOrderParts(this, '${esc(groupId).replace(/'/g,"\\'")}')" title="Εμφάνιση των επιμέρους μερών"><span class="cd-caret">▶</span> ${partCount} μέρ${partCount===1?'ος':'η'}</span>` : ''}</div>
+          <div class="s">${bits.join(' · ')}</div>
+        </div>
+        <div class="cd-right">${status}</div>
+      </div>`;
+    };
+
+    // Parts of an order sit under their parent rather than as siblings, so the
+    // list reads as orders — not as a flat pile where one job appears four times.
+    const childrenOf = {};
+    const topLevel = [];
+    tickets.forEach(t=>{
+      const d = t.data || {};
+      if(d.linkGroupId && d.isLinkChild){
+        (childrenOf[d.linkGroupId] = childrenOf[d.linkGroupId] || []).push(t);
+      } else {
+        topLevel.push(t);
+      }
+    });
+    // A part whose parent isn't here (deleted, or a different client) would
+    // otherwise vanish, so it's promoted to the top level.
+    Object.entries(childrenOf).forEach(([gid, kids])=>{
+      if(!topLevel.some(t=>(t.data||{}).linkGroupId === gid)){
+        kids.forEach(k=>topLevel.push(k));
+        delete childrenOf[gid];
+      }
+    });
+    topLevel.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+
+    const ticketsHtml = topLevel.map(t=>{
+      const gid = (t.data||{}).linkGroupId;
+      const kids = gid ? (childrenOf[gid] || []) : [];
+      if(!kids.length) return ticketRow(t, 0);
+      // The parts are collapsed by default: the customer view is about orders,
+      // and the breakdown is there when someone asks for it.
+      const inner = kids
+        .sort((a,b)=>(a.savedAt||'').localeCompare(b.savedAt||''))
+        .map(k=>ticketRow(k, 0, true)).join('');
+      return ticketRow(t, kids.length, false, gid)
+        + `<div class="cd-parts-wrap" data-parts="${esc(gid)}" style="display:none;">${inner}</div>`;
+    }).join('');
+
+    const approved = offers.filter(o=>o.approved).length;
+    const partCount = tickets.length - topLevel.length;
+    cell.innerHTML = `<div class="client-detail">
+      <h4>Προσφορές — ${offers.length} συνολικά${offers.length ? ` (${approved} εγκεκριμένες, ${offers.length-approved} εκκρεμείς)` : ''}</h4>
+      ${offers.length ? offers.map(offerRow).join('') : '<div class="empty-note">Καμία προσφορά για αυτόν τον πελάτη.</div>'}
+      <h4>Δουλειές / Παραγγελίες — ${topLevel.length}${partCount ? ` (+ ${partCount} επιμέρους μέρη)` : ''}</h4>
+      ${tickets.length ? ticketsHtml : '<div class="empty-note">Καμία δουλειά καταχωρημένη με αυτόν τον πελάτη. Οι δουλειές συνδέονται μέσω του πεδίου «Πελάτης» στο Job Ticket.</div>'}
+    </div>`;
+  }catch(e){
+    console.error('Client detail error:', e);
+    cell.innerHTML = `<div class="client-detail"><div class="empty-note">Σφάλμα: ${esc(e.message)}</div></div>`;
+  }
+}
+
+function toggleOrderParts(badgeEl, groupId){
+  const wrap = badgeEl.closest('.client-detail').querySelector(`.cd-parts-wrap[data-parts="${CSS.escape(groupId)}"]`);
+  if(!wrap) return;
+  const open = wrap.style.display !== 'none';
+  wrap.style.display = open ? 'none' : '';
+  badgeEl.classList.toggle('open', !open);
 }
 
 function toggleSidebar(){
@@ -9468,14 +10031,15 @@ async function refreshClientsList(){
         <tbody>${clients.map(c=>{
           const d = byClient[c];
           return `
-            <tr>
-              <td style="font-weight:600;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</td>
-              <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.count}</td>
-              <td style="text-align:right;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.approved}</td>
-              <td style="text-align:right;cursor:pointer;" onclick="jumpToClientTickets('${esc(c).replace(/'/g,"\\'")}')" title="Δες τα Job Tickets αυτού του πελάτη">${d.jobs||0}</td>
-              <td style="text-align:right;font-weight:700;cursor:pointer;" onclick="jumpToClient('${esc(c).replace(/'/g,"\\'")}')">${d.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+            <tr class="client-row" data-client="${esc(c)}" style="cursor:pointer;" onclick="toggleClientDetail(this, '${esc(c).replace(/'/g,"\\'")}')" title="Άνοιγμα καρτέλας πελάτη">
+              <td style="font-weight:600;"><span class="client-caret">▶</span> ${esc(c)}</td>
+              <td style="text-align:right;">${d.count}</td>
+              <td style="text-align:right;">${d.approved}</td>
+              <td style="text-align:right;">${d.jobs||0}</td>
+              <td style="text-align:right;font-weight:700;">${d.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
               <td style="white-space:nowrap;"><button class="del-link" onclick="event.stopPropagation();deleteClient('${esc(c).replace(/'/g,"\\'")}')">Διαγραφή</button></td>
             </tr>
+            <tr class="client-detail-row" style="display:none;"><td colspan="6" style="padding:0;background:var(--page);"></td></tr>
           `;
         }).join('')}</tbody>
       </table>
