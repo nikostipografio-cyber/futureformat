@@ -166,8 +166,27 @@
   .board-swatch:hover{box-shadow:0 0 0 2px var(--ink);}
   .board-swatch.sel{box-shadow:0 0 0 3px var(--ink);}
   /* On a dark tint the column headings need to lift off the background. */
-  .board-dark .kanban-col-head{color:#e8e8e6;}
-  .board-dark .kanban-col{background:rgba(255,255,255,0.07);}
+  .board-dark .kanban-col-head{color:#f2f2f0;}
+  .board-dark .kanban-col{background:rgba(255,255,255,0.13);}
+  .board-dark .kanban-col-head button{color:#f2f2f0;opacity:0.85;}
+  .board-dark .kanban-col-count{background:rgba(255,255,255,0.22);color:#fff;}
+  /* With a tint on, the card stops being a white slab behind the board — but the
+     header stays a distinct panel, since it's the toolbar you aim at. */
+  .work-tinted #viewProduction > .card,
+  .work-tinted #viewInvoicing > .card{background:transparent;border-color:transparent;}
+  .work-tinted #viewProduction > .card > .card-head,
+  .work-tinted #viewInvoicing > .card > .card-head{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.10);margin-bottom:16px;}
+  .work-dark #viewProduction > .card > .card-head,
+  .work-dark #viewInvoicing > .card > .card-head{
+    background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.18);
+    box-shadow:0 2px 12px rgba(0,0,0,0.22);}
+  /* On a dark work area the header text has to lift off it. */
+  .work-dark .card{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14);}
+  .work-dark .card-head .title{color:#f0f0ee;}
+  .work-dark #saveStatus{color:rgba(255,255,255,0.75);}
+  .work-dark .board-zoom-chip{background:rgba(255,255,255,0.12);color:#eee;border-color:rgba(255,255,255,0.2);}
   .note-colour{width:20px;height:20px;border-radius:50%;border:2px solid #fff;
     box-shadow:0 0 0 1px var(--line-strong);cursor:pointer;padding:0;flex:none;}
   .note-colour:hover{box-shadow:0 0 0 2px var(--ink);}
@@ -242,6 +261,10 @@
   }
   body.tk-locked #viewTicketForm .auto{background:#f4f4f2;color:var(--ink);}
   body.tk-locked #viewTicketForm .tk-qty-cell[readonly]{background:#f0efe9;border-color:var(--ink);}
+  /* The one field production still fills in on a locked ticket — marked so it's
+     obvious it's meant to be used. */
+  body.tk-locked #viewTicketForm .lo-input{background:#fff;border-color:#4a9d6e;
+    box-shadow:0 0 0 2px rgba(74,157,110,0.15);}
   .fixed{background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:5px 6px;text-align:center;color:var(--ink);}
   .rowdel{width:24px;height:24px;border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;}
   .rowdel:hover{background:#fbe6e5;color:#a3312a;border-color:#a3312a;}
@@ -1122,9 +1145,14 @@ function toggleMobileSidebar(forceClose){
           </label>
           <textarea id="tkPalletAddress" rows="3" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea>
         </div>
-        <div style="display:flex;gap:10px;margin-top:12px;">
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;">
           <button class="btn" onclick="printBoxLabels()">🏷️ Εκτύπωση Ετικετών Κουτιών</button>
           <button class="btn" onclick="printPalletLabels()">🏷️ Εκτύπωση Ετικετών Παλετών</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;"
+                 title="Τυπώνει μόνο τη διεύθυνση, χωρίς αριθμό κιβωτίων ούτε αρίθμηση παλέτας — για όταν δεν ξέρεις ακόμα πώς θα φορτωθούν">
+            <input type="checkbox" id="tkPalletNoCount" style="width:15px;height:15px;min-width:15px;margin:0;">
+            Μόνο διεύθυνση
+          </label>
         </div>
         <div class="empty-note" style="margin-top:8px;">Αυτή η κάρτα δεν εμφανίζεται στην εκτύπωση/PDF του ticket.</div>
       </div>
@@ -1307,7 +1335,6 @@ function toggleMobileSidebar(forceClose){
           </span>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Σύρε τις κάρτες (Job Tickets) ανάμεσα στις στήλες για να αλλάξεις στάδιο παραγωγής. Κλικ σε μια κάρτα για να ανοίξεις το ticket. Όταν μια δουλειά φτάσει στην τελευταία στήλη, η κάρτα της έχει δύο κουμπιά: "✓ Αρχειοθέτηση" (φεύγει από τον πίνακα και μένει στα Αρχειοθετημένα) ή "🧾 Τιμολόγηση" (περνάει στην καρτέλα Τιμολόγηση). Και στις δύο περιπτώσεις παύει να εμφανίζεται στο ημερολόγιο και στην Αρχική. Με την <b>αναζήτηση</b> βρίσκεις κάρτα σε όποια στήλη κι αν είναι. Για μεγαλύτερες ή μικρότερες κάρτες: <b>Ctrl + ροδέλα ποντικιού</b>. Τα υπόλοιπα (χρώμα φόντου, πολλαπλή επιλογή, αρχειοθετημένα) στο ⚙ Ρυθμίσεις.</div>
       <div class="card-body" id="archiveList" style="display:none;"></div>
       <div id="bulkSelectBar" style="display:none;padding:10px 16px;border-top:1px solid var(--line);background:var(--page);align-items:center;gap:12px;">
         <span id="bulkSelectCount" style="font-size:12.5px;font-weight:600;">0 επιλεγμένα</span>
@@ -1346,6 +1373,7 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">🏬 Αποθήκη — Κίνηση Χαρτιού</div>
         <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="toggleStockNewPaperPanel()">+ Νέο χαρτί</button>
           <button class="btn" onclick="toggleStockBulkImportPanel()">Μαζική Εισαγωγή</button>
           <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">Μηδενισμός Αποθήκης</button>
         </div>
@@ -1359,6 +1387,24 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="toggleStockBulkImportPanel()">Κλείσιμο</button>
         </div>
         <div class="empty-note" id="stockBulkImportStatus" style="margin-top:8px;"></div>
+      </div>
+      <div id="stockNewPaperPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div class="empty-note" style="margin-bottom:8px;">Καταχώρηση χαρτιού στη βάση — μετά θα το βρίσκεις παντού (προσφορές, tickets, αποθήκη). Μόνο το όνομα είναι υποχρεωτικό.</div>
+        <div class="fieldgrid c4" style="margin-bottom:8px;">
+          <div class="field"><label>Όνομα χαρτιού</label><input id="snpName" placeholder='π.χ. Colorplan Mist 135gr 64x97'></div>
+          <div class="field"><label>Πλάτος (cm)</label><input id="snpW" type="number" step="0.1"></div>
+          <div class="field"><label>Μήκος (cm)</label><input id="snpL" type="number" step="0.1"></div>
+          <div class="field"><label>Γραμμάρια</label><input id="snpG" type="number" step="1"></div>
+        </div>
+        <div class="fieldgrid c4" style="margin-bottom:8px;">
+          <div class="field"><label>Τιμή / κιλό (€)</label><input id="snpPriceKg" type="number" step="0.01"></div>
+          <div class="field"><label>Τιμή / φύλλο (€)</label><input id="snpPriceSheet" type="number" step="0.0001"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn solid" onclick="submitStockNewPaper()">Αποθήκευση χαρτιού</button>
+          <button class="btn" onclick="toggleStockNewPaperPanel()">Κλείσιμο</button>
+        </div>
+        <div class="empty-note" id="snpStatus" style="margin-top:8px;"></div>
       </div>
       <div class="card-body">
         <div class="fieldgrid c2">
@@ -2345,6 +2391,31 @@ function toggleNewPaperPanel(){
   const panel = document.getElementById('newPaperPanel');
   panel.style.display = panel.style.display==='none' ? 'block' : 'none';
   document.getElementById('npStatus').textContent = '';
+}
+
+function toggleStockNewPaperPanel(){
+  const p = document.getElementById('stockNewPaperPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('snpStatus').textContent = '';
+  if(p.style.display === 'block') document.getElementById('snpName').focus();
+}
+
+// Same store as the offer form's panel — a paper added here is a paper added
+// everywhere, which is the point of having one paper database.
+function submitStockNewPaper(){
+  const name = document.getElementById('snpName').value.trim();
+  const status = document.getElementById('snpStatus');
+  if(!name){ status.textContent = 'Χρειάζεται όνομα χαρτιού.'; return; }
+  const numOrNull = id => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : null; };
+  upsertPaper({ name, w: numOrNull('snpW'), l: numOrNull('snpL'), g: numOrNull('snpG'),
+                priceKg: numOrNull('snpPriceKg'), priceSheet: numOrNull('snpPriceSheet') });
+  status.textContent = `Το "${name}" προστέθηκε ✓ — μπορείς να καταχωρήσεις απόθεμα αμέσως.`;
+  ['snpName','snpW','snpL','snpG','snpPriceKg','snpPriceSheet'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  // drop it straight into the stock field, since that's why you're here
+  document.getElementById('stockPaperName').value = name;
+  document.getElementById('stockQty').focus();
 }
 
 function submitNewPaper(){
@@ -4831,6 +4902,9 @@ function printPalletLabels(){
   const mainLine = address || labelMainLine();
   const boxesPerPallet = num(document.getElementById('tkBoxesPerPallet').value);
   const totalBoxes = num(document.getElementById('tkTotalBoxes').textContent);
+  // Sometimes the pallets are built before anyone knows how they'll be filled —
+  // the address is still needed, the count would just be a guess on a label.
+  const noCount = (document.getElementById('tkPalletNoCount')||{}).checked;
   const logoImg = LOGO_BASE64 ? `<img class="lb-logo" src="data:image/png;base64,${LOGO_BASE64}">` : '';
 
   const mainCls = labelMainClass(mainLine);
@@ -4844,11 +4918,11 @@ function printPalletLabels(){
           <div class="lb-main-box">
             <div class="${mainCls}">${esc(greekUpper(mainLine))}</div>
           </div>
-          <div class="lb-count-box">
+          ${noCount ? '' : `<div class="lb-count-box">
             <div class="lb-count-header"><span>Qnt</span><span>Box</span></div>
             <div class="lb-count-value">${boxesOnThisPallet}</div>
             <div class="lb-count-sub">${i}/${totalPallets}</div>
-          </div>
+          </div>`}
         </div>
         <div class="lb-bottom">${logoImg}</div>
       </div>
@@ -4963,6 +5037,8 @@ function applyOfferData(d){
 }
 
 function switchView(view){
+  // The board tint belongs to the board; every other tab starts clean.
+  if(view !== 'production' && view !== 'invoicing') clearWorkArea();
   document.getElementById('viewHome').style.display = view==='home' ? 'block' : 'none';
   document.getElementById('viewForm').style.display = view==='form' ? 'block' : 'none';
   document.getElementById('viewList').style.display = view==='list' ? 'block' : 'none';
@@ -4998,6 +5074,7 @@ function switchView(view){
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
   if(view==='production' || view==='invoicing'){ attachBoardContextMenu(); bindBoardZoomResize(); }
+  if(view==='production') setTimeout(fitBoardToViewport, 90);
   if(view==='productiontime') refreshProdTimeList();
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
@@ -5835,10 +5912,12 @@ async function splitTicketPaperRowToChild(rowId){
   const parentSchema = document.getElementById('tkSchema').value;
   const parentSelides = document.getElementById('tkSelides').value;
   const parentProcRows = tkProcRows.map(p => ({ label: p.label, details: p.details }));
+  const childId = 'split_' + Date.now();
 
   // The row stays here for the full picture, but the child now owns it: mark it
   // so the paper can't be taken out of stock twice, once from each ticket.
   row.movedToChild = true;
+  row.childTicketId = childId;      // so deleting that child can release this row
   renderTkPaper();
 
   // Save the parent ticket first, so its (possibly newly-assigned) linkGroupId
@@ -5884,8 +5963,7 @@ async function splitTicketPaperRowToChild(rowId){
   try{
     const data = collectTicket();
     const record = await jbGetRecord();
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
-    const childId = 'split_' + Date.now();
+    const firstStage = defaultTicketStage(record);
     record.tickets[childId] = { label: data.info || 'Χωρίς τίτλο', date:'', savedAt: new Date().toISOString(), deadlineDate:'', stage: firstStage, data };
     await jbPutRecord(record);
   }catch(e){
@@ -5993,7 +6071,7 @@ function leftoverCell(r){
   }
   const canPost = num(r.leftover) > 0 && (r.xarti||'').trim();
   return `
-    <input type="number" min="0" style="width:62px;display:inline-block;" placeholder="0" value="${esc(r.leftover||'')}"
+    <input type="number" min="0" class="lo-input" style="width:62px;display:inline-block;" placeholder="0" value="${esc(r.leftover||'')}"
       oninput="onLeftoverInput(${r.id}, this)" title="Φύλλα που περίσσεψαν">
     <button class="own-ticket-btn lo-post" style="${canPost?'border-color:#4a9d6e;color:#1f7a4d;opacity:1;':''}"
       ${canPost?'':'disabled'} title="Επιστροφή στην Αποθήκη"
@@ -6090,7 +6168,7 @@ async function buildSeparateGangTicket(gangRows, gangSheets, client){
   try{
     const data = collectTicket();
     const record = await jbGetRecord();
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    const firstStage = defaultTicketStage(record);
     record.tickets['gang_' + Date.now()] = { label: data.info || 'Συνεκτύπωση', date:'',
       savedAt:new Date().toISOString(), deadlineDate:'', stage:firstStage, data };
     await jbPutRecord(record);
@@ -6153,7 +6231,7 @@ async function splitGangRowsToChild(){
   try{
     const data = collectTicket();
     const record = await jbGetRecord();
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    const firstStage = defaultTicketStage(record);
     record.tickets['gang_' + Date.now()] = { label: data.info || 'Συνεκτύπωση', date:'',
       savedAt:new Date().toISOString(), deadlineDate:'', stage:firstStage, data };
     await jbPutRecord(record);
@@ -6169,6 +6247,9 @@ async function splitGangRowsToChild(){
 function renderTkPaper(){
   const body = document.getElementById('tkPaperBody');
   body.innerHTML = '';
+  // A redraw rebuilds the inputs, so a locked ticket has to be re-locked or the
+  // fields quietly become editable again.
+  if(document.body.classList.contains('tk-locked')) setTimeout(reapplyTicketLock, 0);
   tkPaperRows.forEach(r=>{
     const tr = document.createElement('tr');
     if(r.gangRow) tr.classList.add('gang-run');
@@ -6568,6 +6649,14 @@ function newTicket(){
   statusMsg('Νέο ticket');
 }
 
+// New work starts in the second column, not the first: the first is where jobs
+// wait for something (approval, artwork), and a ticket that's just been written
+// is already past that.
+function defaultTicketStage(record){
+  const stages = (record && record.productionStages) || [];
+  return stages[1] || stages[0] || 'Νέο';
+}
+
 async function saveTicket(){
   try{
     const data = collectTicket();
@@ -6587,6 +6676,11 @@ async function saveTicket(){
     const label = data.info || 'Χωρίς τίτλο';
     const existing = record.tickets[id] || {};
     const ticketObj = { ...existing, label, date: data.deadline || '', savedAt, data, deadlineDate: data.deadline || '' };
+    // A brand-new ticket had no stage at all, so it belonged to no column and
+    // simply never appeared on the board. It starts in the first one.
+    if(!ticketObj.stage){
+      ticketObj.stage = defaultTicketStage(record);
+    }
 
     // Write ONLY this ticket — a colleague saving a different ticket at the
     // same moment is no longer overwritten.
@@ -6655,13 +6749,25 @@ async function loadTicket(id, locked){
 
 const TICKET_LOCK_FIELD_IDS = ['tkInfo','tkQty','tkDeadline','tkSchema','tkSelides'];
 
+function reapplyTicketLock(){
+  if(!document.body.classList.contains('tk-locked')) return;
+  document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{
+    inp.readOnly = !inp.classList.contains('lo-input');
+  });
+  document.querySelectorAll('#tkPaperBody .rowdel, #tkProcBody .rowdel').forEach(btn=>{ btn.style.display = 'none'; });
+}
+
 function lockTicketForm(){
   // Locked means "don't edit", not "hard to read". Production reads this on the
   // shop floor, so the fields keep their normal contrast.
   document.body.classList.add('tk-locked');
   document.getElementById('ticketLockBanner').style.display = 'flex';
   TICKET_LOCK_FIELD_IDS.forEach(id=>{ document.getElementById(id).readOnly = true; });
-  document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{ inp.readOnly = true; });
+  // The leftover is filled in *after* printing, by the same people who read the
+  // locked ticket — locking it would mean the paper never comes back to stock.
+  document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{
+    inp.readOnly = !inp.classList.contains('lo-input');
+  });
   document.querySelectorAll('#tkPaperBody .rowdel, #tkProcBody .rowdel').forEach(btn=>{ btn.style.display = 'none'; });
   document.querySelectorAll('#viewTicketForm .card-head button').forEach(btn=>{
     if(btn.textContent.includes('Γραμμή') || btn.textContent.includes('Νέο Ticket')) btn.style.display = 'none';
@@ -6677,13 +6783,53 @@ function unlockTicketForm(){
   document.querySelectorAll('#viewTicketForm .card-head button').forEach(btn=>{ btn.style.display = ''; });
 }
 
+// Deleting a split-off ticket has to give the parent its row back, otherwise
+// the paper stays locked and Production keeps treating a one-ticket job as a
+// linked set.
+async function releaseSplitLinks(record, deletedId, deletedTicket){
+  const group = ((deletedTicket || {}).data || {}).linkGroupId;
+  if(!group) return 0;
+
+  const survivors = Object.entries(record.tickets || {})
+    .filter(([tid, t]) => tid !== deletedId && (t.data||{}).linkGroupId === group);
+  let touched = 0;
+
+  for(const [tid, t] of survivors){
+    const rows = (t.data || {}).paperRows || [];
+    let changed = false;
+    rows.forEach(r=>{
+      // the row that spawned exactly this ticket
+      if(r.childTicketId === deletedId){
+        delete r.movedToChild; delete r.childTicketId; changed = true;
+      }
+    });
+    // Once nothing is left to link to, the group itself is meaningless — and any
+    // row still marked from an older split (before ids were recorded) is stale.
+    if(survivors.length === 1){
+      rows.forEach(r=>{
+        if(r.movedToChild){ delete r.movedToChild; delete r.childTicketId; changed = true; }
+      });
+      if(t.data.linkGroupId){ delete t.data.linkGroupId; delete t.data.isLinkChild; changed = true; }
+    }
+    if(changed){
+      await jbMergePath(SLICE_MAIN, ['tickets', tid], t);
+      touched++;
+    }
+  }
+  return touched;
+}
+
 async function deleteTicket(id){
   if(!confirm('Διαγραφή αυτού του job ticket;')) return;
   try{
+    const record = await jbGetRecord();
+    const doomed = record.tickets[id];
     await jbDeletePath(SLICE_MAIN, ['tickets', id]);
+    const freed = await releaseSplitLinks(record, id, doomed);
     if(currentTicketId===id) currentTicketId = null;
     await refreshTicketList();
-    statusMsg('Διαγράφηκε');
+    if(document.getElementById('viewProduction').style.display !== 'none') refreshProductionBoard();
+    statusMsg(freed ? `Διαγράφηκε — αποδεσμεύτηκαν οι γραμμές σε ${freed} ticket${freed>1?'s':''}` : 'Διαγράφηκε');
   }catch(e){
     console.error('Delete ticket error:', e);
     statusMsg('Σφάλμα διαγραφής: ' + e.message);
@@ -6850,6 +6996,10 @@ async function duplicateTicket(id){
       r.consumed = false;                  // stock for the new run hasn't moved yet
       r.leftover = '';
       r.leftoverPosted = false;
+      // The old run's split tickets have nothing to do with this one — leaving
+      // these set would lock the rows against a child that doesn't exist.
+      delete r.movedToChild;
+      delete r.childTicketId;
     });
     (data.procRows || []).forEach(r=>{
       r.mrSeconds = 0;                     // times belong to the previous run
@@ -6861,7 +7011,7 @@ async function duplicateTicket(id){
     });
     data.attachments = data.attachments || []; // files stay — same artwork
 
-    const firstStage = (record.productionStages && record.productionStages[0]) || 'Νέο';
+    const firstStage = defaultTicketStage(record);
     const newId = 't' + Date.now();
     const copy = {
       label: data.info,
@@ -8255,7 +8405,11 @@ const BOARD_COLOURS = [
   { name:'Έντονο ροζ',    value:'#f7d9e2' },
   { name:'Έντονο μωβ',    value:'#ded4f2' },
   { name:'Έντονο γκρι',   value:'#d8dbe0' },
-  // Row 4 — dark, for a clear visual break
+  // Row 4 — deeper blues and darks, for a clear visual break
+  { name:'Μεσαίο μπλε',   value:'#9fc0ea' },
+  { name:'Βαθύ μπλε',     value:'#6f9fd8' },
+  { name:'Μπλε πετρόλ',   value:'#3f6f9f' },
+  { name:'Ναυτικό μπλε',  value:'#2b4a72' },
   { name:'Σκούρο γκρι',   value:'#2b2f36' },
   { name:'Σκούρο μπλε',   value:'#24303f' }
 ];
@@ -8263,19 +8417,49 @@ const BOARD_COLOURS = [
 function applyBoardColour(board, colour){
   const el = document.getElementById(board === 'invoicing' ? 'invoicingBoard' : 'productionBoard');
   if(!el) return;
+  el.classList.toggle('board-dark', !!colour && isDarkColour(colour));
+  // The tint covers the whole working area, not a rectangle inside it — a board
+  // is the screen you stand in front of, so the colour has to read as the room.
+  paintWorkArea(board, colour);
+}
+
+// Painting the content pane rather than the board itself means the colour runs
+// edge to edge; the board keeps its own transparent background on top.
+function paintWorkArea(board, colour){
+  const app = document.querySelector('.app');
+  if(!app) return;
+  const viewId = board === 'invoicing' ? 'viewInvoicing' : 'viewProduction';
+  const view = document.getElementById(viewId);
+  if(view.style.display === 'none') return;
   if(colour){
-    el.style.background = colour;
-    el.style.padding = '14px';
-    el.style.borderRadius = '10px';
-    // Keep card text legible when a dark tint is chosen.
-    el.classList.toggle('board-dark', isDarkColour(colour));
+    // #viewProduction already paints the full working area edge to edge, so the
+    // tint goes there — painting the outer pane only showed above and below it.
+    // Both: the view paints the board area edge to edge, the outer pane covers
+    // the status line above it and any slack below.
+    view.style.background = colour;
+    app.style.background = colour;
+    app.classList.toggle('work-dark', isDarkColour(colour));
+    // The board sits inside a card whose white background would otherwise cover
+    // the tint; it has to show through, not just around.
+    app.classList.add('work-tinted');
   } else {
-    el.style.background = '';
-    el.style.padding = '';
-    el.style.paddingBottom = '50px';
-    el.style.borderRadius = '';
-    el.classList.remove('board-dark');
+    view.style.background = '';
+    app.style.background = '';
+    app.classList.remove('work-dark', 'work-tinted');
   }
+}
+
+// Leaving the board clears the tint, so the other tabs keep their own look.
+function clearWorkArea(){
+  const app = document.querySelector('.app');
+  if(app){
+    app.style.background = '';
+    app.classList.remove('work-dark', 'work-tinted');
+  }
+  ['viewProduction','viewInvoicing'].forEach(id=>{
+    const v = document.getElementById(id);
+    if(v) v.style.background = '';
+  });
 }
 
 function isDarkColour(hex){
@@ -8433,6 +8617,29 @@ function stepBoardZoom(board, dir){
 }
 
 // ===== Ρυθμίσεις πίνακα & αναζήτηση =====
+// Sizing the board to finish just above the bottom of the window puts its own
+// horizontal scrollbar permanently in reach — no second bar to keep in sync.
+function fitBoardToViewport(){
+  const board = document.getElementById('productionBoard');
+  if(!board) return;
+  if(document.getElementById('viewProduction').style.display === 'none') return;
+  const top = board.getBoundingClientRect().top + window.scrollY;
+  const available = window.innerHeight - (top - window.scrollY) - 14;
+  if(available < 220) { board.style.maxHeight = ''; board.style.overflowY = ''; return; }
+  board.style.maxHeight = available + 'px';
+  board.style.overflowY = 'auto';
+}
+
+let boardFitBound = false;
+function bindBoardFit(){
+  if(boardFitBound) return;
+  boardFitBound = true;
+  let t = null;
+  const run = ()=>{ clearTimeout(t); t = setTimeout(fitBoardToViewport, 100); };
+  window.addEventListener('resize', run);
+  window.addEventListener('scroll', run, { passive:true });
+}
+
 function toggleBoardSettings(ev){
   if(ev) ev.stopPropagation();
   const m = document.getElementById('boardSettingsMenu');
@@ -8932,6 +9139,8 @@ async function refreshProductionBoard(){
     applyBoardZoom('production');
     const searchTerm = (document.getElementById('boardSearch')||{}).value;
     if(searchTerm) filterProductionBoard(searchTerm);
+    bindBoardFit();
+    setTimeout(fitBoardToViewport, 60);
 
     if(changed) await jbPutRecord(record);
   }catch(e){
@@ -10480,6 +10689,116 @@ async function saveClientInfo(name, patch, quiet){
   }
 }
 
+// Renaming is a migration, not an edit: the name is the key that ties tickets,
+// offers and stored details together, so every reference moves with it or the
+// customer's history silently splits in two.
+// Compared without case or accents, since the same customer is typed a dozen
+// ways across years of tickets.
+function strip(s){
+  return String(s||'').trim().toLocaleLowerCase('el')
+    .replace(/[άΆ]/g,'α').replace(/[έΈ]/g,'ε').replace(/[ήΉ]/g,'η')
+    .replace(/[ίΊϊΐ]/g,'ι').replace(/[όΌ]/g,'ο').replace(/[ύΎϋΰ]/g,'υ').replace(/[ώΏ]/g,'ω')
+    .replace(/\s+/g,' ');
+}
+
+// Replaces the old name inside a title while leaving the rest of it alone.
+function swapName(text, oldName, newName){
+  const s = String(text || '');
+  if(!s) return s;
+  const needle = strip(oldName);
+  if(!needle) return s;
+  const hay = strip(s);
+  const at = hay.indexOf(needle);
+  if(at < 0) return s;
+  // strip() preserves length except for whitespace runs, so a direct slice is
+  // only safe when the two line up — otherwise fall back to leaving it be.
+  if(hay.length !== s.length) return s.replace(new RegExp(oldName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'), newName);
+  return s.slice(0, at) + newName + s.slice(at + needle.length);
+}
+
+async function renameClient(oldName, newNameRaw){
+  const newName = String(newNameRaw || '').trim();
+  if(!newName){ statusMsg('Το όνομα δεν μπορεί να είναι κενό.'); return; }
+  if(newName === oldName) return;
+  try{
+    const record = await jbGetRecord();
+    const clients = record.clients || [];
+
+    const clash = clients.find(cn => cn !== oldName && sameItemName(cn, newName));
+    if(clash){
+      if(!confirm(`Υπάρχει ήδη πελάτης «${clash}».\n\n`
+        + `Οι δουλειές και οι προσφορές του «${oldName}» θα ενωθούν μαζί του. Συνέχεια;`)) return;
+    }
+
+    // The name also lives inside titles ("260801 - ΑΛΦΑ — Λεύκωμα"), and older
+    // records may carry it there and nowhere else — matching only the client
+    // field would leave most of the history behind.
+    const inText = s => {
+      const hay = strip(s), needle = strip(oldName);
+      return !!needle && hay.includes(needle);
+    };
+    const tickets = Object.entries(record.tickets || {})
+      .filter(([, t]) => sameItemName((t.data||{}).client, oldName)
+                      || inText((t.data||{}).info) || inText(t.label));
+    const offers = Object.entries(record.offers || {})
+      .filter(([, o]) => sameItemName((o.data||{}).client, oldName)
+                      || inText(o.label) || inText((o.data||{}).title));
+
+    if(!clash && !confirm(`Μετονομασία «${oldName}» → «${newName}»\n\n`
+      + `Θα ενημερωθούν ${tickets.length} Job Tickets και ${offers.length} προσφορές — `
+      + `και στο πεδίο Πελάτη και μέσα στους τίτλους τους. Συνέχεια;`)) return;
+
+    const target = clash || newName;
+
+    // 1. the name list
+    const idx = clients.findIndex(cn => cn === oldName);
+    if(idx >= 0){
+      if(clash) clients.splice(idx, 1); else clients[idx] = target;
+    } else if(!clash){
+      clients.push(target);
+    }
+    clients.sort((a,b)=>a.localeCompare(b,'el'));
+    await jbMergePath(SLICE_MAIN, ['clients'], clients);
+
+    // 2. stored details — the old entry's data moves across unless the target
+    //    already has some, which we don't overwrite
+    record.clientInfo = record.clientInfo || {};
+    const oldInfo = record.clientInfo[oldName];
+    if(oldInfo){
+      record.clientInfo[target] = Object.assign({}, oldInfo, record.clientInfo[target] || {});
+      if(target !== oldName) delete record.clientInfo[oldName];
+      await jbMergePath(SLICE_MAIN, ['clientInfo'], record.clientInfo);
+    }
+
+    // 3. every ticket and offer that pointed at the old name
+    for(const [tid, t] of tickets){
+      t.data = t.data || {};
+      t.data.client = target;
+      t.data.info = swapName(t.data.info, oldName, target);
+      t.label = swapName(t.label, oldName, target);
+      await jbMergePath(SLICE_MAIN, ['tickets', tid], t);
+    }
+    for(const [oid, o] of offers){
+      if(o.data){
+        o.data.client = target;
+        o.data.title = swapName(o.data.title, oldName, target);
+      }
+      o.label = swapName(o.label, oldName, target);
+      await jbMergePath(SLICE_OFFERS, ['offers', oid], o);
+    }
+
+    clientsCache = clients;
+    refreshClientOptions();
+    refreshClientsList();
+    showToast(`👥 «${oldName}» → «${target}»`,
+              `Ενημερώθηκαν ${tickets.length} tickets και ${offers.length} προσφορές`,
+              ()=>switchView('clients'));
+  }catch(e){
+    console.error('Rename client error:', e);
+    statusMsg('Σφάλμα μετονομασίας: ' + e.message);
+  }
+}
+
 function toggleClientInfoBlock(headEl){
   const block = headEl.nextElementSibling;
   if(!block) return;
@@ -10507,6 +10826,12 @@ function clientInfoFormHtml(name, info){
     </div>`).join('');
 
   return `<div class="ci-grid">
+    <div class="field" style="grid-column:1 / -1;"><label>Επωνυμία πελάτη</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="${id('name')}" value="${esc(name)}" style="flex:1;min-width:220px;font-weight:600;">
+        <button class="btn" onclick="renameClient('${esn}', document.getElementById('${id('name')}').value)">Μετονομασία</button>
+      </div>
+    </div>
     <div class="field" style="grid-column:1 / -1;"><label>Κύρια διεύθυνση παράδοσης</label>
       <textarea id="${id('addr')}" rows="3" placeholder="Οδός, Αριθμός&#10;ΤΚ, Πόλη">${v('address')}</textarea></div>
     <div class="field"><label>Τηλέφωνο</label><input id="${id('phone')}" value="${v('phone')}"></div>
