@@ -8623,11 +8623,21 @@ function fitBoardToViewport(){
   const board = document.getElementById('productionBoard');
   if(!board) return;
   if(document.getElementById('viewProduction').style.display === 'none') return;
-  const top = board.getBoundingClientRect().top + window.scrollY;
-  const available = window.innerHeight - (top - window.scrollY) - 14;
-  if(available < 220) { board.style.maxHeight = ''; board.style.overflowY = ''; return; }
-  board.style.maxHeight = available + 'px';
+
+  const rect = board.getBoundingClientRect();
+  const available = window.innerHeight - rect.top;
+  if(available < 220){
+    board.style.height = ''; board.style.maxHeight = ''; board.style.overflowY = '';
+    return;
+  }
+  // A fixed height, not a maximum: with max-height the board shrinks to its
+  // content and the horizontal scrollbar rides up with it, leaving a band of
+  // empty colour underneath. The board has to actually reach the bottom edge.
+  board.style.height = available + 'px';
+  board.style.maxHeight = 'none';
   board.style.overflowY = 'auto';
+  // The old bottom padding pushed the columns up inside that height.
+  board.style.paddingBottom = '0';
 }
 
 let boardFitBound = false;
