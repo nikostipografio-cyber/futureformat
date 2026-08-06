@@ -67,6 +67,9 @@
   .sidebar.collapsed .sidebar-brand .label{display:none;}
   .app{flex:1;padding:20px;min-width:0;}
   #viewProduction{background:#f5f6f8;margin:-20px;padding:20px;min-height:calc(100vh - 40px);}
+  /* A deeper page tone behind the offer and the ticket, so the white cards read
+     as sheets on a desk rather than merging into the background. */
+  #viewForm, #viewTicketForm{background:#eeeae1;margin:-20px;padding:20px;min-height:calc(100vh - 40px);}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .topbar h1{font-size:21px;margin:0;font-weight:600;}
   .topbar .actions{display:flex;gap:10px;}
@@ -80,6 +83,70 @@
      the same kind of figure. Only shown when the ticket holds several items. */
   .gang-tag{display:inline-block;font-size:12px;margin-right:3px;vertical-align:middle;}
   tr.gang-run td{background:#f4f8ff;}
+  /* In the ticket tables most cells are empty on any given job. Giving the empty
+     ones no border and the filled ones real weight makes the row readable at a
+     glance instead of a grid of identical boxes. */
+  #tkPaperBody input:not([type=checkbox]), #tkProcBody input:not([type=checkbox]){
+    font-size:12.5px;font-weight:600;color:var(--ink);padding-left:6px;padding-right:4px;
+    text-overflow:ellipsis;
+    background:#fff;border:1px solid var(--line-strong);transition:background 0.1s,border-color 0.1s;}
+  /* Empty cells recede but stay visible — you still need to see where you can
+     type. Only their weight drops, not their outline. */
+  #tkPaperBody input.is-empty, #tkProcBody input.is-empty{
+    background:transparent;border-color:var(--line);font-weight:400;color:var(--muted);}
+  /* The leftover field keeps its own green marking — it's the one thing
+     production is asked to fill in on a locked ticket. */
+  #tkPaperBody input.lo-input.is-empty{border-color:#4a9d6e;}
+  #tkPaperBody input:hover, #tkProcBody input:hover{border-color:var(--line-strong);}
+  #tkPaperBody input:focus, #tkProcBody input:focus{
+    background:#fff;border-color:var(--blue);font-weight:600;}
+  #tkPaperBody .auto, #tkProcBody .auto{font-size:12.5px;font-weight:700;}
+  /* Column headings step back so the values lead. */
+  #tkPaperBody, #tkProcBody{font-size:12.5px;}
+  /* Multi-item mode adds two columns; without this the right-hand ones — the
+     leftover among them — simply fall off the edge with no way to reach them. */
+  #tkPaperTableWrap{overflow-x:auto;}
+  #tkPaperTableWrap table{min-width:1180px;}
+  #tkPaperBody .cell-grow, #tkProcBody .cell-grow{
+    width:100%;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);
+    line-height:1.35;padding:5px 6px;border:1px solid var(--line-strong);border-radius:6px;
+    resize:none;overflow:hidden;min-height:30px;background:#fff;display:block;}
+  #tkPaperBody .cell-grow.is-empty, #tkProcBody .cell-grow.is-empty{
+    background:transparent;border-color:var(--line);font-weight:400;color:var(--muted);}
+  #tkPaperBody .cell-grow:focus, #tkProcBody .cell-grow:focus{
+    border-color:var(--blue);background:#fff;font-weight:600;outline:none;}
+  tbody td{vertical-align:top;}
+  .moved-badge{display:inline-flex;align-items:center;justify-content:center;gap:3px;
+    max-width:100%;height:26px;border-radius:6px;background:#eaf1fe;border:1px solid #9dbdf5;
+    font-size:12px;cursor:pointer;padding:0 7px;line-height:1;color:#2f6fed;font-weight:700;}
+  .moved-badge span{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .moved-badge:hover{background:#d8e6fd;border-color:#2f6fed;}
+  /* On a narrow screen the label drops and the icon alone carries it. */
+  @media (max-width:1500px){ .moved-badge span{display:none;} }
+  /* A deeper green: the tick has to read as "done" across a workshop. */
+  /* Drawn rather than native: accent-color is only a hint and browsers render it
+     differently, so the tick is built here to guarantee a strong green. */
+  input[type=checkbox].proc-check{appearance:none;-webkit-appearance:none;width:20px;height:20px;
+    min-width:20px;border:2px solid #b9c2cc;border-radius:5px;background:#fff;cursor:pointer;
+    display:inline-block;position:relative;vertical-align:middle;transition:all 0.12s;margin:0;}
+  input[type=checkbox].proc-check:hover{border-color:#0a5c2e;}
+  /* The tick itself is the green mark, drawn dark on a pale field — a white
+     tick on green reads as a filled box, not as "done". */
+  input[type=checkbox].proc-check:checked{background:#dff0e5;border-color:#0a5c2e;}
+  input[type=checkbox].proc-check:checked::after{content:"";position:absolute;left:5px;top:1px;
+    width:5px;height:10px;border:solid #0a5c2e;border-width:0 3px 3px 0;transform:rotate(45deg);}
+  tr.proc-done{background:#e9f4ee;}
+  tr.proc-done input:not(.proc-check), tr.proc-done .cell-grow{color:#4f7a63;text-decoration:line-through;
+    text-decoration-color:#8ab89e;border-color:transparent;background:transparent;}
+  .tk-strip{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+  .tk-chip{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+    background:var(--page);border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+  .tk-chip-stage{background:var(--ink);border-color:var(--ink);color:#fff;letter-spacing:0.03em;}
+  .tk-chip-ok{background:#eef7f2;border-color:#bfe0cd;color:#1c7a4f;}
+  .tk-chip-soon{background:#fdf6e3;border-color:#eddcae;color:#8a6d1f;}
+  .tk-chip-late{background:#fdf0f2;border-color:#f0c8ce;color:#b3243c;}
+  .tk-chip-done{background:#eef7f2;border-color:#bfe0cd;color:#1c7a4f;}
+  .tk-chip-info{background:#eaf1fe;border-color:#c6d9fb;color:#2f6fed;}
   .tk-qty-cell{font-weight:800;font-size:15px;text-align:center;border:2px solid var(--ink);background:#f0efe9;}
   .tk-qty-cell:focus{background:#fff;}
   .tk-multi-col{display:none;}
@@ -273,6 +340,23 @@
   .legend .item{display:flex;align-items:center;gap:6px;}
   .legend .swatch{width:13px;height:13px;border-radius:3px;border:1px solid var(--line-strong);}
   .totals{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:0 16px 16px;}
+  /* Chart on the left, the jobs that still need a month on the right — they're
+     the ones the chart can't show, so they belong beside it. */
+  .fc-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:18px;
+    align-items:start;margin-bottom:18px;}
+  @media (max-width:1100px){ .fc-top{grid-template-columns:1fr;} }
+  .fc-uns{background:#fdf6e3;border:1px solid #eddcae;border-radius:9px;padding:12px 14px;}
+  .fc-uns h5{margin:0 0 4px;font-size:12px;font-weight:800;text-transform:uppercase;
+    letter-spacing:0.05em;color:#8a6d1f;}
+  .fc-uns .fc-uns-note{font-size:11px;color:#8a6d1f;opacity:0.85;margin-bottom:9px;line-height:1.4;}
+  .fc-uns-item{display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+    background:#fff;border:1px solid #eddcae;border-radius:6px;padding:6px 9px;margin-bottom:5px;cursor:pointer;}
+  .fc-uns-item:hover{border-color:#c9a227;}
+  .fc-uns-item .t{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fc-uns-item .s{font-size:10.5px;color:var(--muted);}
+  .fc-uns-item .v{font-size:12.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .fc-uns-total{display:flex;justify-content:space-between;font-size:12px;font-weight:800;
+    color:#8a6d1f;border-top:1px solid #eddcae;padding-top:8px;margin-top:8px;}
   .totcard{background:var(--ink);border:1px solid var(--ink);border-radius:8px;padding:10px 12px;}
   /* A dedicated card for the offer's headline figure, so it isn't buried in a
      table footer among the working numbers. */
@@ -719,6 +803,10 @@ function toggleMobileSidebar(forceClose){
           <div class="pdf-dropdown-item" onclick="toggleEnglishPdfBtn();closePdfDropdown();"><span id="englishPdfCheck">☐</span> Αγγλικά PDF</div>
         </div>
       </div>
+      <span style="position:relative;">
+        <button class="btn" id="ofTemplateBtn" onclick="toggleOfferTemplateMenu(event)" title="Έτοιμα στησίματα για προσφορές που επαναλαμβάνονται">📋 Πρότυπα</button>
+        <div id="ofTemplateMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;z-index:4000;min-width:260px;max-height:340px;overflow:auto;"></div>
+      </span>
       <button class="btn" id="convertOneBtn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
@@ -987,17 +1075,22 @@ function toggleMobileSidebar(forceClose){
     <div class="topbar" style="margin-bottom:16px;">
       <div><span id="ticketDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:5px 9px;border-radius:10px;">● Αποθήκευση...</span></div>
       <div class="actions">
+        <span style="position:relative;">
+          <button class="btn" id="tkTemplateBtn" onclick="toggleTemplateMenu(event)" title="Έτοιμα στήσιμα για δουλειές που επαναλαμβάνονται">📋 Πρότυπα</button>
+          <div id="tkTemplateMenu" style="display:none;position:absolute;left:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;z-index:4000;min-width:250px;max-height:340px;overflow:auto;"></div>
+        </span>
+        <button class="btn" id="tkDuplicateBtn" onclick="duplicateCurrentTicket()" title="Αντίγραφο αυτού του ticket για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
         <button class="btn" onclick="printTicket()">🖨 Εκτύπωση / PDF</button>
         <button class="btn solid" onclick="saveTicket()">Αποθήκευση Ticket</button>
       </div>
     </div>
-    <div id="ticketLockBanner" style="display:none;background:#fbe9cf;color:#8a5a12;padding:10px 16px;border-radius:8px;margin-bottom:16px;justify-content:space-between;align-items:center;">
+    <div id="ticketLockBanner" style="display:none;background:#fdfbf6;color:#8b7d68;border:1px solid #ece5d8;padding:10px 16px;border-radius:8px;margin-bottom:16px;justify-content:space-between;align-items:center;">
       <span>🔒 Το ticket είναι κλειδωμένο (μόνο οι Παρατηρήσεις είναι επεξεργάσιμες).</span>
       <button class="btn" onclick="unlockTicketForm()">Ξεκλείδωμα</button>
     </div>
     <div id="linkedTicketsIndicator" style="display:none;"></div>
     <div class="card">
-      <div class="card-head"><div class="title">Στοιχεία Job Ticket</div><button class="btn" onclick="newTicket()">+ Νέο Ticket</button></div>
+      <div class="card-head"><div class="title">Στοιχεία Job Ticket</div></div>
       <div class="card-body">
         <div class="fieldgrid c2">
           <div class="field"><label>Πελάτης / Προϊόν</label><input id="tkInfo" style="font-size:18px;font-weight:800;" placeholder="π.χ. GABRILAKIS — FOSS NOTEPAD"></div>
@@ -1021,20 +1114,20 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="addTkPaperRow()">+ Γραμμή</button>
         </div>
       </div>
-      <div class="card-body" style="padding:0;">
+      <div class="card-body" id="tkPaperTableWrap" style="padding:0;">
         <table>
           <thead><tr>
-            <th style="width:7%">Τύπος</th>
+            <th style="width:11%">Τύπος</th>
             <th style="width:7%" class="tk-multi-col" title="Πόσα τεμάχια αφορά αυτή η γραμμή">Ποσότητα</th>
             <th style="width:7%" class="tk-multi-col" title="Κλειστό σχήμα αυτού του είδους">Σχήμα Είδους</th>
-            <th style="width:15%">Χαρτί</th><th style="width:8%">Χρώμα</th>
-            <th style="width:8%">Καθαρά Φύλλα</th><th style="width:7%">Έξτρα</th><th style="width:9%">Σύνολο Φύλλων</th>
+            <th style="width:17%">Χαρτί</th><th style="width:6%">Χρώμα</th>
+            <th style="width:8%">Καθαρά Φύλλα</th><th style="width:5%">Έξτρα</th><th style="width:8%">Σύνολο Φύλλων</th>
             <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
-            <th style="width:10%">Σχήμα εκτ/σης</th>
+            <th style="width:8%">Σχήμα εκτ/σης</th>
             <th style="width:7%">ΜΟΝΤΑΖ</th><th style="width:6%">Όψεις</th>
             <th style="width:3%"></th>
           </tr></thead>
-          <tbody id="tkPaperBody"></tbody>
+          <tbody id="tkPaperBody" oninput="markEmptyTicketCells()"></tbody>
         </table>
       </div>
     </div>
@@ -1043,8 +1136,8 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">Επεξεργασίες / Post-press</div><button class="btn" onclick="addTkProcRow()">+ Γραμμή</button></div>
       <div class="card-body" style="padding:0;">
         <table>
-          <thead><tr><th style="width:20%">Εργασία</th><th style="width:35%">Λεπτομέρειες</th><th style="width:18%">Make Ready</th><th style="width:18%">Production</th><th style="width:4%"></th></tr></thead>
-          <tbody id="tkProcBody"></tbody>
+          <thead><tr><th style="width:4%" title="Σημείωσε όταν ολοκληρωθεί">✓</th><th style="width:20%">Εργασία</th><th style="width:32%">Λεπτομέρειες</th><th style="width:17%">Make Ready</th><th style="width:17%">Production</th><th style="width:4%"></th></tr></thead>
+          <tbody id="tkProcBody" oninput="markEmptyTicketCells()"></tbody>
         </table>
       </div>
     </div>
@@ -1296,7 +1389,10 @@ function toggleMobileSidebar(forceClose){
         <div class="empty-note" id="bulkImportStatusMsg" style="margin-top:8px;"></div>
       </div>
       <div class="card-body">
-        <div id="forecastChart" style="margin-bottom:18px;"></div>
+        <div class="fc-top">
+          <div id="forecastChart"></div>
+          <div id="forecastUnscheduled"></div>
+        </div>
         <div id="forecastYearSummary" style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(130px,1fr);gap:10px;overflow-x:auto;margin-bottom:12px;"></div>
         <div id="forecastSummary" style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(130px,1fr);gap:10px;overflow-x:auto;margin-bottom:18px;"></div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">
@@ -1576,6 +1672,11 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">👤 Λογαριασμός</div><button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="signOutUser()">Αποσύνδεση</button></div>
       <div class="card-body">
         <div class="empty-note" id="currentUserEmail">Συνδεδεμένος/η</div>
+        <!-- A build stamp: without it there's no way to tell whether the page in
+             front of you is the version that was just published. -->
+        <div class="empty-note" style="margin-top:6px;">
+          Έκδοση εφαρμογής: <b id="appBuildStamp">2026-08-06 18:12</b>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -4189,7 +4290,10 @@ function onManualTotalInput(){
   const price = num(document.getElementById('fManualTotal').value);
   const raw = document.getElementById('fManualTotal').value;
   if(cost>0 && raw!=='' && price>0){
-    document.getElementById('fMarkup').value = Math.round((price - cost) / cost * 100);
+    // One decimal instead of a whole number: the rounding is what let the two
+    // fields disagree in the first place.
+    const pct = (price - cost) / cost * 100;
+    document.getElementById('fMarkup').value = Math.round(pct * 10) / 10;
   } else if(raw===''){
     document.getElementById('fMarkup').value = '';
   }
@@ -4225,11 +4329,15 @@ function syncOfferPriceFields(cost, totals){
   if(priceDrivenBy === 'markup'){
     const raw = markupEl.value;
     if(raw === '' || !(cost > 0)) return;
-    priceEl.value = (cost * (1 + num(raw)/100)).toFixed(2);
+    const next = cost * (1 + num(raw)/100);
+    // Never rewrite the price over a rounding difference — that's what made a
+    // saved 5.500 € drift to 5.501 € on reopening.
+    if(Math.abs(next - num(priceEl.value)) < 1.5) return;
+    priceEl.value = next.toFixed(2);
   } else {
     const price = num(priceEl.value);
     if(!(price > 0) || !(cost > 0)) return;
-    markupEl.value = Math.round((price - cost) / cost * 100);
+    markupEl.value = Math.round((price - cost) / cost * 1000) / 10;
   }
 }
 
@@ -4956,6 +5064,113 @@ function openLabelWindowAndPrint(title, bodyHtml){
   setTimeout(doPrint, 1500);
 }
 
+// ===== Πρότυπα Προσφοράς =====
+// Same idea as the ticket templates: the shape of a recurring quote — papers,
+// print setup, processing, terms — without the customer or the numbers.
+const OFFER_TEMPLATE_STRIP = ['client','title','qty','offerDate','deadline','notes',
+                              'manualTotal','approvedQty','extraQuantities'];
+
+function offerDataAsTemplate(data){
+  const t = JSON.parse(JSON.stringify(data || {}));
+  OFFER_TEMPLATE_STRIP.forEach(k=>delete t[k]);
+  (t.flatRows || []).forEach(r=>{
+    // the setup stays; this job's quantities, prices and approvals do not
+    ['qty','xtra','manualPrice','itemApproved','gangPick'].forEach(k=>delete r[k]);
+  });
+  (t.bookRows || []).forEach(r=>{ ['qty','xtra'].forEach(k=>delete r[k]); });
+  (t.procCategories || []).forEach(cat=>{
+    (cat.tasks || []).forEach(task=>{ ['qty','extra','itemMaterial'].forEach(k=>delete task[k]); });
+  });
+  return t;
+}
+
+async function saveOfferAsTemplate(){
+  const suggested = (document.getElementById('fTitle').value || '').trim() || 'Πρότυπο προσφοράς';
+  const name = prompt('Αποθήκευση ως πρότυπο προσφοράς\n\n'
+    + 'Κρατιούνται: χαρτιά, εκτύπωση, τσίγκοι, επεξεργασίες, όροι, περιθώριο.\n'
+    + 'Δεν κρατιούνται: πελάτης, τίτλος, ποσότητες, τιμές.\n\nΌνομα προτύπου:', suggested);
+  if(name === null) return;
+  const key = name.trim();
+  if(!key){ statusMsg('Χρειάζεται όνομα προτύπου.'); return; }
+  try{
+    const record = await jbGetRecord();
+    record.offerTemplates = record.offerTemplates || {};
+    if(record.offerTemplates[key] && !confirm(`Υπάρχει ήδη πρότυπο «${key}». Να αντικατασταθεί;`)) return;
+    record.offerTemplates[key] = { savedAt: new Date().toISOString(), data: offerDataAsTemplate(collectOffer()) };
+    await jbMergePath(SLICE_MAIN, ['offerTemplates'], record.offerTemplates);
+    showToast(`📋 Αποθηκεύτηκε το πρότυπο «${key}»`, 'Θα το βρίσκεις στο κουμπί Πρότυπα');
+  }catch(e){
+    console.error('Save offer template error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function applyOfferTemplate(name){
+  try{
+    const record = await jbGetRecord();
+    const tpl = (record.offerTemplates || {})[name];
+    if(!tpl){ statusMsg('Δεν βρέθηκε το πρότυπο.'); return; }
+    const hasContent = flatRows.some(r=>(r.material||'').trim() || (r.paperName||'').trim())
+                    || bookRows.some(r=>(r.material||'').trim() || (r.paperName||'').trim());
+    if(hasContent && !confirm(`Εφαρμογή προτύπου «${name}»;\n\nΘα αντικαταστήσει τα χαρτιά και τις επεξεργασίες αυτής της προσφοράς.`)) return;
+
+    // whatever describes *this* quote survives the template
+    const keep = {
+      client: document.getElementById('fClient').value,
+      title: document.getElementById('fTitle').value,
+      qty: document.getElementById('hdrQty').value,
+      offerDate: document.getElementById('fOfferDate').value
+    };
+    applyOfferData(JSON.parse(JSON.stringify(tpl.data)));
+    document.getElementById('fClient').value = keep.client;
+    document.getElementById('fTitle').value = keep.title;
+    document.getElementById('hdrQty').value = keep.qty;
+    document.getElementById('fOfferDate').value = keep.offerDate || todayISO();
+    recalcAll();
+    updateGrand();
+    statusMsg(`Εφαρμόστηκε το πρότυπο «${name}» ✓ — συμπλήρωσε ποσότητες και τιμές.`);
+  }catch(e){
+    console.error('Apply offer template error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function deleteOfferTemplate(name){
+  if(!confirm(`Διαγραφή προτύπου «${name}»;\n\nΟι προσφορές που φτιάχτηκαν με αυτό δεν επηρεάζονται.`)) return;
+  try{
+    const record = await jbGetRecord();
+    delete (record.offerTemplates || {})[name];
+    await jbMergePath(SLICE_MAIN, ['offerTemplates'], record.offerTemplates || {});
+    statusMsg('Το πρότυπο διαγράφηκε');
+    toggleOfferTemplateMenu();
+    toggleOfferTemplateMenu();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function toggleOfferTemplateMenu(ev){
+  if(ev) ev.stopPropagation();
+  const m = document.getElementById('ofTemplateMenu');
+  if(!m) return;
+  if(m.style.display !== 'none'){ m.style.display = 'none'; return; }
+  m.innerHTML = '<div class="empty-note" style="padding:8px 10px;">Φόρτωση…</div>';
+  m.style.display = 'block';
+  setTimeout(()=>document.addEventListener('click', ()=>{ m.style.display = 'none'; }, { once:true }), 0);
+  try{
+    const record = await jbGetRecord();
+    const tpls = Object.keys(record.offerTemplates || {}).sort((a,b)=>a.localeCompare(b,'el'));
+    m.innerHTML = (tpls.length
+      ? tpls.map(n=>`<div style="display:flex;align-items:center;gap:4px;">
+          <button class="btn board-menu-item" style="flex:1;" onclick="applyOfferTemplate('${esc(n).replace(/'/g,"\\'")}')">${esc(n)}</button>
+          <button class="del-link" style="flex:none;" onclick="event.stopPropagation();deleteOfferTemplate('${esc(n).replace(/'/g,"\\'")}')">×</button>
+        </div>`).join('')
+      : '<div class="empty-note" style="padding:8px 10px;line-height:1.5;">Δεν υπάρχουν πρότυπα ακόμα.<br>Στήσε μια προσφορά όπως τη θέλεις και αποθήκευσέ την ως πρότυπο.</div>')
+      + '<div style="border-top:1px solid var(--line);margin:5px 0;"></div>'
+      + '<button class="btn board-menu-item" onclick="saveOfferAsTemplate()">💾 Αποθήκευση αυτής ως πρότυπο</button>';
+  }catch(e){
+    m.innerHTML = '<div class="empty-note" style="padding:8px 10px;">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
 function collectOffer(){
   return {
     client: document.getElementById('fClient').value,
@@ -4987,6 +5202,10 @@ function collectOffer(){
 }
 
 function applyOfferData(d){
+  // A price typed by hand is the agreed figure; the markup beside it is only a
+  // rounded description of it. On load we must follow the price, or recomputing
+  // from that rounded percentage silently shifts the quote by a few euro.
+  priceDrivenBy = (num(d && d.manualTotal) > 0) ? 'price' : 'markup';
   document.getElementById('fClient').value = d.client||'';
   document.getElementById('fTitle').value = d.title||'';
   document.getElementById('fSchemaClosed').value = d.schemaClosed||'';
@@ -5073,8 +5292,13 @@ function switchView(view){
   if(view==='forecast') refreshForecastList();
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
-  if(view==='production' || view==='invoicing'){ attachBoardContextMenu(); bindBoardZoomResize(); }
+  if(view==='production' || view==='invoicing'){
+    // Paint from cache first so the board is already tinted while its data loads.
+    applyCachedBoardColour(view === 'invoicing' ? 'invoicing' : 'production');
+    attachBoardContextMenu(); bindBoardZoomResize();
+  }
   if(view==='production') setTimeout(fitBoardToViewport, 90);
+  if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
   if(view==='productiontime') refreshProdTimeList();
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
@@ -5545,25 +5769,6 @@ function toggleEnglishPdfBtn(){
   syncOfferToggleButtons();
 }
 
-// Job names lead with a reverse date code (260804 = 4/8/2026), matching how
-// offers are numbered, so lists sort chronologically by name alone.
-function jobDateCode(dateStr){
-  const src = (dateStr || new Date().toISOString().slice(0,10));
-  const [y,m,d] = src.split('-');
-  if(!y || !m || !d) return '';
-  return y.slice(2) + m + d;
-}
-
-// Adds the code only when it isn't there already, so re-converting or renaming
-// can't produce "260804 - 260804 - ...".
-function withJobDateCode(name, dateStr){
-  const code = jobDateCode(dateStr);
-  const clean = (name || '').trim();
-  if(!code) return clean;
-  if(/^\d{6}\s*-\s*/.test(clean)) return clean;
-  return clean ? `${code} - ${clean}` : code;
-}
-
 async function saveOffer(){
   try{
     const data = collectOffer();
@@ -5886,6 +6091,13 @@ async function splitTicketPaperRowToChild(rowId){
   }
   const row = tkPaperRows.find(r=>r.id===rowId);
   if(!row) return;
+  const existingChild = rowChildTicketId(row);
+  if(row.movedToChild || existingChild){
+    if(confirm('Αυτή η γραμμή έχει ήδη δικό της Job Ticket.\n\nΝα το ανοίξω;')){
+      openChildTicket(existingChild || '');
+    }
+    return;
+  }
 
   // Rows that print together on one sheet have to leave together — one ticket
   // per row would tell production to run the same sheet twice.
@@ -6062,9 +6274,31 @@ async function consumeTicketPaper(){
 
 // Paper bought for a job often isn't fully used. Letting the operator report
 // what was left lets it go back into stock instead of quietly disappearing.
+// Rows split by older versions were never flagged, so the state is also derived
+// from the linked tickets themselves: if a child ticket exists for this row's
+// item, the row belongs to it whatever the flag says.
+function rowChildTicketId(r){
+  if(r.childTicketId) return r.childTicketId;
+  const children = window.__linkedChildren || [];
+  const name = String(r.tipos || '').trim();
+  if(!name) return null;
+  const hit = children.find(ch => sameItemName(ch.tipos, name)
+                               || String(ch.label||'').trim().endsWith('— ' + name)
+                               || String(ch.label||'').includes(name));
+  return hit ? hit.id : null;
+}
+
 function leftoverCell(r){
-  if(r.movedToChild && !r.consumed){
-    return '<span style="font-size:10px;color:#2f6fed;font-weight:700;" title="Η κατανάλωση και το περίσσευμα καταχωρούνται στο ξεχωριστό ticket αυτής της γραμμής">🎫 σε δικό του ticket</span>';
+  // Shown whenever the row was split off — previously a row that had already
+  // been consumed here lost the marker entirely, which is exactly when someone
+  // needs to know where the leftover goes.
+  if(r.movedToChild || rowChildTicketId(r)){
+    // The column is narrow, so a badge rather than a sentence — the full
+    // explanation stays in the tooltip.
+    // Clickable, because the whole point is to get to the ticket where the
+    // leftover actually goes back to stock.
+    return `<button class="moved-badge" onclick="openChildTicket('${esc(rowChildTicketId(r)||'')}')"
+      title="Άνοιγμα του ξεχωριστού Job Ticket αυτής της γραμμής — εκεί καταχωρείται η κατανάλωση και το περίσσευμα">🎫 <span>δικό του</span></button>`;
   }
   if(r.leftoverPosted){
     return `<span style="font-size:10.5px;color:#1f7a4d;font-weight:700;" title="Καταχωρήθηκε στην Αποθήκη">✓ ${num(r.leftover).toLocaleString('el-GR')} πίσω</span>`;
@@ -6245,6 +6479,7 @@ async function splitGangRowsToChild(){
 }
 
 function renderTkPaper(){
+  setTimeout(()=>{ markEmptyTicketCells(); growAllCells(); fitCellText(); }, 0);
   const body = document.getElementById('tkPaperBody');
   body.innerHTML = '';
   // A redraw rebuilds the inputs, so a locked ticket has to be re-locked or the
@@ -6254,18 +6489,18 @@ function renderTkPaper(){
     const tr = document.createElement('tr');
     if(r.gangRow) tr.classList.add('gang-run');
     tr.innerHTML = `
-      <td><input value="${esc(r.tipos)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value"></td>
+      <td><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tipos)}</textarea></td>
       <td class="tk-multi-col"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
       <td class="tk-multi-col"><input value="${esc(r.itemShape||'')}" placeholder="π.χ. 21x29" oninput="tkPaperRows.find(x=>x.id===${r.id}).itemShape=this.value" title="Κλειστό σχήμα αυτού του είδους"></td>
       <td><input list="paperOptions" value="${esc(r.xarti)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xarti=this.value"></td>
-      <td><input value="${esc(r.xroma)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value"></td>
+      <td><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value;growCell(this);markEmptyTicketCells()">${esc(r.xroma)}</textarea></td>
 
       <td><input value="${esc(r.fyllaNet)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaNet=this.value" title="Καθαρά φύλλα (χωρίς έξτρα/σκάρτα)"></td>
       <td><input value="${esc(r.fyllaXtra)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaXtra=this.value" title="Έξτρα φύλλα (σκάρτα)"></td>
       <td><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
       <td style="white-space:nowrap;">${leftoverCell(r)}</td>
       <td><input value="${esc(r.sxima)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).sxima=this.value"></td>
-      <td><input value="${esc(r.tatgab)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).tatgab=this.value"></td>
+      <td><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tatgab=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tatgab)}</textarea></td>
       <td><input value="${esc(r.opseis)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).opseis=this.value"></td>
       <td style="white-space:nowrap;"><button class="own-ticket-btn" onclick="splitTicketPaperRowToChild(${r.id})" title="Δημιουργία ξεχωριστού, συνδεδεμένου Job Ticket για αυτή τη γραμμή (παραμένει και εδώ — το νέο κινείται ανεξάρτητα στην Παραγωγή)">🎫</button><button class="rowdel" onclick="removeTkPaperRow(${r.id})">×</button></td>
     `;
@@ -6336,14 +6571,19 @@ function timerCellHtml(r, type, label){
 }
 
 function renderTkProc(){
+  setTimeout(()=>{ markEmptyTicketCells(); growAllCells(); }, 0);
   const body = document.getElementById('tkProcBody');
   body.innerHTML = '';
   tkProcRows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', r.id);
+    tr.setAttribute('data-id', r.id);
+    if(r.done) tr.classList.add('proc-done');
     tr.innerHTML = `
-      <td><input value="${esc(r.label)}" placeholder="π.χ. Βιβλιοδεσία" oninput="tkProcRows.find(x=>x.id===${r.id}).label=this.value"></td>
-      <td><input value="${esc(r.details)}" oninput="tkProcRows.find(x=>x.id===${r.id}).details=this.value"></td>
+      <td style="text-align:center;"><input type="checkbox" class="proc-check" ${r.done ? 'checked' : ''}
+        onchange="toggleProcDone(${r.id}, this.checked)" title="Ολοκληρώθηκε"></td>
+      <td><textarea class="cell-grow" rows="1" placeholder="π.χ. Βιβλιοδεσία" oninput="tkProcRows.find(x=>x.id===${r.id}).label=this.value;growCell(this)">${esc(r.label)}</textarea></td>
+      <td><textarea class="cell-grow" rows="1" oninput="tkProcRows.find(x=>x.id===${r.id}).details=this.value;growCell(this)">${esc(r.details)}</textarea></td>
       <td>${timerCellHtml(r,'mr','Make Ready')}</td>
       <td>${timerCellHtml(r,'prod','Production')}</td>
       <td><button class="rowdel" onclick="removeTkProcRow(${r.id})">×</button></td>
@@ -6663,16 +6903,6 @@ async function saveTicket(){
     const id = currentTicketId || ('t' + Date.now());
     const savedAt = new Date().toISOString();
     const record = await jbGetRecord();
-    // Tickets typed from scratch get the same leading date code as converted
-    // ones. An existing ticket keeps the date it was first created with.
-    if((data.info || '').trim()){
-      const existingTicket = record.tickets[id];
-      const codeDate = (existingTicket && existingTicket.savedAt)
-        ? existingTicket.savedAt.slice(0,10)
-        : savedAt.slice(0,10);
-      data.info = withJobDateCode(data.info, codeDate);
-      document.getElementById('tkInfo').value = data.info;
-    }
     const label = data.info || 'Χωρίς τίτλο';
     const existing = record.tickets[id] || {};
     const ticketObj = { ...existing, label, date: data.deadline || '', savedAt, data, deadlineDate: data.deadline || '' };
@@ -6738,6 +6968,8 @@ async function loadTicket(id, locked){
     applyTicketData(t.data, t.deadlineDate);
     currentTicketId = id;
     switchView('ticketform');
+    // The stage lives on the ticket record, not in the form, so it's carried
+    // across for the status strip to show.
     if(locked) lockTicketForm(); else unlockTicketForm();
     markTicketClean();
     statusMsg('Φορτώθηκε ✓');
@@ -6751,10 +6983,66 @@ const TICKET_LOCK_FIELD_IDS = ['tkInfo','tkQty','tkDeadline','tkSchema','tkSelid
 
 function reapplyTicketLock(){
   if(!document.body.classList.contains('tk-locked')) return;
+  hideEmptyWhenLocked();
   document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{
     inp.readOnly = !inp.classList.contains('lo-input');
   });
   document.querySelectorAll('#tkPaperBody .rowdel, #tkProcBody .rowdel').forEach(btn=>{ btn.style.display = 'none'; });
+}
+
+// A locked ticket is a document to read, not a form to fill. Empty fields and
+// empty columns carry nothing, so they step out of the way — and come back the
+// moment it's unlocked.
+const LOCK_HIDEABLE_FIELDS = ['tkSelides','tkSchema','tkClient','tkDeadline'];
+
+function hideEmptyWhenLocked(){
+  LOCK_HIDEABLE_FIELDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const wrap = el.closest('.field');
+    if(!wrap) return;
+    wrap.style.display = String(el.value || '').trim() ? '' : 'none';
+  });
+  hideEmptyTicketColumns(true);
+}
+
+function showAllWhenUnlocked(){
+  LOCK_HIDEABLE_FIELDS.forEach(id=>{
+    const el = document.getElementById(id);
+    const wrap = el && el.closest('.field');
+    if(wrap) wrap.style.display = '';
+  });
+  hideEmptyTicketColumns(false);
+}
+
+// Whole columns with nothing in them are the biggest source of noise on a
+// printed-looking ticket, so they go too.
+function hideEmptyTicketColumns(hide){
+  // Περίσσευμα stays whatever happens: it is empty precisely because it is the
+  // field production is expected to fill in on a locked ticket.
+  [['tkPaperBody', ['ΤΥΠΟΣ','ΧΑΡΤΙ','ΣΥΝΟΛΟ ΦΥΛΛΩΝ','ΠΕΡΙΣΣΕΥΜΑ']], ['tkProcBody', ['ΕΡΓΑΣΙΑ']]].forEach(([bodyId, keep])=>{
+    const body = document.getElementById(bodyId);
+    if(!body) return;
+    const table = body.closest('table');
+    const heads = Array.from(table.querySelectorAll('thead th'));
+    heads.forEach((th, i)=>{
+      // greekUpper, not toUpperCase: the latter keeps the tonos, so "Περίσσευμα"
+      // became "ΠΕΡΊΣΣΕΥΜΑ" and never matched the list of columns to keep.
+      const label = greekUpper(th.textContent.trim());
+      // never hide the columns that identify the row, nor the action column
+      const essential = keep.some(k=>label.startsWith(k)) || !label;
+      const cells = Array.from(body.querySelectorAll('tr')).map(tr=>tr.children[i]).filter(Boolean);
+      if(!cells.length) return;
+      const hasContent = cells.some(td=>{
+        const f = td.querySelector('input, textarea');
+        if(f) return String(f.value || '').trim() !== '';
+        return td.textContent.trim() !== '';
+      });
+      const shouldHide = hide && !essential && !hasContent;
+      th.style.display = shouldHide ? 'none' : '';
+      cells.forEach(td=>{ td.style.display = shouldHide ? 'none' : ''; });
+    });
+  });
 }
 
 function lockTicketForm(){
@@ -6772,6 +7060,8 @@ function lockTicketForm(){
   document.querySelectorAll('#viewTicketForm .card-head button').forEach(btn=>{
     if(btn.textContent.includes('Γραμμή') || btn.textContent.includes('Νέο Ticket')) btn.style.display = 'none';
   });
+  hideEmptyWhenLocked();
+  // Copying a locked ticket is fine — the copy is a fresh, editable job.
 }
 
 function unlockTicketForm(){
@@ -6781,6 +7071,7 @@ function unlockTicketForm(){
   document.querySelectorAll('#tkPaperBody input, #tkProcBody input').forEach(inp=>{ inp.readOnly = false; });
   document.querySelectorAll('#tkPaperBody .rowdel, #tkProcBody .rowdel').forEach(btn=>{ btn.style.display = ''; });
   document.querySelectorAll('#viewTicketForm .card-head button').forEach(btn=>{ btn.style.display = ''; });
+  showAllWhenUnlocked();
 }
 
 // Deleting a split-off ticket has to give the parent its row back, otherwise
@@ -6973,6 +7264,204 @@ async function refreshTicketList(){
 // saves re-entering everything — but anything that belonged to the *previous*
 // run has to start clean, otherwise the new job inherits old times and would
 // double-count paper that was already taken out of stock.
+// Both act on whatever is open, so they have to deal with unsaved work rather
+// than silently throwing it away.
+// ===== Πρότυπα Job Ticket =====
+// A template is just a ticket with the job-specific parts removed. Building it
+// from real work beats a fixed list of presets, because the shop's own way of
+// setting up a poster is the only definition that matters.
+const TEMPLATE_STRIP = ['client','qty','deadline','offerId','linkGroupId','isLinkChild',
+                        'approvedQty','attachments','tkPackQty','info'];
+
+function ticketDataAsTemplate(data){
+  const t = JSON.parse(JSON.stringify(data || {}));
+  TEMPLATE_STRIP.forEach(k=>delete t[k]);
+  (t.paperRows || []).forEach(r=>{
+    // sizes and papers stay; anything counted or consumed does not
+    ['qty','fyllaNet','fyllaXtra','fylla','leftover','consumed','leftoverPosted',
+     'movedToChild','childTicketId','gangRow'].forEach(k=>delete r[k]);
+  });
+  (t.procRows || []).forEach(r=>{
+    ['mrSeconds','prodSeconds','mrRunning','prodRunning','mrStartedAt','prodStartedAt','details']
+      .forEach(k=>delete r[k]);
+  });
+  t.notes = '';
+  return t;
+}
+
+async function saveTicketAsTemplate(){
+  const base = (document.getElementById('tkInfo').value || '').trim();
+  const suggested = base.replace(/^\d{6}\s*-\s*/, '').split(' — ').pop() || 'Πρότυπο';
+  const name = prompt('Αποθήκευση ως πρότυπο\n\n'
+    + 'Κρατιούνται: χαρτιά, τύποι, όψεις, τσίγκοι, επεξεργασίες, συσκευασία.\n'
+    + 'Δεν κρατιούνται: πελάτης, ποσότητα, ημερομηνία, καταναλώσεις.\n\nΌνομα προτύπου:', suggested);
+  if(name === null) return;
+  const key = name.trim();
+  if(!key){ statusMsg('Χρειάζεται όνομα προτύπου.'); return; }
+  try{
+    const record = await jbGetRecord();
+    record.ticketTemplates = record.ticketTemplates || {};
+    if(record.ticketTemplates[key] && !confirm(`Υπάρχει ήδη πρότυπο «${key}». Να αντικατασταθεί;`)) return;
+    record.ticketTemplates[key] = { savedAt: new Date().toISOString(), data: ticketDataAsTemplate(collectTicket()) };
+    await jbMergePath(SLICE_MAIN, ['ticketTemplates'], record.ticketTemplates);
+    showToast(`📋 Αποθηκεύτηκε το πρότυπο «${key}»`, 'Θα το βρίσκεις στο κουμπί Πρότυπα');
+  }catch(e){
+    console.error('Save template error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function applyTicketTemplate(name){
+  try{
+    const record = await jbGetRecord();
+    const tpl = (record.ticketTemplates || {})[name];
+    if(!tpl){ statusMsg('Δεν βρέθηκε το πρότυπο.'); return; }
+    const hasContent = (document.getElementById('tkInfo').value || '').trim()
+                    || tkPaperRows.some(r=>(r.tipos||'').trim() || (r.xarti||'').trim());
+    if(hasContent && !confirm(`Εφαρμογή προτύπου «${name}»;\n\nΘα αντικαταστήσει τα χαρτιά και τις επεξεργασίες αυτού του ticket.`)) return;
+
+    // keep what the user has already typed about *this* job
+    const keep = {
+      info: document.getElementById('tkInfo').value,
+      client: document.getElementById('tkClient').value,
+      qty: document.getElementById('tkQty').value,
+      deadline: document.getElementById('tkDeadline').value
+    };
+    applyTicketData(JSON.parse(JSON.stringify(tpl.data)));
+    document.getElementById('tkInfo').value = keep.info;
+    document.getElementById('tkClient').value = keep.client;
+    document.getElementById('tkQty').value = keep.qty;
+    document.getElementById('tkDeadline').value = keep.deadline;
+    markTicketDirty();
+    statusMsg(`Εφαρμόστηκε το πρότυπο «${name}» ✓ — συμπλήρωσε ποσότητες και αποθήκευσε.`);
+  }catch(e){
+    console.error('Apply template error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function deleteTicketTemplate(name){
+  if(!confirm(`Διαγραφή προτύπου «${name}»;\n\nΤα tickets που φτιάχτηκαν με αυτό δεν επηρεάζονται.`)) return;
+  try{
+    const record = await jbGetRecord();
+    delete (record.ticketTemplates || {})[name];
+    await jbMergePath(SLICE_MAIN, ['ticketTemplates'], record.ticketTemplates || {});
+    statusMsg('Το πρότυπο διαγράφηκε');
+    toggleTemplateMenu();
+    toggleTemplateMenu();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function toggleTemplateMenu(ev){
+  if(ev) ev.stopPropagation();
+  const m = document.getElementById('tkTemplateMenu');
+  if(!m) return;
+  if(m.style.display !== 'none'){ m.style.display = 'none'; return; }
+
+  let list = '<div class="empty-note" style="padding:8px 10px;">Φόρτωση…</div>';
+  m.innerHTML = list;
+  m.style.display = 'block';
+  setTimeout(()=>document.addEventListener('click', ()=>{ m.style.display = 'none'; }, { once:true }), 0);
+
+  try{
+    const record = await jbGetRecord();
+    const tpls = Object.keys(record.ticketTemplates || {}).sort((a,b)=>a.localeCompare(b,'el'));
+    list = tpls.length
+      ? tpls.map(n=>`<div style="display:flex;align-items:center;gap:4px;">
+          <button class="btn board-menu-item" style="flex:1;" onclick="applyTicketTemplate('${esc(n).replace(/'/g,"\\'")}')">${esc(n)}</button>
+          <button class="del-link" style="flex:none;" onclick="event.stopPropagation();deleteTicketTemplate('${esc(n).replace(/'/g,"\\'")}')">×</button>
+        </div>`).join('')
+      : '<div class="empty-note" style="padding:8px 10px;line-height:1.5;">Δεν υπάρχουν πρότυπα ακόμα.<br>Στήσε ένα ticket όπως το θέλεις και αποθήκευσέ το ως πρότυπο.</div>';
+    m.innerHTML = list
+      + '<div style="border-top:1px solid var(--line);margin:5px 0;"></div>'
+      + '<button class="btn board-menu-item" onclick="saveTicketAsTemplate()">💾 Αποθήκευση αυτού ως πρότυπο</button>';
+  }catch(e){
+    m.innerHTML = '<div class="empty-note" style="padding:8px 10px;">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+// Ticking a step off is the shop-floor equivalent of crossing it out on paper —
+// the row stays legible but visibly finished.
+function toggleProcDone(rowId, on){
+  const r = tkProcRows.find(x=>x.id===rowId);
+  if(!r) return;
+  r.done = !!on;
+  r.doneAt = on ? new Date().toISOString() : '';
+  const tr = document.querySelector(`#tkProcBody tr[data-id="${rowId}"]`);
+  if(tr){
+    tr.classList.toggle('proc-done', !!on);
+    const box = tr.querySelector('.proc-check');
+    if(box) box.checked = !!on;      // keeps it right when set from code, not a click
+  }
+  markTicketDirty();
+}
+
+// Empty cells are tagged so they can step back visually while the filled ones
+// carry the weight — that's what makes a row readable at a glance.
+// A textarea can wrap where an input can only clip. It's sized to its content
+// on every change so the row grows instead of hiding the end of a name.
+// The row was split off, so its stock movements live on the child ticket.
+async function openChildTicket(childId){
+  try{
+    const record = await jbGetRecord();
+    if(childId && record.tickets[childId]){
+      if(ticketDirty && !confirm('Υπάρχουν αλλαγές που δεν έχουν αποθηκευτεί.\n\nΝα ανοίξω το ξεχωριστό ticket;')) return;
+      await loadTicket(childId, false);
+      statusMsg('Άνοιξε το ξεχωριστό ticket — εδώ καταχωρείται το περίσσευμα.');
+      return;
+    }
+    // Older splits didn't record which child they made; fall back to the group.
+    const group = (collectTicket() || {}).linkGroupId;
+    const sibling = Object.entries(record.tickets || {})
+      .find(([tid, t]) => tid !== currentTicketId && (t.data||{}).linkGroupId === group && (t.data||{}).isLinkChild);
+    if(sibling){ await loadTicket(sibling[0], false); return; }
+    statusMsg('Δεν βρέθηκε το ξεχωριστό ticket — ίσως διαγράφηκε.');
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+function growCell(el){
+  if(!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, 30) + 'px';
+}
+
+function growAllCells(){
+  document.querySelectorAll('#tkPaperBody .cell-grow, #tkProcBody .cell-grow').forEach(growCell);
+}
+
+// The paper name needs its datalist, so it stays an input — instead of clipping,
+// its type shrinks a little until the whole value fits.
+function fitCellText(){
+  document.querySelectorAll('#tkPaperBody input[list], #tkPaperBody input:not([type])').forEach(inp=>{
+    inp.style.fontSize = '';
+    if(!inp.value) return;
+    let size = 12.5;
+    while(inp.scrollWidth > inp.clientWidth + 1 && size > 9){
+      size -= 0.5;
+      inp.style.fontSize = size + 'px';
+    }
+  });
+}
+
+function markEmptyTicketCells(){
+  document.querySelectorAll('#tkPaperBody input, #tkProcBody input, #tkPaperBody textarea, #tkProcBody textarea')
+    .forEach(inp=>{
+      if(inp.type === 'checkbox' || inp.type === 'button') return;
+      inp.classList.toggle('is-empty', !String(inp.value || '').trim());
+    });
+}
+
+async function duplicateCurrentTicket(){
+  if(!currentTicketId){
+    statusMsg('Αποθήκευσε πρώτα αυτό το ticket για να το αντιγράψεις.');
+    return;
+  }
+  if(ticketDirty && confirm('Υπάρχουν αλλαγές που δεν έχουν αποθηκευτεί.\n\nΝα αποθηκευτούν πριν την αντιγραφή;')){
+    await saveTicket();
+  }
+  await duplicateTicket(currentTicketId);
+}
+
 async function duplicateTicket(id){
   try{
     const record = await jbGetRecord();
@@ -7157,7 +7646,7 @@ async function convertOfferToTicket(){
   const schemaClosedVal = document.getElementById('fSchemaClosed').value;
 
   newTicket();
-  document.getElementById('tkInfo').value = withJobDateCode([client, title].filter(Boolean).join(' — '), document.getElementById('fOfferDate').value);
+  document.getElementById('tkInfo').value = [client, title].filter(Boolean).join(' — ');
   document.getElementById('tkQty').value = baseQty;
   document.getElementById('tkDeadline').value = ''; // real calendar date — set separately, not the same as the offer's "χρόνος παράδοσης" estimate
   document.getElementById('tkSchema').value = schemaClosedVal;
@@ -7237,12 +7726,21 @@ async function convertOfferToTicket(){
 
 async function renderLinkedTicketsIndicator(){
   const wrap = document.getElementById('linkedTicketsIndicator');
-  if(!currentTicketLinkGroupId){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  if(!currentTicketLinkGroupId){
+    window.__linkedChildren = [];
+    wrap.style.display = 'none'; wrap.innerHTML = ''; return;
+  }
   try{
     const record = await jbGetRecord();
     const linked = Object.entries(record.tickets)
       .filter(([id, t]) => t.data && t.data.linkGroupId===currentTicketLinkGroupId && id!==currentTicketId)
-      .map(([id, t]) => ({ id, label: (t.data && t.data.info) || t.label || 'Χωρίς τίτλο' }));
+      .map(([id, t]) => ({ id, label: (t.data && t.data.info) || t.label || 'Χωρίς τίτλο',
+                           // the item name a child covers, so a parent row can be matched to it
+                           tipos: (((t.data||{}).paperRows||[])[0]||{}).tipos || '' }));
+    // Children created by older versions left no mark on the parent's rows; the
+    // rows are matched to them here so the marker and the guard still work.
+    window.__linkedChildren = linked;
+    renderTkPaper();
     if(linked.length===0){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
     wrap.style.display = 'flex';
     wrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#eaf1fe;border:1px solid #c6d9fb;color:#2f6fed;padding:9px 14px;border-radius:8px;margin-bottom:16px;font-size:12.5px;';
@@ -7844,6 +8342,51 @@ async function setForecastMonth(id, value){
   }
 }
 
+// Money that's expected but has no month can't appear in the chart at all —
+// which is exactly why it's the easiest to forget. It gets its own panel.
+function renderUnscheduledForecast(fullList){
+  const el = document.getElementById('forecastUnscheduled');
+  if(!el) return;
+  const pending = (fullList || []).filter(o => o.status !== 'invoiced' && !o.month);
+  if(!pending.length){
+    el.innerHTML = '';
+    return;
+  }
+  pending.sort((a,b)=>num(b.amount) - num(a.amount));
+  const total = pending.reduce((s,o)=>s + num(o.amount), 0);
+  el.innerHTML = `<div class="fc-uns">
+    <h5>⏳ Χωρίς μήνα τιμολόγησης</h5>
+    <div class="fc-uns-note">${pending.length} δουλει${pending.length===1?'ά':'ές'} σε εκκρεμότητα που δεν μετράνε σε κανέναν μήνα της πρόβλεψης.</div>
+    ${pending.slice(0,12).map(o=>`<div class="fc-uns-item" onclick="focusForecastEntry('${esc(o.id)}')" title="Άνοιγμα για ορισμό μήνα">
+      <div style="min-width:0;">
+        <div class="t">${esc(o.client || 'Χωρίς πελάτη')}</div>
+        <div class="s">${esc(o.job || '—')}</div>
+      </div>
+      <div class="v">${fmt(num(o.amount))}</div>
+    </div>`).join('')}
+    ${pending.length > 12 ? `<div class="fc-uns-note" style="margin:6px 0 0;">…και άλλες ${pending.length-12}</div>` : ''}
+    <div class="fc-uns-total"><span>Σύνολο</span><span>${fmt(total)}</span></div>
+  </div>`;
+}
+
+// Filters down to the one entry so its month field is right there to fill in.
+function focusForecastEntry(id){
+  const sel = document.getElementById('forecastMonthFilter');
+  const none = Array.from(sel.options).find(o=>o.value === '__NONE__');
+  if(none){
+    Array.from(sel.options).forEach(o=>{ o.selected = (o.value === '__NONE__'); });
+    onForecastMonthChange();
+  }
+  setTimeout(()=>{
+    const card = document.querySelector(`#forecastList [data-fc-id="${id}"]`);
+    if(card){
+      card.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+      card.style.boxShadow = '0 0 0 3px #c9a227';
+      setTimeout(()=>{ card.style.boxShadow = ''; }, 2000);
+    }
+  }, 400);
+}
+
 function renderForecastChart(fullList){
   const container = document.getElementById('forecastChart');
   const withMonth = fullList.filter(o=>o.month);
@@ -8023,10 +8566,15 @@ function updateForecastMonthFilterLabel(){
   const selected = Array.from(monthSel.selectedOptions);
   const label = document.getElementById('forecastMonthFilterLabel');
   if(selected.length===0) label.textContent = 'Όλοι οι μήνες';
-  else if(selected.length===1) label.textContent = selected[0].textContent;
+  else if(selected.length===1) label.textContent = selected[0].textContent.replace(/^— | —$/g,'');
   else label.textContent = selected.length + ' μήνες';
 }
 function onForecastMonthChange(){
+  const sel = document.getElementById('forecastMonthFilter');
+  // Picking "all months" is a command, not a selection to combine with others.
+  if(Array.from(sel.selectedOptions).some(o=>o.value === '__ALL__')){
+    Array.from(sel.options).forEach(o=>{ o.selected = false; });
+  }
   updateForecastMonthFilterLabel();
   refreshForecastList();
 }
@@ -8050,7 +8598,13 @@ async function refreshForecastList(){
     const monthSel = document.getElementById('forecastMonthFilter');
     const prevSelected = new Set(Array.from(monthSel.selectedOptions).map(o=>o.value));
     const distinctMonths = [...new Set(fullList.map(o=>o.month).filter(Boolean))].sort();
-    monthSel.innerHTML = distinctMonths.map(m=>`<option value="${m}" ${prevSelected.has(m)?'selected':''}>${esc(monthLabel(m))}</option>`).join('');
+    // An explicit "all months" row: deselecting everything already meant "all",
+    // but nobody discovers that on their own.
+    const noMonthCount = fullList.filter(o=>!o.month).length;
+    monthSel.innerHTML =
+      `<option value="__ALL__">— Όλοι οι μήνες —</option>`
+      + (noMonthCount ? `<option value="__NONE__" ${prevSelected.has('__NONE__')?'selected':''}>Χωρίς μήνα (${noMonthCount})</option>` : '')
+      + distinctMonths.map(m=>`<option value="${m}" ${prevSelected.has(m)?'selected':''}>${esc(monthLabel(m))}</option>`).join('');
     const selectedMonths = Array.from(monthSel.selectedOptions).map(o=>o.value);
     updateForecastMonthFilterLabel();
 
@@ -8058,14 +8612,15 @@ async function refreshForecastList(){
     if(forecastFilter!=='all'){
       list = list.filter(o => o.status === forecastFilter);
     }
-    if(selectedMonths.length>0){
-      list = list.filter(o => selectedMonths.includes(o.month));
+    if(selectedMonths.length>0 && !selectedMonths.includes('__ALL__')){
+      list = list.filter(o => selectedMonths.includes(o.month || '__NONE__'));
     }
 
     el.innerHTML = '';
     summaryEl.innerHTML = '';
     yearSummaryEl.innerHTML = '';
     renderForecastChart(fullList);
+    renderUnscheduledForecast(fullList);
     if(list.length===0){
       el.innerHTML = '<div class="empty-note">Δεν υπάρχουν δουλειές με αυτά τα κριτήρια.</div>';
       return;
@@ -8107,7 +8662,7 @@ async function refreshForecastList(){
       const jobsHtml = jobs.map(o=>{
         const invoiced = o.status === 'invoiced';
         return `
-          <div class="fc-job-row">
+          <div class="fc-job-row" data-fc-id="${o.id}">
             <div class="name"><span class="client">${esc(o.client)}</span> — ${esc(o.job || '(χωρίς περιγραφή)')}</div>
             <div class="btns">
               <span class="fc-month-btn" onclick="toggleForecastMonthEditPopover('${o.id}', this, '${esc(o.month||'')}')" title="Μήνας τιμολόγησης: ${o.month ? esc(monthLabel(o.month)) : 'δεν έχει οριστεί'} — κλικ για αλλαγή">📅</span>
@@ -8414,6 +8969,22 @@ const BOARD_COLOURS = [
   { name:'Σκούρο μπλε',   value:'#24303f' }
 ];
 
+// The colour lives in the record, which means waiting for a round-trip before
+// the board is painted — long enough to see a white flash on every switch.
+// Caching it locally lets the tint be there from the first frame.
+function cacheBoardColour(board, colour){
+  try{ localStorage.setItem('ff_board_colour_' + board, colour || ''); }catch(e){}
+}
+
+function cachedBoardColour(board){
+  try{ return localStorage.getItem('ff_board_colour_' + board) || ''; }catch(e){ return ''; }
+}
+
+function applyCachedBoardColour(board){
+  const colour = cachedBoardColour(board);
+  if(colour) applyBoardColour(board, colour);
+}
+
 function applyBoardColour(board, colour){
   const el = document.getElementById(board === 'invoicing' ? 'invoicingBoard' : 'productionBoard');
   if(!el) return;
@@ -8472,6 +9043,7 @@ function isDarkColour(hex){
 
 async function setBoardColour(board, colour){
   applyBoardColour(board, colour);
+  cacheBoardColour(board, colour);
   try{
     const record = await jbGetRecord();
     record.boardColours = record.boardColours || {};
@@ -8619,10 +9191,13 @@ function stepBoardZoom(board, dir){
 // ===== Ρυθμίσεις πίνακα & αναζήτηση =====
 // Sizing the board to finish just above the bottom of the window puts its own
 // horizontal scrollbar permanently in reach — no second bar to keep in sync.
-function fitBoardToViewport(){
-  const board = document.getElementById('productionBoard');
-  if(!board) return;
-  if(document.getElementById('viewProduction').style.display === 'none') return;
+function fitBoardToViewport(which){
+  // Both boards have the same problem, so they share the fix.
+  const isInv = which === 'invoicing';
+  const board = document.getElementById(isInv ? 'invoicingBoard' : 'productionBoard');
+  const view = document.getElementById(isInv ? 'viewInvoicing' : 'viewProduction');
+  if(!board || !view) return;
+  if(view.style.display === 'none') return;
 
   const rect = board.getBoundingClientRect();
   const available = window.innerHeight - rect.top;
@@ -8645,7 +9220,7 @@ function bindBoardFit(){
   if(boardFitBound) return;
   boardFitBound = true;
   let t = null;
-  const run = ()=>{ clearTimeout(t); t = setTimeout(fitBoardToViewport, 100); };
+  const run = ()=>{ clearTimeout(t); t = setTimeout(()=>{ fitBoardToViewport(); fitBoardToViewport('invoicing'); }, 100); };
   window.addEventListener('resize', run);
   window.addEventListener('scroll', run, { passive:true });
 }
@@ -8908,7 +9483,9 @@ async function refreshProductionBoard(){
     }
 
     boardEl.innerHTML = '';
-    applyBoardColour('production', (record.boardColours||{}).production || '');
+    const prodColour = (record.boardColours||{}).production || '';
+    applyBoardColour('production', prodColour);
+    cacheBoardColour('production', prodColour);
     stages.forEach((stage, idx)=>{
       const col = document.createElement('div');
       col.className = 'kanban-col';
@@ -9480,7 +10057,9 @@ async function refreshInvoicingBoard(){
       .filter(t => t.invoiceStage && !t.archived);
 
     boardEl.innerHTML = '';
-    applyBoardColour('invoicing', (record.boardColours||{}).invoicing || '');
+    const invColour = (record.boardColours||{}).invoicing || '';
+    applyBoardColour('invoicing', invColour);
+    cacheBoardColour('invoicing', invColour);
     stages.forEach((stage, idx)=>{
       const inStage = tickets.filter(t => t.invoiceStage === stage);
       const col = document.createElement('div');
@@ -9556,6 +10135,8 @@ async function refreshInvoicingBoard(){
       boardEl.appendChild(col);
     });
     applyBoardZoom('invoicing');
+    bindBoardFit();
+    setTimeout(()=>fitBoardToViewport('invoicing'), 60);
   }catch(e){
     console.error('Invoicing board error:', e);
     boardEl.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
@@ -10519,7 +11100,10 @@ function toggleClientImport(){
 function parseClientImport(text){
   const cols = ['name','address','phone','vat'];
   return String(text||'').split(/\r?\n/)
-    .map(l=>l.trim()).filter(Boolean)
+    // Only blank-looking lines are dropped; the line itself is NOT trimmed,
+    // because a leading tab means "the name cell is empty" — trimming it would
+    // shift every column left and import the address as the customer's name.
+    .filter(l=>l.trim())
     .map(line=>{
       // Excel gives tabs; a pasted CSV gives semicolons or commas. Tabs and
       // semicolons are unambiguous, so commas are only used if neither appears.
