@@ -445,7 +445,23 @@
   .tk-list-tools button{white-space:nowrap;padding:7px 14px;}
   .ticket-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background 0.1s,border-color 0.1s;}
   .ticket-item:hover{background:var(--page);border-color:var(--line-strong);}
-  .ticket-item .meta{font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px;min-width:0;}
+  /* flex:1 so the name claims the space first — without it the buttons take
+     everything and the name collapses to nothing on a narrow screen. */
+  .ticket-item .meta{flex:1;font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px;min-width:0;}
+  .ticket-item .btns{display:flex;align-items:center;gap:8px;flex:none;}
+  @media (max-width:780px){
+    /* On a phone the name gets its own line and the actions sit underneath. */
+    .ticket-item{flex-direction:column;align-items:stretch;gap:10px;}
+    .ticket-item .meta{flex-wrap:wrap;font-size:14.5px;}
+    .ticket-item .meta > span{white-space:normal!important;overflow:visible!important;}
+    /* All three actions on one line: wrapping put a single button on its own
+       row, which read as a mistake rather than a layout. */
+    .ticket-item .btns{justify-content:flex-start;flex-wrap:nowrap;gap:6px;}
+    .ticket-item .btns button{min-height:40px;padding:6px 10px;font-size:12.5px;flex:1;
+      justify-content:center;}
+    .ticket-item .btns .order-badge{flex:none;}
+    .ticket-item.ticket-part{margin-left:14px;}
+  }
   .ticket-item .meta .sub{color:var(--muted);font-size:12px;font-weight:400;white-space:nowrap;flex:none;}
   .ticket-item.ticket-part{margin-left:28px;background:transparent;border-style:dashed;padding-top:9px;padding-bottom:9px;}
   .ticket-item.ticket-part .meta{font-weight:500;font-size:14px;}
