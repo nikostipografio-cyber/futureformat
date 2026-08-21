@@ -5339,7 +5339,35 @@ async function showDeployedFileDate(){
   }
 }
 
+// ===== Πλοήγηση με τα βελάκια =====
+// Without this, the browser's back button leaves the app entirely — which is
+// jarring on desktop and destroys the illusion when installed on a phone.
+// Each view becomes a history entry, so back/forward move within the app.
+let navSuppressHistory = false;
+
+function pushViewHistory(view){
+  if(navSuppressHistory) return;
+  const current = (history.state || {}).ffView;
+  if(current === view) return;              // no entry for re-selecting the same tab
+  history.pushState({ ffView: view }, '', '#' + view);
+}
+
+function bindHistoryNavigation(){
+  window.addEventListener('popstate', ev => {
+    const view = (ev.state && ev.state.ffView) || viewFromHash() || 'home';
+    // Suppressed so following a history entry doesn't create another one.
+    navSuppressHistory = true;
+    try { switchView(view); } finally { navSuppressHistory = false; }
+  });
+}
+
+function viewFromHash(){
+  const h = (location.hash || '').replace('#', '').trim();
+  return h || null;
+}
+
 function switchView(view){
+  pushViewHistory(view);
   // The board tint belongs to the board; every other tab starts clean.
   if(view !== 'production' && view !== 'invoicing') clearWorkArea();
   document.getElementById('viewHome').style.display = view==='home' ? 'block' : 'none';
@@ -8810,6 +8838,16 @@ function showAppAfterLogin(){
   loadPapers(); loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo();
   checkUserPermissions();
   startReceivedOrderWatch();   // paper arrivals reach you wherever you are
+  bindHistoryNavigation();
+  // Opening a link with #production lands on that tab rather than the home page.
+  const wanted = viewFromHash();
+  if(wanted){
+    navSuppressHistory = true;
+    try { switchView(wanted); } finally { navSuppressHistory = false; }
+    history.replaceState({ ffView: wanted }, '', '#' + wanted);
+  } else {
+    history.replaceState({ ffView: 'home' }, '', '#home');
+  }
   supabaseAuthClient.auth.getUser().then(({data})=>{
     const el = document.getElementById('currentUserEmail');
     if(el && data && data.user) el.textContent = 'Συνδεδεμένος/η ως: ' + data.user.email;
