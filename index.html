@@ -1146,6 +1146,7 @@ function toggleMobileSidebar(forceClose){
           <div id="tkTemplateMenu" style="display:none;position:absolute;left:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;z-index:4000;min-width:250px;max-height:340px;overflow:auto;"></div>
         </span>
         <button class="btn" id="tkDuplicateBtn" onclick="duplicateCurrentTicket()" title="Αντίγραφο αυτού του ticket για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
+        <button class="btn" onclick="convertTicketToOffer()" title="Νέα προσφορά με βάση όσα πραγματικά έγιναν σε αυτή τη δουλειά">→ Προσφορά</button>
         <button class="btn" onclick="printTicket()">🖨 Εκτύπωση / PDF</button>
         <button class="btn solid" onclick="saveTicket()">Αποθήκευση Ticket</button>
       </div>
@@ -2876,8 +2877,11 @@ function recalcBookRow(id){
   const baseQty = num(document.getElementById('hdrQty').value);
   const pages = num(r.pages), pps = num(r.pagesPerSheet);
   const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-  const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-  const totalSheets = sheets + num(r.xtra) * signatures;
+  // "Έξτρα" here means extra copies of the book, so it costs the same sheets per
+  // copy as the run itself: xtra × (pages/pps). Rounding that ratio up first —
+  // as ceilSafe did — charged a whole extra signature that is never printed.
+  const sheetsPerCopy = pps>0 ? pages/pps : 0;
+  const totalSheets = sheets + Math.round(num(r.xtra) * sheetsPerCopy);
   const pCost = paperCost(r, totalSheets);
   const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
   const printCost = sidesEkt * num(r.pricePerSide);
@@ -2911,8 +2915,7 @@ function computeBookFoldQuantity(){
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     if(!(pps>0) || !(pages>0)) return;
     const sheets = ceilSafe((baseQty*pages)/pps);
-    const signatures = ceilSafe(pages/pps);
-    const totalSheets = sheets + num(r.xtra) * signatures;
+    const totalSheets = sheets + Math.round(num(r.xtra) * (pages/pps));
     total += totalSheets * foldMultiplierForPagesPerSheet(pps);
   });
   return total;
@@ -2960,8 +2963,7 @@ function recalcBookTotal(){
   bookRows.forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-    const totalSheets = sheets + num(r.xtra) * signatures;
+    const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     const pCost = paperCost(r, totalSheets);
     const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
     const printCost = sidesEkt * num(r.pricePerSide);
@@ -4317,8 +4319,7 @@ function computeTotals(baseQty){
   bookRows.forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-    const totalSheets = sheets + num(r.xtra)*signatures;
+    const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     bookPaper += paperCost(r, totalSheets);
     const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
     bookPrint += sidesEkt * num(r.pricePerSide);
@@ -4725,8 +4726,7 @@ function computeMaterialsSummary(){
     if(!r.paperName) return;
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-    const totalSheets = sheets + num(r.xtra) * signatures;
+    const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     if(totalSheets<=0) return;
     if(!byMaterial[r.paperName]) byMaterial[r.paperName] = {qty:0, unit:'φύλλα'};
     byMaterial[r.paperName].qty += totalSheets;
@@ -5964,10 +5964,152 @@ async function saveOffer(){
     currentOfferId = id;
     updateApproveButton(record.offers[id].approved);
     markOfferClean();
+    refreshOfferTicketLink();
     statusMsg('Αποθηκεύτηκε ✓');
+
+    // Completing a link started by "→ Προσφορά": the ticket now points at this
+    // offer, so the job has a price and later edits can reach it.
+    const pendingLink = window.__linkOfferToTicket;
+    if(pendingLink && record.tickets[pendingLink]){
+      const t = record.tickets[pendingLink];
+      t.data = t.data || {};
+      if(!t.data.offerId){
+        t.data.offerId = id;
+        await jbMergePath(SLICE_MAIN, ['tickets', pendingLink], t);
+        statusMsg('Αποθηκεύτηκε ✓ — συνδέθηκε με το Job Ticket.');
+      }
+      window.__linkOfferToTicket = null;
+    }
+    await offerSyncToTickets(id, record);
   }catch(e){
     console.error('Save error:', e);
     statusMsg('Σφάλμα αποθήκευσης: ' + e.message);
+  }
+}
+
+// ===== Ενημέρωση Job Ticket από την προσφορά =====
+// A ticket that is already in production holds facts the offer does not know:
+// paper taken out of stock, timers, rows split into their own tickets. Those
+// are never overwritten — the sync only touches what is still just a plan, and
+// says plainly what it left alone.
+function paperRowSyncable(r){
+  return !r.consumed && !r.leftoverPosted && !r.movedToChild && !r.mrSeconds && !r.prodSeconds;
+}
+
+function offerRowToTicketRow(src, baseQty, isBook, pages){
+  const qty = num(src.qty) || baseQty;
+  if(isBook){
+    const pps = num(src.pagesPerSheet);
+    const sheets = pps>0 ? ceilSafe((baseQty*num(src.pages||pages))/pps) : 0;
+    const xtra = Math.round(num(src.xtra) * (pps>0 ? num(src.pages||pages)/pps : 0));
+    return { tipos:src.material||'Σώμα', xarti:src.paperName||'', xroma:src.color||'',
+             fyllaNet:sheets||'', fyllaXtra:xtra||'', fylla:(sheets+xtra)||'' };
+  }
+  const pps = num(src.piecesPerSheet);
+  const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
+  const xtra = num(src.xtra);
+  return { tipos:src.material||'', xarti:src.paperName||'', xroma:src.color||'',
+           qty: qty||'', fyllaNet:sheets||'', fyllaXtra:xtra||'', fylla:(sheets+xtra)||'',
+           opseis:src.sides||'', itemShape:src.simShape||'' };
+}
+
+// Returns a plain-language list of what would change, so the decision is made
+// on facts rather than on trust.
+function offerTicketDiff(offerData, ticket){
+  const td = ticket.data || {};
+  const baseQty = num(offerData.qty);
+  const isBook = !offerData.multiItem;
+  const pages = num(offerData.pages);
+  // In multi-item mode the book table is hidden and its default "Σώμα" row is
+  // meaningless — including it would add a phantom line to the ticket.
+  const wanted = [
+    ...(isBook ? (offerData.bookRows||[]).filter(r=>r.material||r.paperName)
+        .map(r=>offerRowToTicketRow(r, baseQty, true, pages)) : []),
+    ...((offerData.flatRows||[]).filter(r=>r.material||r.paperName)
+        .map(r=>offerRowToTicketRow(r, baseQty, false, pages)))
+  ];
+  const changes = [], blocked = [];
+
+  if(String(num(td.qty)) !== String(baseQty) && baseQty > 0){
+    changes.push(`Ποσότητα: ${num(td.qty).toLocaleString('el-GR')} → ${baseQty.toLocaleString('el-GR')}`);
+  }
+  wanted.forEach(w=>{
+    const existing = (td.paperRows||[]).find(r => sameItemName(r.tipos, w.tipos));
+    if(!existing){ changes.push(`Νέα γραμμή: ${w.tipos || w.xarti}`); return; }
+    if(!paperRowSyncable(existing)){
+      blocked.push(`${existing.tipos || existing.xarti} (${existing.consumed ? 'καταχωρημένο χαρτί'
+        : existing.movedToChild ? 'σε δικό του ticket' : 'με μετρημένο χρόνο'})`);
+      return;
+    }
+    if(num(existing.fylla) !== num(w.fylla)){
+      changes.push(`${w.tipos}: φύλλα ${num(existing.fylla).toLocaleString('el-GR')} → ${num(w.fylla).toLocaleString('el-GR')}`);
+    } else if((existing.xarti||'') !== (w.xarti||'')){
+      changes.push(`${w.tipos}: χαρτί → ${w.xarti}`);
+    }
+  });
+  return { changes, blocked, wanted };
+}
+
+async function offerSyncToTickets(offerId, record){
+  if(!offerId) return;
+  const linked = Object.entries(record.tickets || {})
+    .filter(([, t]) => ((t.data||{}).offerId === offerId) && !t.archived);
+  if(!linked.length) return;
+
+  const offerData = record.offers[offerId] && record.offers[offerId].data;
+  if(!offerData) return;
+
+  const plans = linked.map(([id, t]) => ({ id, t, diff: offerTicketDiff(offerData, t) }))
+                      .filter(p => p.diff.changes.length || p.diff.blocked.length);
+  if(!plans.length) return;
+
+  const allChanges = plans.flatMap(p => p.diff.changes);
+  const allBlocked = plans.flatMap(p => p.diff.blocked);
+  if(!allChanges.length){
+    if(allBlocked.length){
+      statusMsg(`Το Job Ticket δεν ενημερώθηκε — ${allBlocked.length} γραμμ${allBlocked.length===1?'ή είναι':'ές είναι'} ήδη στην παραγωγή.`);
+    }
+    return;
+  }
+
+  const msg = `Η προσφορά άλλαξε. Να ενημερωθ${linked.length===1?'εί το':'ούν τα'} ${linked.length} συνδεδεμέν${linked.length===1?'ο Job Ticket':'α Job Tickets'};\n\n`
+    + allChanges.slice(0,8).map(x=>'• ' + x).join('\n')
+    + (allChanges.length > 8 ? `\n…και ${allChanges.length-8} ακόμα` : '')
+    + (allBlocked.length ? `\n\nΔΕΝ θα πειραχτούν (είναι ήδη στην παραγωγή):\n`
+        + allBlocked.map(x=>'• ' + x).join('\n') : '');
+  if(!confirm(msg)) return;
+
+  try{
+    let updated = 0;
+    for(const p of plans){
+      const td = p.t.data || {};
+      let touched = false;
+      const baseQty = num(offerData.qty);
+      if(baseQty > 0 && num(td.qty) !== baseQty){ td.qty = baseQty; touched = true; }
+      p.diff.wanted.forEach(w=>{
+        const existing = (td.paperRows||[]).find(r => sameItemName(r.tipos, w.tipos));
+        if(!existing){
+          td.paperRows = td.paperRows || [];
+          td.paperRows.push(Object.assign({ id: Date.now() + Math.floor(Math.random()*1000) }, w));
+          touched = true;
+          return;
+        }
+        if(!paperRowSyncable(existing)) return;      // production data stays untouched
+        Object.assign(existing, w);
+        touched = true;
+      });
+      if(touched){
+        await jbMergePath(SLICE_MAIN, ['tickets', p.id], p.t);
+        updated++;
+      }
+    }
+    showToast(`🔄 Ενημερώθηκ${updated===1?'ε':'αν'} ${updated} Job Ticket${updated===1?'':'s'}`,
+              allBlocked.length ? `${allBlocked.length} γραμμές στην παραγωγή δεν πειράχτηκαν` : '',
+              ()=>switchView('ticketlist'));
+    if(currentTicketId && plans.some(p=>p.id===currentTicketId)) await loadTicket(currentTicketId, false);
+  }catch(e){
+    console.error('Offer sync error:', e);
+    statusMsg('Σφάλμα ενημέρωσης ticket: ' + e.message);
   }
 }
 
@@ -5981,6 +6123,7 @@ async function loadOffer(id){
     switchView('form');
     updateApproveButton(o.approved || false);
     markOfferClean();
+    refreshOfferTicketLink();
     statusMsg('Φορτώθηκε ✓');
   }catch(e){
     console.error('Load error:', e);
@@ -6016,6 +6159,9 @@ async function deleteOffer(id){
 }
 
 function newOffer(){
+  window.__linkOfferToTicket = null;   // a blank offer is not a conversion
+  window.__offerLinkedTickets = [];
+  setTimeout(refreshOfferTicketLink, 0);
   priceDrivenBy = 'markup';
   document.querySelectorAll('#viewForm input, #viewForm select, #viewForm textarea').forEach(i=>{
     if(i.id !== 'hdrQty') i.value = '';
@@ -7334,8 +7480,10 @@ function releaseSplitLinksInForm(deletedId){
   if(changed && typeof renderTkPaper === 'function') renderTkPaper();
 }
 
-async function deleteTicket(id){
-  if(!confirm('Διαγραφή αυτού του job ticket;')) return;
+async function deleteTicket(id, skipConfirm){
+  // Callers that already asked a fuller question pass skipConfirm, so the user
+  // isn't made to confirm the same deletion twice.
+  if(!skipConfirm && !confirm('Διαγραφή αυτού του job ticket;')) return;
   try{
     const record = await jbGetRecord();
     const doomed = record.tickets[id];
@@ -7684,6 +7832,212 @@ function markEmptyTicketCells(){
     });
 }
 
+// A ticket knows what a job actually cost — sheets really printed, hours really
+// measured. Turning it into an offer therefore quotes from fact rather than
+// estimate, which is what makes reprints and after-the-fact pricing reliable.
+// Presses fold in powers of two, so a computed 15.24 means a 16-page signature.
+// Snapping to the real value keeps the derived figure usable rather than odd.
+function nearestSignature(value){
+  const sizes = [2,4,8,16,32,64];
+  let best = sizes[0], diff = Infinity;
+  sizes.forEach(s=>{
+    const d = Math.abs(s - value);
+    if(d < diff){ diff = d; best = s; }
+  });
+  // Well outside the standard range (odd imposition), keep what was measured.
+  return (value > 80 || diff / value > 0.35) ? Math.max(2, Math.round(value)) : best;
+}
+
+// An offer that already has a ticket must not spawn a second one — that would
+// duplicate a job in production. The button becomes a way to reach the existing
+// ticket instead, which is what someone actually wants at that point.
+async function refreshOfferTicketLink(){
+  const btn = document.getElementById('convertOneBtn');
+  if(!btn) return;
+  window.__offerLinkedTickets = [];
+  if(!currentOfferId){
+    btn.textContent = 'Μετατροπή σε Job Ticket';
+    btn.classList.remove('solid');
+    btn.title = '';
+    return;
+  }
+  try{
+    const record = await jbGetRecord();
+    const linked = Object.entries(record.tickets || {})
+      .filter(([, t]) => ((t.data||{}).offerId === currentOfferId) && !t.archived)
+      .map(([id, t]) => ({ id, label: (t.data||{}).info || t.label || 'Job Ticket' }));
+    window.__offerLinkedTickets = linked;
+    if(linked.length){
+      btn.textContent = linked.length === 1 ? '🎫 Άνοιγμα Job Ticket' : `🎫 ${linked.length} Job Tickets`;
+      btn.classList.add('solid');
+      btn.title = 'Αυτή η προσφορά έχει ήδη Job Ticket: ' + linked.map(x=>x.label).join(' · ');
+    } else {
+      btn.textContent = 'Μετατροπή σε Job Ticket';
+      btn.classList.remove('solid');
+      btn.title = '';
+    }
+  }catch(e){ /* offline or not saved yet — leave the button as it is */ }
+}
+
+async function openLinkedTicketFromOffer(){
+  const linked = window.__offerLinkedTickets || [];
+  if(!linked.length) return false;
+  if(linked.length === 1){
+    await loadTicket(linked[0].id, false);
+    statusMsg('Άνοιξε το Job Ticket αυτής της προσφοράς.');
+    return true;
+  }
+  const names = linked.map((x,i)=>`${i+1}. ${x.label}`).join(NL);
+  const pick = prompt(`Αυτή η προσφορά έχει ${linked.length} Job Tickets:${NL}${names}${NL}${NL}Ποιο να ανοίξω; (αριθμός)`, '1');
+  if(pick === null) return true;
+  const idx = parseInt(pick, 10) - 1;
+  if(linked[idx]) await loadTicket(linked[idx].id, false);
+  return true;
+}
+
+async function convertTicketToOffer(){
+  const info = (document.getElementById('tkInfo').value || '').trim();
+  const sourceTicketId = currentTicketId;
+  const rows = tkPaperRows.filter(r => (r.tipos||'').trim() || (r.xarti||'').trim());
+  if(!rows.length){ statusMsg('Δεν υπάρχουν γραμμές χαρτιού για μεταφορά.'); return; }
+
+  const qty = num(document.getElementById('tkQty').value);
+  if(!confirm(`Δημιουργία προσφοράς από αυτό το Job Ticket;\n\n`
+    + `Θα μεταφερθούν ${rows.length} γραμμ${rows.length===1?'ή':'ές'} χαρτιού και οι επεξεργασίες, `
+    + `με βάση όσα πραγματικά τυπώθηκαν.\nΤιμές και περιθώριο τα ορίζεις εσύ.`)) return;
+
+  try{
+    const record = await jbGetRecord();
+    switchView('form');
+    newOffer();
+    // More than one paper row is a multi-item quote; a single one is the
+    // ordinary book/print form.
+    // Pages plus a row named Σώμα means this was a book; otherwise more than one
+    // paper row is a multi-item quote.
+    const pagesHint = num(((document.getElementById('tkSelides').value||'').match(/\d+/)||[])[0]);
+    const looksLikeBook = pagesHint > 0 && rows.some(r=>/σ[ωώ]μα|body|εσωτερικ/i.test(String(r.tipos||'')));
+    setOfferType((!looksLikeBook && rows.length > 1) ? 'multi' : 'book');
+
+    document.getElementById('fClient').value = document.getElementById('tkClient').value || '';
+    document.getElementById('fTitle').value = info.replace(/^\d{6}\s*-\s*/, '')
+      .split(' — ').slice(1).join(' — ') || info;
+    document.getElementById('hdrQty').value = qty || 1000;
+    document.getElementById('fSchemaClosed').value = document.getElementById('tkSchema').value || '';
+    document.getElementById('fPages').value = document.getElementById('tkSelides').value || '';
+    document.getElementById('fOfferDate').value = todayISO();
+
+    // A book's body is priced by pages, not by pieces — it belongs in the
+    // Βιβλιοδεσία table, where pages-per-sheet drives the calculation. Anything
+    // else (cover, insert, flat work) stays in Flat Work.
+    const pagesText = document.getElementById('tkSelides').value || '';
+    const totalPages = num((pagesText.match(/\d+/) || [])[0]);
+    const isBodyRow = r => /σ[ωώ]μα|body|εσωτερικ/i.test(String(r.tipos||''));
+    const bodyRows = totalPages > 0 ? rows.filter(isBodyRow) : [];
+    const flatSrc = rows.filter(r => !bodyRows.includes(r));
+
+    const paperOf = name => paperByName[name]
+      || Object.values(paperByName || {}).find(p => sameItemName(p.name, name));
+
+    flatRows = [];
+    bookRows = [];
+
+    bodyRows.forEach(r=>{
+      // Net sheets, not the total: the extras are overs for setup and waste, and
+      // including them makes the imposition look denser than it was.
+      const sheets = num(r.fyllaNet) || Math.max(0, num(r.fylla) - num(r.fyllaXtra));
+      const paper = paperOf(r.xarti);
+      // Sheets printed for the run tell us how many pages fit on one:
+      // (copies × pages) / sheets — then snapped to a real signature size.
+      const raw = (sheets > 0 && qty > 0 && totalPages > 0) ? (qty * totalPages) / sheets : 0;
+      const pps = raw > 0 ? nearestSignature(raw) : '';
+      // The ticket counts overs in sheets; the book table counts them in extra
+      // copies, and one copy costs pages/pps sheets. So sheets are converted
+      // back to copies, or the same overs are charged several times over.
+      const sheetsPerCopy = pps > 0 ? totalPages / pps : 0;
+      const xtraCopies = (sheetsPerCopy > 0 && num(r.fyllaXtra) > 0)
+        ? Math.round(num(r.fyllaXtra) / sheetsPerCopy) : (num(r.fyllaXtra) || '');
+      addBookRow({
+        material: r.tipos || 'Σώμα',
+        paperName: r.xarti || '',
+        pages: totalPages,
+        pagesPerSheet: pps,
+        xtra: xtraCopies,
+        priceKg: paper ? (paper.priceKg || '') : '',
+        priceSheet: paper ? (paper.priceSheet || '') : '',
+        color: r.xroma || '',
+        pricePerSide: ''
+      });
+    });
+
+    flatSrc.forEach(r=>{
+      const sheets = num(r.fyllaNet) || Math.max(0, num(r.fylla) - num(r.fyllaXtra));
+      const rowQty = num(r.qty) || qty;
+      // Sheets are known, so pieces-per-sheet is derived rather than guessed.
+      const pps = (rowQty > 0 && sheets > 0) ? Math.max(1, Math.round(rowQty / sheets)) : '';
+      const paper = paperOf(r.xarti);
+      addFlatRow({
+        material: r.tipos || '',
+        paperName: r.xarti || '',
+        qty: rows.length > 1 ? rowQty : '',
+        piecesPerSheet: pps,
+        xtra: num(r.fyllaXtra) || '',
+        priceKg: paper ? (paper.priceKg || '') : '',
+        priceSheet: paper ? (paper.priceSheet || '') : '',
+        color: r.xroma || '',
+        sides: r.opseis || 1,
+        simShape: r.itemShape || ''
+      });
+    });
+    if(!flatRows.length) addFlatRow();
+    if(!bookRows.length) addBookRow();
+
+    // Post-press comes across with the measured time as the starting estimate.
+    const cat = procCategories.find(x => x.name === 'ΕΠΕΞΕΡΓΑΣΙΕΣ');
+    if(cat){
+      cat.collapsed = false;
+      cat.tasks = [];
+      tkProcRows.filter(p => (p.label||'').trim()).forEach(p=>{
+        const secs = num(p.prodSeconds);
+        const hours = secs / 3600;
+        cat.tasks.push({
+          id: 'pt' + Math.random().toString(36).slice(2,8),
+          name: p.label,
+          itemMaterial: rows.length === 1 ? (rows[0].tipos || '') : '',
+          qty: qty || '',
+          // Measured speed where we have it, so the quote reflects this shop.
+          speed: (hours > 0 && qty > 0) ? Math.round(qty / hours) : '',
+          rate: '', extra: '', cost: 0
+        });
+      });
+      if(!cat.tasks.length) cat.tasks.push({ id:'pt0', name:'', qty:'', speed:'', rate:'', extra:'', cost:0 });
+      renderProc();
+    }
+
+    renderFlat();
+    recalcAll();
+    updateGrand();
+    const measured = tkProcRows.some(p => num(p.prodSeconds) > 0)
+                  || rows.some(r => num(r.prodSeconds) > 0);
+    // A ticket that has no offer behind it gains one: from now on the job has a
+    // price attached, and the two stay in step. A ticket that already came from
+    // an offer keeps that link — the new quote is a separate job (a reprint),
+    // and re-pointing would silently detach the original.
+    const hadOffer = (document.getElementById('tkOfferId').value || '').trim();
+    window.__linkOfferToTicket = hadOffer ? null : sourceTicketId;
+
+    const where = bodyRows.length ? ' (το σώμα μπήκε στη Βιβλιοδεσία)' : '';
+    const linkNote = window.__linkOfferToTicket
+      ? ' Θα συνδεθεί με το Job Ticket μόλις αποθηκευτεί.'
+      : (hadOffer ? ' Ξεχωριστή προσφορά — το ticket κρατά τη σύνδεσή του με την αρχική.' : '');
+    statusMsg((measured
+      ? 'Δημιουργήθηκε προσφορά με μετρημένους χρόνους ✓'
+      : 'Δημιουργήθηκε προσφορά ✓') + where + ' — συμπλήρωσε τιμές και περιθώριο.' + linkNote);
+  }catch(e){
+    console.error('Ticket to offer error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function duplicateCurrentTicket(){
   if(!currentTicketId){
     statusMsg('Αποθήκευσε πρώτα αυτό το ticket για να το αντιγράψεις.');
@@ -7854,6 +8208,8 @@ function printTicket(){
 }
 
 async function convertOfferToTicket(){
+  // Already has a ticket → open it rather than making a duplicate.
+  if(await openLinkedTicketFromOffer()) return;
   const partial = (typeof approvedItems === 'function') ? approvedItems() : null;
   if(partial && partial.length < flatRows.filter(r=>r.material && r.material.trim()).length){
     if(!confirm(`Θα δημιουργηθεί ένα Job Ticket μόνο για τα ${partial.length} εγκεκριμένα είδη:\n`
@@ -7929,8 +8285,8 @@ async function convertOfferToTicket(){
   (skipBook ? [] : bookRows).filter(r=>r.material || r.paperName).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
-    const signatures = pps>0 ? ceilSafe(pages/pps) : 0;
-    const xtra = num(r.xtra)*signatures;
+    // Extra copies converted to sheets, matching how the offer costs them.
+    const xtra = Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     const totalSheets = sheets + xtra;
     const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
     addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: sidesEkt || '' });
@@ -9145,6 +9501,37 @@ async function applyLabelToSelected(labelId){
   }
 }
 
+// Deleting from the board is a bigger step than deleting from the list: the
+// card is right there and a mis-click is easy, so the job's name has to appear
+// in the question — and anything already consumed is worth naming too.
+async function deleteTicketFromBoard(ticketId){
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[ticketId];
+    if(!t){ statusMsg('Δεν βρέθηκε το ticket.'); return; }
+    const d = t.data || {};
+    const name = d.info || t.label || 'αυτό το Job Ticket';
+
+    const consumed = (d.paperRows||[]).filter(r=>r.consumed).length;
+    const children = Object.values(record.tickets||{})
+      .filter(x => x !== t && (x.data||{}).linkGroupId && (x.data||{}).linkGroupId === d.linkGroupId).length;
+
+    const warn = [];
+    if(consumed) warn.push(`${consumed} γραμμ${consumed===1?'ή έχει':'ές έχουν'} καταχωρημένο χαρτί — δεν επιστρέφει στην Αποθήκη`);
+    if(children) warn.push(`είναι συνδεδεμένο με ${children} ακόμα ticket${children===1?'':'s'}`);
+
+    if(!confirm(`Διαγραφή Job Ticket;\n\n«${name}»`
+      + (warn.length ? '\n\n⚠ ' + warn.join('\n⚠ ') : '')
+      + '\n\nΗ ενέργεια δεν αναιρείται.')) return;
+
+    await deleteTicket(ticketId, true);
+    refreshProductionBoard();
+  }catch(e){
+    console.error('Delete from board error:', e);
+    statusMsg('Σφάλμα διαγραφής: ' + e.message);
+  }
+}
+
 function closeCardContextMenu(){
   const menu = document.getElementById('cardContextMenu');
   if(menu) menu.remove();
@@ -9165,6 +9552,8 @@ function showCardContextMenu(e, ticketId, cardEl, stage, currentDividerId){
   menu.innerHTML = `
     <div class="ctx-menu-item" data-action="labels" style="padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;display:flex;align-items:center;gap:8px;">🏷️ Ετικέτες</div>
     <div class="ctx-menu-item" data-action="move" style="padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;display:flex;align-items:center;gap:8px;">↦ Μετακίνηση σε άλλο στάδιο</div>
+    <div style="border-top:1px solid var(--line);margin:5px 0;"></div>
+    <div class="ctx-menu-item" data-action="delete" style="padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;display:flex;align-items:center;gap:8px;color:#b3243c;">🗑 Διαγραφή</div>
   `;
   document.body.appendChild(menu);
   menu.querySelectorAll('.ctx-menu-item').forEach(item=>{
@@ -9175,6 +9564,7 @@ function showCardContextMenu(e, ticketId, cardEl, stage, currentDividerId){
       closeCardContextMenu();
       if(action==='labels') toggleLabelPopover(ticketId, cardEl);
       if(action==='move') toggleMovePopover(ticketId, cardEl, stage, currentDividerId);
+      if(action==='delete') deleteTicketFromBoard(ticketId);
     });
   });
   setTimeout(()=>{ document.addEventListener('click', closeCardContextMenuOnClickOutside); }, 0);
