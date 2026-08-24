@@ -1247,8 +1247,6 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">📦 Συσκευασία</div>
         <div style="display:flex;gap:8px;">
           <span id="pkControls" style="display:none;gap:8px;">
-            <button class="btn" id="pkModeManualBtn" onclick="setPackagingMode('manual')">✍️ Χειροκίνητα</button>
-            <button class="btn" id="pkModeAutoBtn" onclick="setPackagingMode('auto')">🧮 Αυτόματος Υπολογισμός</button>
             <button class="btn" onclick="recalcTicketPackaging()">Υπολογισμός</button>
           </span>
           <button class="btn" id="tkPackToggle" onclick="toggleTicketSection('tkPackBody','tkPackToggle','pkControls')">▶ Εμφάνιση</button>
@@ -1301,9 +1299,12 @@ function toggleMobileSidebar(forceClose){
         <input type="hidden" id="tkPalletWeight">
         <div class="field" style="margin-top:12px;"><label>Εναλλακτικό κείμενο ετικέτας κουτιού (αντικαθιστά Πελάτη/Προϊόν εκεί)</label><textarea id="tkBoxLabelText" rows="2" placeholder="π.χ. αφήστε κενό για το κανονικό Πελάτης — Τίτλος Έργου"></textarea></div>
         <div class="field" style="margin-top:12px;">
-          <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <span>Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</span>
-            <button class="btn" style="padding:2px 9px;font-size:11px;" onclick="fillPalletAddressFromClient(event)" title="Συμπλήρωση από την καρτέλα του πελάτη">📍 Διεύθυνση πελάτη</button>
+          <label style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="flex:1;min-width:200px;">Διεύθυνση (για τις ετικέτες παλέτας — αντικαθιστά Πελάτη/Προϊόν εκεί)</span>
+            <span style="display:flex;gap:6px;flex:none;">
+              <button class="btn" style="padding:2px 9px;font-size:11px;" onclick="fillPalletAddressFromClient(event)" title="Συμπλήρωση από την καρτέλα του πελάτη">📍 Από πελάτη</button>
+              <button class="btn" style="padding:2px 9px;font-size:11px;" onclick="savePalletAddressToClient()" title="Αποθήκευση αυτής της διεύθυνσης στην καρτέλα του πελάτη, για να τη βρίσκεις κι από άλλα tickets">💾 Αποθήκευση στον πελάτη</button>
+            </span>
           </label>
           <textarea id="tkPalletAddress" rows="3" placeholder="π.χ. Παράδοση: Οδός, Αριθμός, Πόλη, ΤΚ"></textarea>
         </div>
@@ -4866,7 +4867,10 @@ function recalcWeightThickness(){
   document.getElementById('pkPieceThicknessCm').textContent = thickness_mm>0 ? '= ' + (thickness_mm/10).toFixed(3) + ' cm' : '';
 }
 
-let ticketPackagingMode = 'auto';
+// Packaging is always entered by hand: the automatic limits (box weight, pallet
+// capacity, piece thickness) needed data that was rarely accurate, and a wrong
+// automatic number is worse than a blank one on a shop-floor ticket.
+let ticketPackagingMode = 'manual';
 let currentTicketLinkGroupId = null;
 let currentTicketIsChild = false;
 
@@ -4879,20 +4883,20 @@ function generateLinkGroupId(){
   return 'lnk' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 }
 
-function setPackagingMode(mode){
-  ticketPackagingMode = mode;
-  document.getElementById('pkModeAutoBtn').classList.toggle('solid', mode==='auto');
-  document.getElementById('pkModeManualBtn').classList.toggle('solid', mode==='manual');
-  const piecesEl = document.getElementById('tkPiecesPerBox'), boxesEl = document.getElementById('tkBoxesPerPallet');
-  [piecesEl, boxesEl].forEach(el=>{
-    el.readOnly = (mode==='auto'); // appearance follows from the shared input[readonly] rule
-    el.style.background = '';
-    el.style.fontWeight = '';
+// Kept as a no-op shim: older saved tickets carry tkPackagingMode, and loading
+// one must not throw just because the automatic mode is gone.
+function setPackagingMode(){
+  ticketPackagingMode = 'manual';
+  ['tkPiecesPerBox','tkBoxesPerPallet'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.readOnly = false; el.style.background = ''; el.style.fontWeight = ''; }
   });
-  document.getElementById('pkManualSection').style.display = (mode==='manual') ? 'none' : '';
-  // Weight per piece only matters when the app is working out box limits itself.
-  document.getElementById('tkUnitWeightField').style.display = (mode==='manual') ? 'none' : '';
-  if(mode==='manual') document.getElementById('tkPackagingMorePanel').style.display = 'none';
+  const limits = document.getElementById('pkManualSection');
+  if(limits) limits.style.display = 'none';
+  const weightField = document.getElementById('tkUnitWeightField');
+  if(weightField) weightField.style.display = 'none';
+  const morePanel = document.getElementById('tkPackagingMorePanel');
+  if(morePanel) morePanel.style.display = 'none';
   recalcTicketPackaging();
 }
 
@@ -4908,62 +4912,17 @@ function recalcTicketPackaging(){
   // out on a smaller figure than the ticket's total.
   const qty = num(document.getElementById('tkPackQty').value) || num(document.getElementById('tkQty').value);
   const unitWeight_kg = unitWeight_g/1000;
-  const boxMaxWeight = num(document.getElementById('tkBoxMaxWeight').value);
-  const boxMaxPieces = num(document.getElementById('tkBoxMaxPieces').value);
-  const boxTare = 0; // field removed — box tare weight no longer tracked
-  // (unitWeight_g total display removed — field no longer shown)
 
-  // Dimensional capacity: how many pieces fit in one layer (like sheet imposition) ×
-  // how many layers fit given the piece thickness.
-  const boxSize = parseBoxSize(document.getElementById('tkBoxSize').value);
-  const boxL = boxSize ? boxSize.l : 0;
-  const boxW = boxSize ? boxSize.w : 0;
-  const boxH = boxSize ? boxSize.h : 0;
-  const baseThickness_mm = num(document.getElementById('tkUnitThickness').value);
-  const extraThickness_mm = num(document.getElementById('tkExtraThickness').value);
-  const thickness_mm = baseThickness_mm + extraThickness_mm;
-  const pieceDim = parseDimFromText(document.getElementById('tkSchemaClosed').value);
-  let byDimensions = Infinity;
-  if(boxL>0 && boxW>0 && pieceDim){
-    const layout = bestFitLayout(boxL, boxW, pieceDim.w, pieceDim.h);
-    const perLayer = layout.count || 0;
-    const layers = (boxH>0 && thickness_mm>0) ? Math.max(1, Math.floor(boxH / (thickness_mm/10))) : 1;
-    if(perLayer>0) byDimensions = perLayer * layers;
-  }
-
-  let piecesPerBox;
-  if(ticketPackagingMode==='manual'){
-    piecesPerBox = num(document.getElementById('tkPiecesPerBox').value);
-  } else {
-    const byWeight = (boxMaxWeight>0 && unitWeight_kg>0) ? Math.floor((boxMaxWeight-boxTare)/unitWeight_kg) : Infinity;
-    const byCount = boxMaxPieces>0 ? boxMaxPieces : Infinity;
-    piecesPerBox = Math.min(byWeight, byCount, byDimensions);
-    if(!isFinite(piecesPerBox) || piecesPerBox<1) piecesPerBox = qty>0 ? qty : 0;
-    document.getElementById('tkPiecesPerBox').value = piecesPerBox>0 ? piecesPerBox : '';
-  }
-
+  // Both figures are typed in; only the totals and the pallet weight follow.
+  const piecesPerBox = num(document.getElementById('tkPiecesPerBox').value);
   const totalBoxes = (piecesPerBox>0 && qty>0) ? Math.ceil(qty/piecesPerBox) : 0;
-  const boxWeight_kg = boxTare + piecesPerBox*unitWeight_kg;
+  const boxWeight_kg = piecesPerBox*unitWeight_kg;
 
   document.getElementById('tkTotalBoxes').textContent = totalBoxes>0 ? totalBoxes : '–';
 
-  const palletMaxBoxes = num(document.getElementById('tkPalletMaxBoxes').value);
-  const palletMaxWeight = num(document.getElementById('tkPalletMaxWeight').value);
-  const palletTare = 0; // field removed — pallet tare weight no longer tracked
-
-  let boxesPerPallet;
-  if(ticketPackagingMode==='manual'){
-    boxesPerPallet = num(document.getElementById('tkBoxesPerPallet').value);
-  } else {
-    const boxesByWeight = (palletMaxWeight>0 && boxWeight_kg>0) ? Math.floor((palletMaxWeight-palletTare)/boxWeight_kg) : Infinity;
-    const boxesByCount = palletMaxBoxes>0 ? palletMaxBoxes : Infinity;
-    boxesPerPallet = Math.min(boxesByWeight, boxesByCount);
-    if(!isFinite(boxesPerPallet) || boxesPerPallet<1) boxesPerPallet = totalBoxes>0 ? totalBoxes : 0;
-    document.getElementById('tkBoxesPerPallet').value = boxesPerPallet>0 ? boxesPerPallet : '';
-  }
-
+  const boxesPerPallet = num(document.getElementById('tkBoxesPerPallet').value);
   const totalPallets = (boxesPerPallet>0 && totalBoxes>0) ? Math.ceil(totalBoxes/boxesPerPallet) : 0;
-  const palletWeight_kg = palletTare + boxesPerPallet*boxWeight_kg;
+  const palletWeight_kg = boxesPerPallet*boxWeight_kg;
 
   document.getElementById('tkTotalPallets').textContent = totalPallets>0 ? totalPallets : '–';
   document.getElementById('tkPalletWeight').value = palletWeight_kg>0 ? palletWeight_kg.toFixed(1) : '';
@@ -7010,10 +6969,6 @@ function applyTicketData(d, topLevelDeadline){
   // A ticket with files attached should say so on opening — a collapsed section
   // hides the very thing the operator needs to look at.
   if(ticketAttachments.length) openTicketSection('tkAttachBody','tkAttachToggle');
-  // Same reasoning for packaging: if someone worked it out, show it.
-  if(num(d.tkPiecesPerBox) > 0 || num(d.tkBoxesPerPallet) > 0 || num(d.tkPackQty) > 0){
-    openTicketSection('tkPackBody','tkPackToggle','pkControls');
-  }
   currentTicketLinkGroupId = d.linkGroupId || null;
   currentTicketIsChild = d.isLinkChild === true;
   updateDeadlineFieldVisibility();
@@ -11963,6 +11918,55 @@ async function fillPalletAddressFromClient(ev){
     if(options.length === 1){ applyPalletAddress(client, options[0]); return; }
     openPalletAddressPicker(client, options, ev);
   }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// An address typed straight onto a ticket is usually a real delivery point that
+// will come up again. Saving it from here means it doesn't have to be retyped,
+// and the customer card becomes complete as a side effect of doing the job.
+async function savePalletAddressToClient(){
+  const client = (document.getElementById('tkClient').value || '').trim();
+  if(!client){ statusMsg('Συμπλήρωσε πρώτα τον Πελάτη στα Στοιχεία Job Ticket.'); return; }
+  const raw = (document.getElementById('tkPalletAddress').value || '').trim();
+  if(!raw){ statusMsg('Δεν υπάρχει διεύθυνση για αποθήκευση.'); return; }
+
+  // The label block carries the recipient on the first line and a phone on the
+  // last; those are split back out so the stored record is structured.
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let phone = '';
+  const phoneIdx = lines.findIndex(l=>/^τηλ\.?\s*/i.test(l));
+  if(phoneIdx >= 0){ phone = lines[phoneIdx].replace(/^τηλ\.?\s*/i,'').trim(); lines.splice(phoneIdx,1); }
+  const looksLikeName = lines.length > 1 && !/\d/.test(lines[0]);
+  const recipient = looksLikeName ? lines.shift() : '';
+  const address = lines.join('\n');
+  if(!address){ statusMsg('Η διεύθυνση φαίνεται κενή.'); return; }
+
+  try{
+    const record = await jbGetRecord();
+    const info = getClientInfo(record, client) || {};
+    const extras = (info.extraAddresses || []).slice();
+
+    if(!info.address){
+      // First address this customer has — it becomes the main one.
+      await saveClientInfo(client, { address, phone: phone || info.phone || '' });
+      showToast('📍 Αποθηκεύτηκε ως κύρια διεύθυνση', client, ()=>switchView('clients'));
+      return;
+    }
+    const same = x => sameItemName((x.address||'').replace(/\s+/g,' '), address.replace(/\s+/g,' '));
+    if(sameItemName((info.address||'').replace(/\s+/g,' '), address.replace(/\s+/g,' ')) || extras.some(same)){
+      statusMsg('Αυτή η διεύθυνση υπάρχει ήδη στην καρτέλα του πελάτη.');
+      return;
+    }
+    const label = prompt('Αποθήκευση ως επιπλέον διεύθυνση.' + '\n' + '\n'
+      + 'Επωνυμία παραλήπτη (μπαίνει πρώτη γραμμή στην ετικέτα):',
+      recipient || client);
+    if(label === null) return;
+    extras.push({ label: label.trim() || client, address, phone });
+    await saveClientInfo(client, { extraAddresses: extras });
+    showToast('📍 Προστέθηκε στις διευθύνσεις του πελάτη', label.trim() || client, ()=>switchView('clients'));
+  }catch(e){
+    console.error('Save pallet address error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 function applyPalletAddress(client, opt){
