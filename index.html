@@ -193,6 +193,12 @@
   @keyframes needsApproval{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,0);}
     50%{box-shadow:0 0 0 5px rgba(201,162,39,0.55);}}
   .needs-approval{animation:needsApproval 0.7s ease-in-out 3;}
+  .ship-quick{display:flex;align-items:center;gap:10px;background:var(--page);
+    border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:10px;}
+  .ship-quick label{font-size:10.5px;font-weight:800;text-transform:uppercase;
+    letter-spacing:0.05em;color:var(--muted);flex:none;}
+  .ship-quick input{width:150px;font-size:15px;font-weight:700;padding:7px 9px;}
+  .ship-quick .ship-eur{font-size:14px;font-weight:700;color:var(--muted);}
   #qtyTabsBar{display:none;gap:6px;flex-wrap:wrap;margin:-14px -16px 12px;
     padding:10px 16px 0;border-bottom:2px solid var(--line);background:var(--page);}
   .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
@@ -456,6 +462,38 @@
   .fc-uns-item .v{font-size:12.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
   .fc-uns-total{display:flex;justify-content:space-between;font-size:12px;font-weight:800;
     color:#8a6d1f;border-top:1px solid #eddcae;padding-top:8px;margin-top:8px;}
+  /* Seven figures on one line: adding the shipping box pushed the last one onto
+     a second row, because the grid still declared six tracks. Sized so they all
+     fit, and allowed to wrap only when the window is genuinely too narrow. */
+  .totals-compact{grid-template-columns:repeat(7, minmax(0, 1fr));gap:8px;}
+  /* Six when there is no shipping: its box and the combined total both go. */
+  /* The heading sits in a pale band at the top of each card. Against a solid
+     black block the small grey label was the first thing to disappear; on its
+     own strip it reads at a glance and the cards separate cleanly. */
+  .totals-compact .totcard{padding:0;overflow:hidden;}
+  .totals-compact .lbl{font-size:9px;letter-spacing:0.02em;line-height:1.3;
+    background:#f2efe8;color:#3a3a38;padding:5px 9px;border-bottom:1px solid var(--ink);
+    display:block;min-height:26px;display:flex;align-items:center;}
+  .totals-compact .val{font-size:15px;padding:9px 9px 10px;box-sizing:border-box;}
+  /* Padding rather than margins: a stretched flex child keeps its full width and
+     adds the margins on top, which pushed the card 18px wider than its column. */
+  .totals-compact .totcard{display:flex;flex-direction:column;}
+  .totals-compact input.val{font-size:15px;padding:7px 9px 8px;margin:0;
+    width:100%;box-sizing:border-box;border-bottom:1px solid #555;}
+  /* The profit note belongs to the value, not to the heading. */
+  /* Shares the .lbl class with the headings, so it needs its own reset. */
+  .totals-compact #profitNote{background:transparent;color:#7ee2a8;border:none;
+    padding:0 9px 8px;min-height:0;font-size:8.5px;box-sizing:border-box;}
+  /* With shipping hidden there are six — they simply share the room. */
+  .totals-compact:has(#shipTotCard[style*="display: none"]){grid-template-columns:repeat(5, minmax(0, 1fr));}
+  @media (max-width:1150px){
+    .totals-compact, .totals-compact:has(#shipTotCard[style*="display: none"]){
+      grid-template-columns:repeat(4, minmax(0, 1fr));}
+  }
+  @media (max-width:780px){
+    .totals-compact, .totals-compact:has(#shipTotCard[style*="display: none"]){
+      grid-template-columns:repeat(2, minmax(0, 1fr));}
+  }
   .totcard{background:var(--ink);border:1px solid var(--ink);border-radius:8px;padding:10px 12px;}
   /* A dedicated card for the offer's headline figure, so it isn't buried in a
      table footer among the working numbers. */
@@ -951,6 +989,7 @@ function toggleMobileSidebar(forceClose){
           <div class="pdf-dropdown-item" onclick="generatePdfOffer();closePdfDropdown();">PDF Προσφοράς</div>
           <div class="pdf-dropdown-item" onclick="downloadOfferPdf();closePdfDropdown();">Κατέβασμα PDF</div>
           <div class="pdf-dropdown-item" onclick="toggleEnglishPdfBtn();closePdfDropdown();"><span id="englishPdfCheck">☐</span> Αγγλικά PDF</div>
+          <div class="pdf-dropdown-item" onclick="toggleProcInOfferBtn();closePdfDropdown();" title="Αν οι επεξεργασίες θα αναφέρονται στο PDF της προσφοράς"><span id="procInOfferCheck">☐</span> Επεξεργασίες</div>
         </div>
       </div>
       <span style="position:relative;">
@@ -1163,20 +1202,44 @@ function toggleMobileSidebar(forceClose){
 
   <div class="card">
     <div class="card-head"><div class="title">⚙ Επεξεργασίες</div><button class="btn" onclick="addProcCategory()">+ Κατηγορία</button></div>
-    <div class="card-body" style="padding:16px 16px 0;">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;">
-        <input type="checkbox" id="fShowProcInOffer" checked style="width:auto;"> Εμφάνιση επεξεργασιών στην προσφορά (PDF)
-      </label>
-    </div>
+    <!-- The setting itself now lives in the PDF menu, next to the language
+         option — both decide what the customer's document contains. -->
+    <input type="checkbox" id="fShowProcInOffer" style="display:none;">
     <div class="card-body" id="procList" style="padding:16px;"></div>
   </div>
 
-  <div class="totals book-only" id="offerTotalsCard" style="padding-top:2px;grid-template-columns:1fr 1fr 1fr 1fr 0.8fr 1.1fr;">
+  <div class="card book-only" id="shippingCard">
+    <div class="card-head"><div class="title">🚚 Μεταφορικά</div>
+      <button class="btn" id="shipToggle" onclick="toggleTicketSection('shipBody','shipToggle')">▶ Εμφάνιση</button>
+    </div>
+    <div class="card-body" id="shipBody" style="display:none;">
+      <div class="empty-note" style="margin-bottom:10px;">
+        Προστίθενται στο τέλος, <b>χωρίς περιθώριο</b> — μετακυλίονται στον πελάτη, δεν κοστολογούνται σαν παραγωγή.
+      </div>
+
+      <!-- The common case is one figure for the whole delivery, so it gets its
+           own line at the top instead of being one row among many. -->
+      <div class="ship-quick">
+        <label for="shipSimple">ΜΕΤΑΦΟΡΙΚΑ</label>
+        <input id="shipSimple" type="number" step="0.01" placeholder="π.χ. 120"
+          oninput="onShipSimpleInput(this.value)">
+        <span class="ship-eur">€</span>
+      </div>
+
+      <div id="shipTotal" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="totals totals-compact book-only" id="offerTotalsCard" style="padding-top:2px;">
     <div class="totcard"><div class="lbl">Σύνολο Χαρτιών</div><div class="val" id="sumMaterials">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Σύνολο Εκτύπωσης</div><div class="val" id="sumPrinting">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Σύνολο Επεξεργασιών</div><div class="val" id="sumProc">0,00 €</div></div>
     <div class="totcard"><div class="lbl">Συνολικό Κόστος</div><div class="val" id="sumGrand">0,00 €</div></div>
-    <div class="totcard"><div class="lbl">Περιθώριο %</div><input class="val" id="fMarkup" type="number" step="1" placeholder="π.χ. 60" oninput="onMarkupInput()" title="Προσαύξηση επί του κόστους. Γράψε ποσοστό και βγαίνει η τιμή — ή γράψε τιμή και βγαίνει το ποσοστό."></div>
+    <div class="totcard" id="shipTotCard" style="display:none;"><div class="lbl">Μεταφορικά</div><div class="val" id="sumShipping">0,00 €</div></div>
+    <div class="totcard" id="totalWithShipCard" style="display:none;"><div class="lbl">Κόστος + Μεταφορικά</div><div class="val" id="sumCostPlusShip">0,00 €</div></div>
+    <!-- The markup still drives the price; it just no longer needs a box of its
+         own beside the figures it is derived from. -->
+    <input id="fMarkup" type="number" step="1" oninput="onMarkupInput()" style="display:none;">
     <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" id="fManualTotal" type="number" step="0.01" placeholder="π.χ. 3100" oninput="onManualTotalInput()"><div class="lbl" id="profitNote" style="margin-top:3px;color:#7ee2a8;"></div></div>
   </div>
 
@@ -4303,6 +4366,7 @@ function addDays(iso, days){
 }
 
 function buildOfferPrintHtml(){
+  if(hdrQtyTimer) applyHeaderQty();
   // The PDF always shows the main quantity plus its alternatives, regardless of
   // which tab happens to be open.
   if(editingExtraQtyId !== null) return withMainQuantity(buildOfferPrintHtml);
@@ -4701,20 +4765,21 @@ function syncOfferPriceFields(cost, totals){
                 + (r.material ? assignedTaskCostForItem(r.material) : 0);
     });
     const pct = num(markupEl.value);
-    priceEl.value = (totals.itemsManualPrice + autoCost * (1 + pct/100)).toFixed(2);
+    // Shipping rides on top of the marked-up figure, never through it.
+    priceEl.value = (totals.itemsManualPrice + autoCost * (1 + pct/100) + shippingTotal()).toFixed(2);
     return;
   }
 
   if(priceDrivenBy === 'markup'){
     const raw = markupEl.value;
     if(raw === '' || !(cost > 0)) return;
-    const next = cost * (1 + num(raw)/100);
+    const next = cost * (1 + num(raw)/100) + shippingTotal();
     // Never rewrite the price over a rounding difference — that's what made a
     // saved 5.500 € drift to 5.501 € on reopening.
     if(Math.abs(next - num(priceEl.value)) < 1.5) return;
     priceEl.value = next.toFixed(2);
   } else {
-    const price = num(priceEl.value);
+    const price = num(priceEl.value) - shippingTotal();   // the production part
     if(!(price > 0) || !(cost > 0)) return;
     markupEl.value = Math.round((price - cost) / cost * 1000) / 10;
   }
@@ -4724,7 +4789,8 @@ function refreshProfitNote(){
   const el = document.getElementById('profitNote');
   if(!el) return;
   const cost = computeTotals(num(document.getElementById('hdrQty').value)).grand;
-  const price = num(document.getElementById('fManualTotal').value);
+  // Shipping is passed through, so it is neither cost nor profit here.
+  const price = num(document.getElementById('fManualTotal').value) - shippingTotal();
   if(!(cost>0 && price>0)){ el.textContent = ''; return; }
   const profit = price - cost;
   // Margin on price is the figure accountants use; markup on cost is what you
@@ -4812,6 +4878,15 @@ function updateGrand(){
   document.getElementById('sumPrinting').textContent = fmt(t.printing);
   document.getElementById('sumProc').textContent = fmt(t.procTotal);
   document.getElementById('sumGrand').textContent = fmt(t.grand);
+
+  // What the job actually costs the shop, delivery included — the figure to
+  // compare the final price against.
+  const ship = shippingTotal();
+  const withShip = document.getElementById('totalWithShipCard');
+  if(withShip) withShip.style.display = ship > 0 ? '' : 'none';
+  const withShipVal = document.getElementById('sumCostPlusShip');
+  if(withShipVal) withShipVal.textContent = fmt(t.grand + ship);
+
   renderCostSplit(t);
 
   // Mirror into the sticky bar so it stays correct while scrolling.
@@ -4856,8 +4931,15 @@ setupStickyTotals();
 let extraQuantities = []; // [{id, qty, manualTotal, label, snap}]
 
 function snapshotOffer(){
-  return JSON.parse(JSON.stringify({
-    flatRows, bookRows, fabricRows, procCategories,
+  return JSON.parse(snapshotOfferRaw());
+}
+
+// The serialised form, so callers that need both the text and the object don't
+// pay for the conversion twice.
+function snapshotOfferRaw(){
+  if(hdrQtyTimer) applyHeaderQty();   // never snapshot a half-applied quantity
+  return JSON.stringify({
+    flatRows, bookRows, fabricRows, procCategories, shipRows,
     multiItem: document.getElementById('fMultiItem').checked,
     pages: document.getElementById('fPages').value,
     schemaClosed: document.getElementById('fSchemaClosed').value,
@@ -4866,7 +4948,7 @@ function snapshotOffer(){
     manualTotal: document.getElementById('fManualTotal').value,
     markup: document.getElementById('fMarkup').value,
     priceDrivenBy
-  }));
+  });
 }
 
 function extraQtyTotals(e){
@@ -4883,7 +4965,10 @@ function addExtraQuantity(){
   // don't reach it. The new tab opens immediately, so the Ποσότητα field at the
   // top is already the one to fill in — no separate box to hunt for.
   const id = extraQtySeq++;
-  extraQuantities.push({ id, qty:'', manualTotal:'', label:'', snap: snapshotOffer() });
+  // Both forms kept from the start: without the serialised one, the very first
+  // change to a copy went unnoticed and it was never marked as customised.
+  const raw = snapshotOfferRaw();
+  extraQuantities.push({ id, qty:'', manualTotal:'', label:'', snap: JSON.parse(raw), snapRaw: raw });
   forceSwitchQtyTab(id);
   renderExtraQuantitiesList();
   renderExtraTotals();
@@ -4942,16 +5027,19 @@ function renderExtraQuantitiesList(){
 let editingExtraQtyId = null;   // null = the main quantity
 
 function stashCurrentTab(){
-  const snap = snapshotOffer();
   const qty = document.getElementById('hdrQty').value;
   if(editingExtraQtyId === null){
-    window.__mainOfferBackup = { snap, qty };
+    window.__mainOfferBackup = { snap: snapshotOffer(), qty };
     return;
   }
   const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
   if(e){
-    // Marked as customised only when it really differs from what was copied.
-    if(JSON.stringify(e.snap) !== JSON.stringify(snap)) e.snapEdited = true;
+    // Serialised once and kept, rather than stringifying the whole offer twice
+    // on every switch — that comparison was most of the cost of a tab change.
+    const raw = snapshotOfferRaw();
+    if(e.snapRaw !== undefined && e.snapRaw !== raw) e.snapEdited = true;
+    e.snapRaw = raw;
+    const snap = JSON.parse(raw);
     e.snap = snap;
     e.qty = qty;
     // manualTotal is what the PDF and the totals read, so it's mirrored out of
@@ -4965,6 +5053,7 @@ function loadTabSnapshot(snap, qty){
   flatRows = JSON.parse(JSON.stringify(snap.flatRows || []));
   bookRows = JSON.parse(JSON.stringify(snap.bookRows || []));
   fabricRows = JSON.parse(JSON.stringify(snap.fabricRows || []));
+  shipRows = JSON.parse(JSON.stringify(snap.shipRows || []));
   procCategories = JSON.parse(JSON.stringify(snap.procCategories || []));
   if(snap.multiItem !== undefined) document.getElementById('fMultiItem').checked = !!snap.multiItem;
   if(qty !== undefined) document.getElementById('hdrQty').value = qty;
@@ -5053,6 +5142,62 @@ function renderQtyTabs(){
           `switchQtyTab(${x.e.id})`, x.e.snapEdited, x.e.id)).join('');
 }
 
+// ===== Μεταφορικά =====
+// One figure for the whole delivery. Deliberately outside computeTotals: markup
+// applies to what the shop makes, not to a courier's invoice. Adding 60% to a
+// 50 € delivery would charge the customer 80 € for it — the same mistake as
+// folding the price into the cost.
+// Kept as an array because that is how existing offers were saved, and because
+// converting to a ticket may one day want the detail back.
+let shipRows = [];
+let shipSeq = 0;
+const SHIP_SIMPLE_LABEL = 'Μεταφορικά';
+
+function shippingTotal(snap){
+  const rows = snap ? (snap.shipRows || []) : shipRows;
+  return rows.reduce((s,r)=>{
+    const q = num(r.qty);
+    return s + (q > 0 ? q : 1) * num(r.unitPrice);
+  }, 0);
+}
+
+function onShipSimpleInput(value){
+  let row = shipRows.find(r=>r.simple);
+  if(!row){
+    row = { id: shipSeq++, label: SHIP_SIMPLE_LABEL, qty:'', unitPrice:'', simple:true };
+    shipRows.unshift(row);
+  }
+  row.unitPrice = value;
+  renderShipTotals();
+  markOfferDirty();
+}
+
+function renderShip(){
+  const el = document.getElementById('shipSimple');
+  if(!el) return;
+  // Older offers may hold several lines; their sum is shown in the one field.
+  const simple = shipRows.find(r=>r.simple);
+  const others = shipRows.filter(r=>!r.simple);
+  if(others.length){
+    const merged = shippingTotal();
+    shipRows = [{ id: shipSeq++, label: SHIP_SIMPLE_LABEL, qty:'', unitPrice: merged, simple:true }];
+  } else if(!simple && shipRows.length === 0){
+    // nothing to show
+  }
+  const row = shipRows.find(r=>r.simple);
+  if(document.activeElement !== el) el.value = row ? (row.unitPrice || '') : '';
+  renderShipTotals();
+}
+
+function renderShipTotals(){
+  const total = shippingTotal();
+  const card = document.getElementById('shipTotCard');
+  if(card) card.style.display = total > 0 ? '' : 'none';
+  const sum = document.getElementById('sumShipping');
+  if(sum) sum.textContent = fmt(total);
+  updateGrand();
+}
+
 function renderExtraTotals(){
   const container = document.getElementById('extraTotals');
   const extras = extraQuantities.filter(e => num(e.qty) > 0);
@@ -5125,18 +5270,29 @@ function syncApprovedMarker(isApproved, extrasCount){
   }
 }
 
-function recalcAll(){ renderFlat(); renderBiblio(); renderFabric(); refreshAutoFoldTasks(); renderProc(); updateGrand(); }
+function recalcAll(){ renderFlat(); renderBiblio(); renderFabric(); renderShip(); refreshAutoFoldTasks(); renderProc(); updateGrand(); }
 
 // The quantity feeds paper, printing and every processing task, so a change has
 // to reach all of them. Before this it only redrew the paper tables, and the
 // processing figures were refreshed by accident — through the book row's own
 // recalculation — which failed whenever there was no book row to recalculate.
+// Rebuilding every table takes about 170ms, which is longer than the gap
+// between keystrokes — so typing "1500" froze the form for most of a second.
+// The tables are now rebuilt once, shortly after typing stops.
+let hdrQtyTimer = null;
 function onHeaderQtyInput(){
   // On an alternative tab, the header quantity IS that tab's quantity.
   if(editingExtraQtyId !== null){
     const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
-    if(e){ e.qty = document.getElementById('hdrQty').value; renderQtyTabs(); }
+    if(e) e.qty = document.getElementById('hdrQty').value;
   }
+  clearTimeout(hdrQtyTimer);
+  hdrQtyTimer = setTimeout(applyHeaderQty, 220);
+}
+
+function applyHeaderQty(){
+  clearTimeout(hdrQtyTimer);
+  renderQtyTabs();
   renderBiblio();
   renderFlat();
   refreshAutoFoldTasks();   // folding and sewing follow the sheet count
@@ -5706,7 +5862,9 @@ function collectOffer(){
     manualTotal: document.getElementById('fManualTotal').value,
     markup: document.getElementById('fMarkup').value,
     approvedQty: document.getElementById('fApprovedQty').value,
-    extraQuantities: extraQuantities.map(({id, ...rest})=>rest),
+    // snapRaw is a cache of snap — storing both would double the saved size.
+    shipRows: shipRows.map(({id, ...rest})=>rest),
+    extraQuantities: extraQuantities.map(({id, snapRaw, ...rest})=>rest),
     flatRows: flatRows.map(({id, ...r})=>r),
     bookRows: bookRows.map(({id, ...r})=>r),
     fabricRows: fabricRows.map(({id, ...r})=>r),
@@ -5733,7 +5891,9 @@ function applyOfferData(d){
   document.getElementById('fPaymentTerms').value = d.paymentTerms||'';
   document.getElementById('fVat').value = d.vat||'';
   document.getElementById('fValidityDays').value = d.validityDays||15;
-  document.getElementById('fShowProcInOffer').checked = d.showProcInOffer !== false;
+  // Off unless the offer was saved with it on. It used to default to on, so an
+  // offer saved before this change has no flag — and must not switch itself on.
+  document.getElementById('fShowProcInOffer').checked = d.showProcInOffer === true;
   document.getElementById('fMultiItem').checked = d.multiItem === true;
   document.getElementById('fEnglishPdf').checked = d.englishPdf === true;
   syncOfferToggleButtons();
@@ -5753,7 +5913,8 @@ function applyOfferData(d){
       manualTotal: e.manualTotal || '',
       markup: e.markup || '',
       snapEdited: !!e.snapEdited,
-      snap: e.snap ? JSON.parse(JSON.stringify(e.snap)) : null
+      snap: e.snap ? JSON.parse(JSON.stringify(e.snap)) : null,
+      snapRaw: e.snap ? JSON.stringify(e.snap) : undefined
     }));
   } else {
     // Migrate older offers saved with the old fixed extra1/extra2 fields.
@@ -5762,7 +5923,8 @@ function applyOfferData(d){
     if(num(d.extra2) > 0) extraQuantities.push({ id: extraQtySeq++, qty: d.extra2, manualTotal: (d.extraManualTotals && d.extraManualTotals[2]) || '' });
   }
   renderExtraQuantitiesList();
-  flatRows = []; bookRows = []; fabricRows = [];
+  flatRows = []; bookRows = []; fabricRows = []; shipRows = [];
+  (d.shipRows||[]).forEach(r=>shipRows.push(Object.assign({id: shipSeq++}, r)));
   (d.flatRows||[]).forEach(r=>addFlatRow(r));
   (d.bookRows||[]).forEach(r=>addBookRow(r));
   (d.fabricRows||[]).forEach(r=>addFabricRow(r));
@@ -5776,6 +5938,7 @@ function applyOfferData(d){
   } else {
     procCategories = [];
   }
+  renderShip();   // the rows were restored above, but nothing had drawn them yet
   // Folding and sewing are derived from the book rows, so they are recomputed on
   // load — a saved offer otherwise showed the plain header quantity there.
   refreshAutoFoldTasks();
@@ -6340,6 +6503,9 @@ function syncOfferToggleButtons(){
   });
   const checked = document.getElementById('fEnglishPdf').checked;
   document.getElementById('englishPdfCheck').textContent = checked ? '☑' : '☐';
+  const proc = document.getElementById('fShowProcInOffer');
+  const procMark = document.getElementById('procInOfferCheck');
+  if(proc && procMark) procMark.textContent = proc.checked ? '☑' : '☐';
 }
 
 // The offer type reshapes the form rather than silently changing what the same
@@ -6371,6 +6537,16 @@ function toggleEnglishPdfBtn(){
   const cb = document.getElementById('fEnglishPdf');
   cb.checked = !cb.checked;
   syncOfferToggleButtons();
+}
+
+function toggleProcInOfferBtn(){
+  const cb = document.getElementById('fShowProcInOffer');
+  cb.checked = !cb.checked;
+  syncOfferToggleButtons();
+  markOfferDirty();
+  statusMsg(cb.checked
+    ? 'Οι επεξεργασίες θα εμφανίζονται στο PDF.'
+    : 'Οι επεξεργασίες δεν θα εμφανίζονται στο PDF.');
 }
 
 async function saveOffer(){
@@ -6641,14 +6817,14 @@ function newOffer(){
   document.getElementById('fValidityDays').value = 15;
   // An offer is nearly always written on the day it's dated.
   document.getElementById('fOfferDate').value = new Date().toISOString().slice(0,10);
-  document.getElementById('fShowProcInOffer').checked = true;
+  document.getElementById('fShowProcInOffer').checked = false;
   document.getElementById('fMultiItem').checked = false;
   document.getElementById('fEnglishPdf').checked = false;
   syncOfferToggleButtons();
   document.body.classList.remove('multi-item-mode');
   extraQuantities = [];
   renderExtraQuantitiesList();
-  flatRows = []; bookRows = []; fabricRows = [];
+  flatRows = []; bookRows = []; fabricRows = []; shipRows = [];
   addFlatRow();
   addBookRow({material:'Σώμα'}); // book always has a body, so this one earns its place
   addFabricRow();
@@ -7038,8 +7214,15 @@ async function consumeTicketPaper(){
 // from the linked tickets themselves: if a child ticket exists for this row's
 // item, the row belongs to it whatever the flag says.
 function rowChildTicketId(r){
+  // A child ticket owns its rows outright. Without this it matched its own item
+  // against the parent it is linked to and marked the row as "belonging
+  // elsewhere" — so neither ticket would let the leftover be posted.
+  if(currentTicketIsChild) return null;
   if(r.childTicketId) return r.childTicketId;
-  const children = window.__linkedChildren || [];
+
+  // Only actual children count; the link group also contains the parent and any
+  // siblings, and matching against those produced the same false positive.
+  const children = (window.__linkedChildren || []).filter(ch => ch.isChild);
   const name = String(r.tipos || '').trim();
   if(!name) return null;
   const hit = children.find(ch => sameItemName(ch.tipos, name)
@@ -8261,7 +8444,20 @@ async function openChildTicket(childId){
     const sibling = Object.entries(record.tickets || {})
       .find(([tid, t]) => tid !== currentTicketId && (t.data||{}).linkGroupId === group && (t.data||{}).isLinkChild);
     if(sibling){ await loadTicket(sibling[0], false); return; }
-    statusMsg('Δεν βρέθηκε το ξεχωριστό ticket — ίσως διαγράφηκε.');
+
+    // The child is gone for good, so the row is stranded: it can't be used here
+    // and there is nowhere else to use it. Offer to hand it back.
+    if(confirm('Δεν βρέθηκε το ξεχωριστό Job Ticket — φαίνεται ότι διαγράφηκε.\n\n'
+      + 'Να ξεκλειδώσω αυτή τη γραμμή, ώστε να καταχωρείται το χαρτί της εδώ;')){
+      releaseSplitLinksInForm(childId || '__missing__');
+      tkPaperRows.forEach(r=>{ delete r.movedToChild; delete r.childTicketId; });
+      window.__linkedChildren = [];
+      currentTicketLinkGroupId = null;
+      currentTicketIsChild = false;
+      renderTkPaper();
+      markTicketDirty();
+      statusMsg('Η γραμμή ξεκλειδώθηκε — αποθήκευσε το ticket για να παραμείνει.');
+    }
   }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
 }
 
@@ -8838,10 +9034,25 @@ async function renderLinkedTicketsIndicator(){
       .filter(([id, t]) => t.data && t.data.linkGroupId===currentTicketLinkGroupId && id!==currentTicketId)
       .map(([id, t]) => ({ id, label: (t.data && t.data.info) || t.label || 'Χωρίς τίτλο',
                            // the item name a child covers, so a parent row can be matched to it
-                           tipos: (((t.data||{}).paperRows||[])[0]||{}).tipos || '' }));
+                           tipos: (((t.data||{}).paperRows||[])[0]||{}).tipos || '',
+                           isChild: (t.data||{}).isLinkChild === true }));
     // Children created by older versions left no mark on the parent's rows; the
     // rows are matched to them here so the marker and the guard still work.
     window.__linkedChildren = linked;
+
+    // A row pointing at a ticket that no longer exists can never be used. Rather
+    // than leaving it locked for ever, the pointer is dropped on load — the row
+    // simply becomes an ordinary one again.
+    let healed = false;
+    tkPaperRows.forEach(r=>{
+      if(r.childTicketId && !record.tickets[r.childTicketId]){
+        delete r.childTicketId;
+        delete r.movedToChild;
+        healed = true;
+      }
+    });
+    if(healed) statusMsg('Μια γραμμή έδειχνε σε διαγραμμένο ticket — ξεκλειδώθηκε.');
+
     renderTkPaper();
     if(linked.length===0){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
     wrap.style.display = 'flex';
@@ -8922,11 +9133,21 @@ async function toggleOfferApprovedInForm(){
   if(!currentlyApproved){
     const extras = extraQuantities.filter(e=>num(e.qty)>0);
     if(extras.length>0){
-      const baseQty = num(document.getElementById('hdrQty').value);
-      const options = [baseQty].concat(extras.map(e=>num(e.qty))).sort((a,b)=>a-b);
+      // The header field holds the open tab's quantity, so on an alternative it
+      // returns that alternative — listing it twice and hiding the main one.
+      // The main quantity is read from where it is parked instead.
+      const baseQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
+        ? num(window.__mainOfferBackup.qty)
+        : num(document.getElementById('hdrQty').value);
+      // Duplicates removed as well: an alternative set to the same figure as the
+      // main one would otherwise appear twice in the list.
+      const options = [...new Set([baseQty].concat(extras.map(e=>num(e.qty))))]
+        .filter(q => q > 0).sort((a,b)=>a-b);
       const answer = prompt(
         `Για ποια ποσότητα εγκρίθηκε η προσφορά;\n\nΔιαθέσιμες ποσότητες: ${options.join(', ')} τεμ.\n\nΓράψε την ποσότητα:`,
-        String(baseQty)
+        String(editingExtraQtyId !== null
+          ? num(document.getElementById('hdrQty').value)   // the tab you are on
+          : baseQty)
       );
       if(answer===null) return; // cancelled — don't approve
       const picked = num(answer);
@@ -10488,6 +10709,17 @@ function highlightLinkGroup(groupId){
   });
 }
 
+// The card that dimmed the board can be gone before the pointer leaves it — sent
+// to invoicing, archived, redrawn — and then mouseleave never fires and the
+// board stays grey with nothing lit. Any redraw checks for that and recovers.
+function clearStaleLinkHighlight(){
+  document.querySelectorAll('#productionBoard, #invoicingBoard').forEach(board=>{
+    if(!board.classList.contains('group-focus')) return;
+    if(board.querySelector('.group-match')) return;   // still a live selection
+    board.classList.remove('group-focus');
+  });
+}
+
 function clearLinkGroupHighlight(){
   document.querySelectorAll('#productionBoard, #invoicingBoard').forEach(board=>{
     board.classList.remove('group-focus');
@@ -10876,7 +11108,10 @@ async function refreshProductionBoard(){
           const group = info.linkGroupId ? (linkGroups[info.linkGroupId] || []) : [];
           const groupColour = info.linkGroupId ? linkGroupColour(info.linkGroupId) : '';
           const partNo = group.length ? group.findIndex(g=>g.id===t.id) + 1 : 0;
-          if(info.linkGroupId){
+          // A link needs at least two live tickets. When the others have been
+          // deleted or archived, the survivor is an ordinary job — marking it as
+          // linked dimmed the whole board for a group that no longer exists.
+          if(info.linkGroupId && group.length > 1){
             card.classList.add('linked-card');
             card.setAttribute('data-group', info.linkGroupId);
           }
@@ -10897,7 +11132,9 @@ async function refreshProductionBoard(){
               <div class="kanban-invoice-btn">🧾 Τιμολόγηση</div>
             </div>` : ''}
           `;
-          if(info.linkGroupId){
+          // Same rule as the card marking above: a group of one is not a group,
+          // so hovering it must not dim anything.
+          if(info.linkGroupId && group.length > 1){
             // Hovering one part lifts the whole order out of the board and fades
             // everything else, so a set is visible on demand without the board
             // carrying permanent decoration.
@@ -10969,6 +11206,7 @@ async function refreshProductionBoard(){
     // Measured after the columns are in place: an empty board has no height to
     // preserve, and the whole point is to keep the scrollbar where it was.
     applyBoardZoom('production');
+    clearStaleLinkHighlight();
     const searchTerm = (document.getElementById('boardSearch')||{}).value;
     if(searchTerm) filterProductionBoard(searchTerm);
     bindBoardFit();
@@ -11179,6 +11417,7 @@ function isTicketActive(t){
 
 // ===== Τιμολόγηση (invoicing board) =====
 async function sendToInvoicing(id){
+  clearLinkGroupHighlight();
   try{
     const record = await jbGetRecord();
     const t = record.tickets[id];
@@ -11270,6 +11509,7 @@ async function openLinkedOffer(ticketId){
 }
 
 async function returnFromInvoicing(id){
+  clearLinkGroupHighlight();
   try{
     const record = await jbGetRecord();
     const t = record.tickets[id];
@@ -11380,6 +11620,7 @@ async function refreshInvoicingBoard(){
       boardEl.appendChild(col);
     });
     applyBoardZoom('invoicing');
+    clearStaleLinkHighlight();
     bindBoardFit();
     setTimeout(()=>fitBoardToViewport('invoicing'), 60);
   }catch(e){
@@ -11389,6 +11630,7 @@ async function refreshInvoicingBoard(){
 }
 
 async function archiveTicket(id){
+  clearLinkGroupHighlight();
   try{
     const record = await jbGetRecord();
     if(record.tickets[id]){
