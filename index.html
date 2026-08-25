@@ -168,6 +168,63 @@
     input[type=checkbox].proc-check{width:26px;height:26px;min-width:26px;}
     input[type=checkbox].proc-check:checked::after{left:7px;top:2px;width:6px;height:13px;}
   }
+  /* A compact comparison of every quantity — read-only, because each one is
+     priced on its own tab now. */
+  .qty-compare{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .qc-row{display:grid;grid-template-columns:1.6fr 1fr 1fr 0.9fr 1fr;gap:10px;
+    padding:8px 12px;font-size:13px;align-items:baseline;cursor:pointer;
+    border-top:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  .qc-row:first-child{border-top:none;}
+  .qc-row:hover{background:var(--page);}
+  .qc-head{background:var(--page);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:0.04em;color:var(--muted);font-weight:700;cursor:default;}
+  .qc-head:hover{background:var(--page);}
+  .qc-active{background:#eaf1fe;box-shadow:inset 3px 0 0 #2f6fed;}
+  .qc-active:hover{background:#e3ecfd;}
+  .qc-chosen{box-shadow:inset 3px 0 0 #0e8a45;}
+  .qc-tag{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;
+    color:var(--muted);font-weight:700;margin-left:4px;}
+  .qc-tag.qc-ok{color:#0e8a45;}
+  .qc-empty{color:var(--muted);}
+  .qc-profit{color:#0e8a45;font-weight:700;}
+  .qc-loss{color:#b3243c;font-weight:700;}
+  /* A brief pulse on the approval button when conversion is refused — the
+     message alone is easy to miss at the bottom of a long form. */
+  @keyframes needsApproval{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,0);}
+    50%{box-shadow:0 0 0 5px rgba(201,162,39,0.55);}}
+  .needs-approval{animation:needsApproval 0.7s ease-in-out 3;}
+  #qtyTabsBar{display:none;gap:6px;flex-wrap:wrap;margin:-14px -16px 12px;
+    padding:10px 16px 0;border-bottom:2px solid var(--line);background:var(--page);}
+  .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
+    gap:1px;padding:8px 16px 9px;border:1px solid var(--line);border-bottom:none;
+    border-radius:9px 9px 0 0;background:var(--page);cursor:pointer;margin-bottom:-2px;
+    font-family:inherit;color:var(--muted);transition:background 0.12s,color 0.12s;}
+  .qty-tab:hover{background:#fff;}
+  .qty-tab.active{background:#fff;color:var(--ink);border-bottom:2px solid #fff;}
+  .qty-tab .qt-main{font-size:13.5px;font-weight:700;line-height:1.1;}
+  .qty-tab .qt-sub{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;opacity:0.75;}
+  .qty-tab .qt-sub:first-letter{font-weight:700;}
+  .qty-tab .qt-dot{position:absolute;top:6px;right:20px;width:6px;height:6px;
+    border-radius:50%;background:#c9a227;}
+  .qty-tab{padding-right:26px;}
+  .qty-tab .qt-close{position:absolute;top:4px;right:5px;width:17px;height:17px;
+    display:flex;align-items:center;justify-content:center;border-radius:4px;
+    font-size:14px;line-height:1;color:var(--muted);opacity:0;transition:opacity 0.12s,background 0.12s;}
+  .qty-tab:hover .qt-close, .qty-tab.active .qt-close{opacity:0.7;}
+  .qty-tab .qt-close:hover{opacity:1;background:#fdf0f2;color:#b3243c;}
+  /* An unticked operation stays readable — its price is a default you may want
+     to see — but recedes so the ones in play stand out. */
+  #procList tr.proc-off input:not(.proc-use), #procList tr.proc-off select,
+  #procList tr.proc-off .auto{opacity:0.45;}
+  #procList tr.proc-on{background:#f2f8f4;}
+  #procList tr.proc-on td:first-child{border-left:3px solid #0e8a45;}
+  input[type=checkbox].proc-use{appearance:none;-webkit-appearance:none;width:18px;height:18px;
+    min-width:18px;border:2px solid #b9c2cc;border-radius:5px;background:#fff;cursor:pointer;
+    display:inline-block;position:relative;vertical-align:middle;margin:0;transition:all 0.12s;}
+  input[type=checkbox].proc-use:hover{border-color:#0a5c2e;}
+  input[type=checkbox].proc-use:checked{background:#dff0e5;border-color:#0a5c2e;}
+  input[type=checkbox].proc-use:checked::after{content:"";position:absolute;left:4px;top:0px;
+    width:5px;height:10px;border:solid #0a5c2e;border-width:0 3px 3px 0;transform:rotate(45deg);}
   input[type=checkbox].proc-check{appearance:none;-webkit-appearance:none;width:20px;height:20px;
     min-width:20px;border:2px solid #b9c2cc;border-radius:5px;background:#fff;cursor:pointer;
     display:inline-block;position:relative;vertical-align:middle;transition:all 0.12s;margin:0;}
@@ -402,6 +459,21 @@
   .totcard{background:var(--ink);border:1px solid var(--ink);border-radius:8px;padding:10px 12px;}
   /* A dedicated card for the offer's headline figure, so it isn't buried in a
      table footer among the working numbers. */
+  /* Where the money goes, at a glance. The final price is deliberately left out:
+     this is about the make-up of the cost, and including the selling price would
+     make the three real components look smaller than they are. */
+  #costSplitCard{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:14px 18px;margin-top:12px;}
+  #costSplitCard .cs-inner{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .cs-legend{display:flex;flex-direction:column;gap:7px;flex:1;min-width:210px;}
+  .cs-row{display:flex;align-items:center;gap:9px;font-size:13px;}
+  .cs-swatch{width:12px;height:12px;border-radius:3px;flex:none;}
+  .cs-name{flex:1;min-width:0;}
+  .cs-val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .cs-pct{color:var(--muted);font-size:11.5px;width:44px;text-align:right;
+    font-variant-numeric:tabular-nums;flex:none;}
+  .cs-total{border-top:1px solid var(--line);padding-top:7px;margin-top:2px;font-weight:800;}
+  @media (max-width:700px){ #costSplitCard .cs-inner{justify-content:center;} }
   .offer-total-card{display:none;background:var(--ink);border-radius:9px;padding:9px 14px;
     margin-bottom:16px;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
   body.multi-item-mode .offer-total-card{display:flex;}
@@ -613,6 +685,17 @@
   table.op-table td{font-size:12.5px;padding:6px 4px;}
   .op-desc-row td{font-weight:700;font-size:14px;padding-top:10px;}
   .op-meta-row td{font-size:11px;color:#444;padding:1px 4px;}
+  /* An alternative with a different specification prints as its own block, so
+     the customer compares products rather than bare numbers. */
+  .op-alt{margin-top:18px;padding-top:14px;border-top:1px dashed #bbb;page-break-inside:avoid;}
+  .op-alt-head{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;
+    margin-bottom:8px;}
+  /* These rows sit outside .op-infogrid, so they need the same layout applied
+     directly — otherwise the label and value ran together. */
+  .op-alt .row{display:flex;justify-content:space-between;padding:2px 0;}
+  .op-alt .row .l{color:#8a8a8a;}
+  .op-alt .row .v{font-weight:700;color:#111;}
+  .op-alt table.op-sub{margin:8px 0 10px;}
   table.op-sub{width:100%;border-collapse:collapse;margin:8px 0 20px;}
   /* Smaller and tighter: at the previous size long paper names ran into the
      neighbouring column when printed. Wrapping is allowed so nothing overlaps. */
@@ -695,6 +778,7 @@
   .offer-type-switch{display:flex;gap:6px;}
   .offer-type-switch .ot-btn{padding:5px 12px;font-size:11.5px;}
   .impo-margins{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;margin-bottom:14px;padding:10px;background:var(--page);border-radius:8px;}
+  .impo-hint{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.3;}
   .impo-margin-field label{display:block;font-size:9.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
   .impo-margin-field input{width:100%;font-size:12px;padding:5px 6px;border:1px solid var(--line-strong);border-radius:5px;}
 
@@ -905,7 +989,7 @@ function toggleMobileSidebar(forceClose){
         <div class="field"><label>Τίτλος Έργου</label><input id="fTitle" placeholder="π.χ. Notepad Α5"></div>
       </div>
       <div class="fieldgrid c4">
-        <div class="field book-only"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="renderBiblio();renderFlat()" style="font-weight:700;"></div>
+        <div class="field book-only"><label>Ποσότητα</label><input id="hdrQty" type="number" min="0" value="1000" oninput="onHeaderQtyInput()" style="font-weight:700;"></div>
         <div class="field book-only"><label>Σχήμα Κλειστό</label><input id="fSchemaClosed" placeholder="π.χ. 21*29"></div>
         <div class="field book-only"><label>Σελίδες</label><input id="fPages" placeholder="π.χ. 288+4"></div>
         <div class="field"><label>Χρόνος Παρ. (μέρες)</label><input id="fDeadline" value="15-20 Εργάσιμες ημέρες"></div>
@@ -1096,6 +1180,13 @@ function toggleMobileSidebar(forceClose){
     <div class="totcard"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div><input class="val" id="fManualTotal" type="number" step="0.01" placeholder="π.χ. 3100" oninput="onManualTotalInput()"><div class="lbl" id="profitNote" style="margin-top:3px;color:#7ee2a8;"></div></div>
   </div>
 
+  <div id="costSplitCard" class="book-only" style="display:none;">
+    <div class="cs-inner">
+      <svg id="costSplitPie" viewBox="0 0 120 120" width="132" height="132" aria-label="Κατανομή κόστους"></svg>
+      <div id="costSplitLegend" class="cs-legend"></div>
+    </div>
+  </div>
+
   <div class="offer-total-card" id="offerTotalCard">
     <div>
       <div class="otc-label" id="otcLabel">Σύνολο Προσφοράς</div>
@@ -1119,7 +1210,8 @@ function toggleMobileSidebar(forceClose){
   <div class="card book-only">
     <div class="card-head"><div class="title">Έξτρα Ποσότητες (εναλλακτικές τιμές στο PDF)</div><button class="btn" onclick="addExtraQuantity()">+ Ποσότητα</button></div>
     <div class="card-body">
-      <div class="empty-note" style="margin-bottom:8px;">π.χ. 500, 1000, 1500, 2000 — κάθε μία εμφανίζεται σαν εναλλακτική τιμή στο PDF.</div>
+      <div id="qtyTabsBar"></div>
+      <div class="empty-note" style="margin-bottom:8px;">π.χ. 500, 1000, 1500, 2000 — κάθε μία εμφανίζεται σαν εναλλακτική τιμή στο PDF. Κάνε κλικ σε καρτέλα για να δουλέψεις σε εκείνη την ποσότητα.</div>
       <div id="extraQuantitiesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;"></div>
       <div id="extraTotals"></div>
     </div>
@@ -1861,7 +1953,7 @@ function toggleMobileSidebar(forceClose){
     <div class="sub" id="impoSub"></div>
 
     <div class="impo-margins" id="impoShapeRow" style="grid-template-columns:1fr 1fr;">
-      <div class="impo-margin-field" id="impoSchemaGroup"><label>Σχήμα (πχ 21x29)</label><input id="impoSchema" type="text" oninput="recalcCurrentImposition()"></div>
+      <div class="impo-margin-field" id="impoSchemaGroup"><label id="impoSchemaLabel">Σχήμα τεμαχίου (πχ 21x29)</label><input id="impoSchema" type="text" oninput="onImpoSchemaInput()" onblur="recalcCurrentImposition()" placeholder="π.χ. 44x30" autocomplete="off"><div class="impo-hint" id="impoSchemaHint"></div></div>
       <div class="impo-margin-field"><label>Προσανατολισμός τεμαχίου</label>
         <select id="impoOrientation" onchange="recalcCurrentImposition()">
           <option value="auto">Αυτόματο (ό,τι χωράει καλύτερα)</option>
@@ -1969,6 +2061,22 @@ function refreshPaperOptions(){
   });
 }
 refreshPaperOptions();
+
+// Paper names are typed and pasted, so an exact key lookup fails on a trailing
+// space or different case — which made the imposition button report "choose a
+// paper first" for a row that clearly had one. Everything resolves through here.
+function findPaper(name){
+  const key = String(name || '').trim();
+  if(!key) return null;
+  const exact = paperByName[key];
+  if(exact) return exact;
+  // Also collapse runs of spaces: a name pasted from a spreadsheet often has
+  // two where the database has one.
+  const flat = s => String(s||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('el');
+  const want = flat(key);
+  const hit = Object.keys(paperByName).find(k => flat(k) === want);
+  return hit ? paperByName[hit] : null;
+}
 
 async function upsertPaper(paper){
   paperByName[paper.name] = paper;
@@ -2621,7 +2729,7 @@ function num(v){ const n = parseFloat(v); return isFinite(n) ? n : 0; }
 function ceilSafe(v){ return isFinite(v) ? Math.ceil(v) : 0; }
 
 function paperCost(row, totalSheets){
-  const p = paperByName[row.paperName];
+  const p = findPaper(row.paperName);
   const priceSheet = num(row.priceSheet);
   const priceKg = num(row.priceKg);
   if(priceSheet > 0) return totalSheets * priceSheet;
@@ -2671,7 +2779,7 @@ function onPaperPick(kind, id, value){
   const rows = kind==='flat' ? flatRows : bookRows;
   const row = rows.find(r=>r.id===id);
   row.paperName = value;
-  const p = paperByName[value];
+  const p = findPaper(value);
   if(p){
     row.priceKg = p.priceKg || '';
     row.priceSheet = p.priceSheet || '';
@@ -2704,7 +2812,7 @@ function renderFlat(){
       <td data-l="Χαρτί"><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('flat',${r.id},this.value)"></td>
       <td><input type="number" value="${r.qty}" placeholder="${document.getElementById('hdrQty').value || ''}" oninput="flatRows.find(x=>x.id===${r.id}).qty=this.value;recalcFlatRow(${r.id})"></td>
       <td class="mi-col"><input class="c-simshape" value="${esc(r.simShape||'')}" placeholder="π.χ. 9x5" oninput="flatRows.find(x=>x.id===${r.id}).simShape=this.value" title="Σχήμα τεμαχίου σε cm"></td>
-      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου (μοντάζ)" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
+      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="${r.simShape ? 'Μοντάζ με σχήμα ' + esc(r.simShape) + ' — κλικ για αλλαγή' : 'Προσομοίωση χωρητικότητας φύλλου (μοντάζ)'}" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
       <td><div class="auto c-sheets">0</div></td>
       <td><input type="number" value="${r.xtra}" oninput="flatRows.find(x=>x.id===${r.id}).xtra=this.value;recalcFlatRow(${r.id})"></td>
       <td><div class="auto c-totalsheets">0</div></td>
@@ -2929,16 +3037,44 @@ function isFoldOrSewTaskName(name){
 
 function refreshAutoFoldTasks(){
   const qty = computeBookFoldQuantity();
-  if(!(qty>0)) return;
+  let changed = false;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
-      if(t.foldAuto!==false && isFoldOrSewTaskName(t.name)){
-        t.qty = qty;
-        t.foldAuto = true;
-      }
+      if(t.foldAuto === false || !isFoldOrSewTaskName(t.name)) return;
+      // No book rows to fold: clear the stamp rather than leaving an old sheet
+      // count behind, which is how a stale figure survived a reload.
+      const next = qty > 0 ? qty : '';
+      if(String(t.qty || '') !== String(next)){ t.qty = next; changed = true; }
+      t.foldAuto = true;
     });
   });
+  if(changed) renderProc();
+}
+
+function toggleProcTaskOn(catId, taskId, on){
+  const cat = procCategories.find(c=>c.id===catId);
+  const t = cat && cat.tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.on = !!on;
+  // A task switched on with no price yet gets the default, so ticking it is
+  // enough to produce a sensible figure.
+  if(t.on && !num(t.rate)) t.rate = DEFAULT_PROC_RATE;
   renderProc();
+  updateGrand();
+}
+
+// Ticking every box in a category at once — most jobs use a whole binding
+// method rather than picking operations one by one.
+function toggleProcCategoryAll(catId){
+  const cat = procCategories.find(c=>c.id===catId);
+  if(!cat) return;
+  const anyOff = cat.tasks.some(t=>!t.on);
+  cat.tasks.forEach(t=>{
+    t.on = anyOff;
+    if(t.on && !num(t.rate)) t.rate = DEFAULT_PROC_RATE;
+  });
+  renderProc();
+  updateGrand();
 }
 
 function onProcTaskNameInput(catId, taskId, value){
@@ -2954,8 +3090,18 @@ function onProcTaskNameInput(catId, taskId, value){
 function onProcTaskQtyInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   t.qty = value;
-  t.foldAuto = false; // user is manually overriding — stop auto-updating this task
+  // Typing a figure overrides the automatic one; clearing the field hands the
+  // task back to the automatic calculation. Without this an override could
+  // never be undone, and the task stayed frozen for the life of the offer.
+  if(String(value).trim() === ''){
+    t.foldAuto = true;
+    refreshAutoFoldTasks();
+    updateGrand();
+    return;
+  }
+  t.foldAuto = false;
   recalcProcTask(catId, taskId);
+  updateGrand();
 }
 
 function recalcBookTotal(){
@@ -3198,11 +3344,40 @@ function toggleCustomSig(){
   document.getElementById('impoCustomSigWrap').style.display = show ? 'block' : 'none';
 }
 
+// Recalculating on every keystroke redrew the modal, which took the caret with
+// it — so "44x30" came out scrambled. The redraw now waits until typing pauses,
+// and only when the text is actually a complete size.
+let impoSchemaTimer = null;
+function onImpoSchemaInput(){
+  clearTimeout(impoSchemaTimer);
+  const raw = document.getElementById('impoSchema').value;
+  if(!parseDimFromText(raw)) return;          // half-typed — nothing to draw yet
+  impoSchemaTimer = setTimeout(recalcCurrentImposition, 450);
+}
+
 function recalcCurrentImposition(){
   if(currentImpoRowId==null) return;
   if(currentImpoKind==='flat') simulateFlatFit(currentImpoRowId, true);
   else if(currentImpoKind==='fabric') simulateFabricFit(currentImpoRowId, true);
   else simulateBookFit(currentImpoRowId, true);
+}
+
+// Like openEmptyImpositionModal, but leaves the shape field on screen: the
+// message asks for a shape, so the box to type it in has to be reachable.
+function openImpositionShapePrompt(title, message){
+  ['impoShapeRow','impoMarginsGroup'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display = '';
+  });
+  const legend = document.getElementById('impoLegend');
+  if(legend) legend.style.display = 'none';
+  document.getElementById('impoTitle').textContent = title;
+  document.getElementById('impoSub').textContent = '';
+  document.getElementById('impoSvgWrap').innerHTML =
+    `<div class="empty-note" style="text-align:center;padding:26px 0;">${esc(message)}</div>`;
+  document.getElementById('impoStats').innerHTML = '';
+  document.getElementById('impoOverlay').classList.add('show');
+  const f = document.getElementById('impoSchema');
+  if(f){ setTimeout(()=>{ f.focus(); f.select(); }, 60); }
 }
 
 function openEmptyImpositionModal(title, message){
@@ -3374,21 +3549,34 @@ function simulateFlatFit(id, keepModalOpen){
   document.getElementById('impoSchemaGroup').style.display = '';
   document.getElementById('impoMarginsGroup').style.display = '';
   const r = flatRows.find(x=>x.id===id);
-  const p = paperByName[r.paperName];
+  const p = findPaper(r.paperName);
   if(!p || !p.w || !p.l){
     openEmptyImpositionModal('Μοντάζ — Flat Work', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 🧮.');
     return;
   }
   const impoSchemaField = document.getElementById('impoSchema');
   if(!keepModalOpen){
-    impoSchemaField.value = r.simShape || '';
+    // Fall back to the offer's closed format, the way the book simulator does.
+    // Without it, a flat row with no shape of its own opened an empty modal.
+    impoSchemaField.value = r.simShape || document.getElementById('fSchemaClosed').value || '';
   }
   r.simShape = impoSchemaField.value;
   const dim = parseDimFromText(impoSchemaField.value);
   if(!dim){
-    openEmptyImpositionModal('Μοντάζ — Flat Work — ' + (r.material||''), 'Γράψε το σχήμα του κομματιού (π.χ. 32x22) στο πεδίο "Σχήμα" πιο πάνω.');
+    // The shape field stays visible so it can be filled in right here — the old
+    // message pointed at a field that had just been hidden.
+    openImpositionShapePrompt('Μοντάζ — Flat Work — ' + (r.material||''),
+      'Γράψε το σχήμα του κομματιού (π.χ. 32x22) στο πεδίο Σχήμα και πάτα Enter.');
     return;
   }
+  // Say whose shape this is. A cover is imposed at its unfolded size, which is
+  // not the book's closed format — without the label the field looked like it
+  // belonged to the whole offer.
+  const lbl = document.getElementById('impoSchemaLabel');
+  if(lbl) lbl.textContent = 'Σχήμα τεμαχίου' + (r.material ? ' — ' + r.material : '');
+  const hint = document.getElementById('impoSchemaHint');
+  if(hint) hint.textContent = 'Ισχύει μόνο για αυτή τη γραμμή (π.χ. εξώφυλλο σε ανάπτυγμα).';
+
   const margins = getModalMargins();
   const orientation = document.getElementById('impoOrientation').value;
   const layout = bestFitLayout(p.w, p.l, dim.w, dim.h, margins, orientation);
@@ -3565,7 +3753,7 @@ function simulateBookFit(id, keepModalOpen){
   document.getElementById('impoSchemaGroup').style.display = '';
   document.getElementById('impoMarginsGroup').style.display = '';
   const r = bookRows.find(x=>x.id===id);
-  const p = paperByName[r.paperName];
+  const p = findPaper(r.paperName);
   if(!p || !p.w || !p.l){
     openEmptyImpositionModal('Μοντάζ — Βιβλίο', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 🧮.');
     return;
@@ -3574,9 +3762,15 @@ function simulateBookFit(id, keepModalOpen){
   if(!keepModalOpen){
     impoSchemaField.value = document.getElementById('fSchemaClosed').value;
   }
+  const lblB = document.getElementById('impoSchemaLabel');
+  if(lblB) lblB.textContent = 'Κλειστό σχήμα βιβλίου';
+  const hintB = document.getElementById('impoSchemaHint');
+  if(hintB) hintB.textContent = '';
+
   const dim = parseDimFromText(impoSchemaField.value);
   if(!dim){
-    openEmptyImpositionModal('Μοντάζ — Βιβλίο', 'Γράψε ένα σχήμα σε μορφή π.χ. 22x22 στο πεδίο "Σχήμα" πιο πάνω.');
+    openImpositionShapePrompt('Μοντάζ — Βιβλίο',
+      'Γράψε το κλειστό σχήμα (π.χ. 17x24) στο πεδίο Σχήμα και πάτα Enter.');
     return;
   }
   const margins = getModalMargins();
@@ -3823,6 +4017,9 @@ function recalcFabricTotal(){
   ensureFabricCardVisibleIfNeeded();
 }
 
+// A single starting rate for every operation, until the real ones are measured.
+const DEFAULT_PROC_RATE = 30;
+
 const defaultProcCategories = [
   { name: 'ΕΠΕΞΕΡΓΑΣΙΕΣ', tasks: [
     { name: 'ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ', speed: 296 },
@@ -3864,7 +4061,12 @@ function buildDefaultProcCategories(){
     name: cat.name,
     collapsed: true,
     tasks: cat.tasks.map(t => ({
-      id: procTaskSeq++, name: t.name, qty: t.qty || '', speed: t.speed || '', rate: '', extra: ''
+      id: procTaskSeq++, name: t.name, qty: t.qty || '', speed: t.speed || '',
+      // Every task carries a price from the start, so nothing has to be typed
+      // twice. The tick below is what decides whether it reaches the total —
+      // a filled-in price on its own must not cost the customer anything.
+      rate: t.rate != null ? t.rate : DEFAULT_PROC_RATE,
+      extra: '', on: false
     }))
   }));
 }
@@ -3899,6 +4101,9 @@ function prompt2(msg, def){
 }
 
 function procTaskCalc(t, overrideQty){
+  // Not ticked, no cost — the price sitting in the row is a default waiting to
+  // be used, not a charge.
+  if(!t.on) return { hours: 0, cost: 0, total: 0 };
   const qty = num(t.qty) || (overrideQty!=null ? overrideQty : num(document.getElementById('hdrQty').value));
   const speed = num(t.speed);
   const hours = speed>0 ? qty/speed : 0;
@@ -3976,18 +4181,15 @@ function onProcTaskItemInput(catId, taskId, value){
 // the inconvenience of switching type back.
 const BOOK_ONLY_PROC_CATEGORIES = ['ΒΙΒΛΙΟΔΕΣΙΑ','ΜΑΛΑΚΟ','ΣΚΛΗΡΟ','ΑΝΟΙΧΤΗ'];
 
-function procCategoryApplies(cat){
-  const multi = document.getElementById('fMultiItem').checked;
+function procCategoryApplies(cat, snap){
+  const multi = snap ? !!snap.multiItem : document.getElementById('fMultiItem').checked;
   if(!multi) return true;
   return !BOOK_ONLY_PROC_CATEGORIES.includes((cat.name||'').toUpperCase().trim());
 }
 
 function procTaskIsActive(t){
-  // "In use" means the user deliberately priced this task. A quantity that the
-  // fold logic filled in on its own doesn't count — it changes quietly in the
-  // background and shouldn't light up the category.
-  if(num(t.rate)>0 || num(t.extra)>0) return true;
-  return !t.foldAuto && num(t.qty)>0;
+  // Now that every task starts with a price, "in use" can only mean the tick.
+  return !!t.on;
 }
 
 function renderProc(){
@@ -4005,10 +4207,12 @@ function renderProc(){
     cat.tasks.forEach(t=>{
       const itemOptions = flatRows.filter(r=>r.material).map(r=>`<option value="${esc(r.material)}" ${t.itemMaterial===r.material?'selected':''}>${esc(r.material)}</option>`).join('');
       rowsHtml += `
-        <tr data-task-id="${t.id}">
+        <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}">
+          <td style="text-align:center;"><input type="checkbox" class="proc-use" ${t.on ? 'checked' : ''}
+            onchange="toggleProcTaskOn(${cat.id},${t.id},this.checked)" title="Χρησιμοποιείται σε αυτή τη δουλειά"></td>
           <td><input value="${t.name}" oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)"></td>
           <td class="mi-col"><select onchange="onProcTaskItemInput(${cat.id},${t.id},this.value)" style="font-size:11px;"><option value="">— όλα —</option>${itemOptions}</select></td>
-          <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="onProcTaskQtyInput(${cat.id},${t.id},this.value)" title="${t.foldAuto ? 'Αυτόματο από τα φύλλα βιβλίου (δίπλωμα/κλωστορραφή) — άλλαξέ το ελεύθερα.' : ''}" style="${t.foldAuto ? 'border-color:#7ea6dd;' : ''}"></td>
+          <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="onProcTaskQtyInput(${cat.id},${t.id},this.value)" title="${t.foldAuto ? 'Αυτόματο από τα φύλλα βιβλίου — άλλαξέ το ελεύθερα. Σβήσε το για να ξαναγίνει αυτόματο.' : (isFoldOrSewTaskName(t.name) ? 'Χειροκίνητη τιμή — σβήσε το πεδίο για να ξαναγίνει αυτόματο.' : '')}" style="${t.foldAuto ? 'border-color:#7ea6dd;' : ''}"></td>
           <td><input type="number" value="${t.speed}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).speed=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td><input type="number" step="0.01" value="${t.rate}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).rate=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td><div class="auto c-cost">0,00 €</div></td>
@@ -4028,6 +4232,8 @@ function renderProc(){
             : `<span style="color:var(--muted);font-size:10px;font-weight:400;">${cat.tasks.length} εργασίες</span>`}
         </span>
         <span style="display:flex;gap:8px;">
+          <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="toggleProcCategoryAll(${cat.id})"
+            title="Επιλογή ή αποεπιλογή όλων των εργασιών αυτής της κατηγορίας">${cat.tasks.every(t=>t.on) && cat.tasks.length ? '☐ Καμία' : '☑ Όλες'}</button>
           <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="addProcTask(${cat.id})">+ Εργασία</button>
         </span>
       </div>
@@ -4035,9 +4241,10 @@ function renderProc(){
       <table>
         <thead>
           <tr>
-            <th style="width:20%">Εργασία</th>
-            <th style="width:12%" class="mi-col">Είδος</th>
-            <th style="width:10%">Ποσότητα</th>
+            <th style="width:4%" title="Σημείωσε ποιες επεξεργασίες χρειάζεται αυτή η δουλειά — μόνο αυτές κοστολογούνται">✓</th>
+            <th style="width:18%">Εργασία</th>
+            <th style="width:11%" class="mi-col">Είδος</th>
+            <th style="width:9%">Ποσότητα</th>
             <th style="width:11%">Ταχύτητα (μον/ώρα)</th>
             <th style="width:11%">€ / ώρα</th>
             <th style="width:12%">Κόστος</th>
@@ -4096,6 +4303,9 @@ function addDays(iso, days){
 }
 
 function buildOfferPrintHtml(){
+  // The PDF always shows the main quantity plus its alternatives, regardless of
+  // which tab happens to be open.
+  if(editingExtraQtyId !== null) return withMainQuantity(buildOfferPrintHtml);
   updateGrand();
   const v = id => esc(document.getElementById(id).value);
   const qty = num(document.getElementById('hdrQty').value);
@@ -4137,14 +4347,106 @@ function buildOfferPrintHtml(){
     'Τιμή τεμαχίου': 'Unit price', 'Εναλλακτική ποσότητα': 'Alternative quantity',
     'Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.': 'The above prices do not include VAT.',
     'Τρόπος πληρωμής': 'Payment method',
+    'Εναλλακτική': 'Alternative', 'Σελίδες': 'Pages', 'Σχήμα': 'Format',
+    'Χαρτιά': 'Materials', 'Τύπος χαρτιού': 'Paper', 'Χρώμα': 'Colour',
     'Επιβάρυνση πελάτη': 'Customer shipping', 'Αποστολή σε πελάτη': 'Shipping',
   };
   const t = greek => isEN ? (EN_LABELS[greek] || greek) : greek;
 
-  const extraQtyRows = extraQuantities.filter(e=>num(e.qty)>0).map(e=>{
+  const showProc = document.getElementById('fShowProcInOffer').checked;
+
+  // An alternative that only changes the run length is a price line. One that
+  // changes the paper, the pages or the finishing is a different product, and
+  // the customer has to see what they are choosing between — so it gets its own
+  // block with its full specification.
+  const specOf = snap => JSON.stringify({
+    papers: [...(snap.bookRows||[]), ...(snap.flatRows||[])]
+      .filter(r=>r.material || r.paperName)
+      .map(r=>[r.material, r.paperName, r.color, r.pages, r.sides].join('|')),
+    pages: snap.pages,
+    schema: snap.schemaClosed,
+    tasks: (snap.procCategories||[]).flatMap(cat=>cat.tasks.filter(x=>x.on).map(x=>x.name)).sort()
+  });
+  const mainSpecSnap = (window.__mainOfferBackup && editingExtraQtyId !== null)
+    ? window.__mainOfferBackup.snap : snapshotOffer();
+  const mainSpec = specOf(mainSpecSnap);
+
+  const altBlocks = extraQuantities
+    .filter(e => num(e.qty) > 0 && e.snap && specOf(e.snap) !== mainSpec)
+    .sort((a,b)=>num(a.qty) - num(b.qty))
+    .map(e => {
+      const s = e.snap, q = num(e.qty);
+      const tot = extraQtyTotals(e);
+      const altMulti = !!s.multiItem;
+
+      // Laid out exactly like the main offer: same info grid, same table
+      // headings, same totals rows — so the customer reads one document, not a
+      // proper offer followed by a summary in a different shape.
+      const altRows = altMulti
+        ? (s.flatRows||[]).filter(r => r.material).map(r => {
+            const iq = num(r.qty) || q;
+            return `<tr><td>${esc(r.material||'')}</td><td>${esc(r.simShape||'')}</td><td>${esc(r.paperName||'')}</td><td>${esc(r.color||'')}</td><td></td><td>${iq} ${t('τεμ.')}</td><td></td></tr>`;
+          }).join('')
+        // Same order as the main block — flat work first, then the book body.
+        // Reversed, the cover appeared after the pages it wraps.
+        : (s.flatRows||[]).concat(s.bookRows||[])
+            .filter(r => r.material || r.paperName)
+            .map(r => `<tr><td>${esc(r.material||'')}</td><td>${esc(r.paperName||'')}</td><td>${esc(r.color||'')}</td></tr>`)
+            .concat((s.fabricRows||[]).filter(r=>r.material)
+              .map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`))
+            .join('');
+
+      // Same setting as the main block: if processing is hidden in the offer,
+      // it stays hidden here too.
+      const tasks = showProc ? (s.procCategories||[])
+        .flatMap(cat => cat.tasks.filter(x=>x.on && x.name).map(x=>esc(x.name)))
+        .join(', ') : '';
+
+      const altVat = vatPercent ? tot.grand * vatPercent / 100 : 0;
+      const row = (l, val) => `<div class="row"><span class="l">${l}</span><span class="v">${val}</span></div>`;
+
+      return `
+      <div class="op-alt">
+        <div class="op-alt-head">${t('Εναλλακτική')} — ${q.toLocaleString('el-GR')} ${t('τεμ.')}</div>
+
+        <div class="op-infogrid">
+          <div>${row(t('Ποσότητα'), q.toLocaleString('el-GR') + ' ' + t('τεμ.'))
+            }${s.schemaClosed ? row(t('Σχήμα'), esc(s.schemaClosed)) : ''
+            }${s.pages ? row(t('Σελίδες'), esc(s.pages)) : ''}</div>
+        </div>
+
+        ${altRows ? (altMulti ? `
+        <table class="op-sub">
+          <thead><tr><th>${t('Είδος')}</th><th>${t('Σχήμα')}</th><th>${t('Τύπος Χαρτιού')}</th><th>${t('Εκτύπωση')}</th><th>${t('Επεξεργασίες')}</th><th>${t('Ποσότητα')}</th><th>${t('Καθαρή Αξία')}</th></tr></thead>
+          <tbody>${altRows}</tbody>
+        </table>` : `
+        <table class="op-sub">
+          <thead><tr><th>${t('Τμήμα')}</th><th>${t('Υλικό')}</th><th>${t('Εκτύπωση')}</th></tr></thead>
+          <tbody>${altRows}</tbody>
+        </table>`) : ''}
+
+        ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
+        ${v('fNotes') ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${v('fNotes')}</div>` : ''}
+
+        <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+        ${vatPercent ? `
+        <div class="op-total-row" style="font-size:12.5px;font-weight:600;border-top:none;padding-top:0;"><span>${t('ΦΠΑ')} (${vatPercent}%)</span><span>${altVat.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+        <div class="op-total-row"><span>${t('Σύνολο με ΦΠΑ')}</span><span>${(tot.grand+altVat).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+        ` : ''}
+        <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${tot.unit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
+      </div>`;
+    }).join('');
+
+  // Quantities that differ only in run length stay in the compact price table;
+  // listing them twice would just repeat the same figure.
+  const priceOnlyExtras = extraQuantities
+    .filter(e => num(e.qty) > 0 && (!e.snap || specOf(e.snap) === mainSpec))
+    .sort((a,b)=>num(a.qty) - num(b.qty));   // same order as the tabs and the comparison
+
+  const extraQtyRows = priceOnlyExtras.map(e=>{
     const eqty = num(e.qty);
     const manual = num(e.manualTotal);
-    const eGrand = manual>0 ? manual : computeTotals(eqty).grand;
+    const eGrand = extraQtyTotals(e).grand;
     const eUnit = eqty>0 ? eGrand/eqty : 0;
     return `<tr><td>${eqty} ${t('τεμ.')}</td><td>${eGrand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${eUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>`;
   }).join('');
@@ -4169,7 +4471,6 @@ function buildOfferPrintHtml(){
       return `<tr><td>${esc(r.material)}</td><td>${esc(r.simShape)}</td><td>${esc(r.paperName)}</td><td>${esc(r.color)}</td><td>${itemTaskNames.map(esc).join(', ')}</td><td>${itemQty} ${t('τεμ.')}</td><td>${itemCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}<div style="font-size:9px;color:#888;font-weight:400;margin-top:2px;">${itemUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}/${t('τεμ.')}</div></td></tr>`;
     }).join('') : '';
 
-  const showProc = document.getElementById('fShowProcInOffer').checked;
   const procNames = showProc ? procCategories
     .map(cat => cat.tasks.filter(t=>t.name && !(multiItem && t.itemMaterial)).map(t=>esc(t.name)))
     .flat()
@@ -4236,6 +4537,7 @@ function buildOfferPrintHtml(){
         <thead><tr><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
         <tbody>${extraQtyRows}</tbody>
       </table>` : ''}
+      ${altBlocks}
       ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
       ${v('fPaymentTerms') ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${v('fPaymentTerms')}</div>` : ''}
     </div>
@@ -4300,13 +4602,19 @@ function recalcProcTotal(){
   updateGrand();
 }
 
-function computeTotals(baseQty){
+// An alternative quantity is a frozen copy of the whole offer, so the totals
+// have to be computable from that copy rather than only from what's on screen.
+function computeTotals(baseQty, snap){
+  const _flat = snap ? (snap.flatRows||[]) : flatRows;
+  const _book = snap ? (snap.bookRows||[]) : bookRows;
+  const _fabric = snap ? (snap.fabricRows||[]) : fabricRows;
+  const _proc = snap ? (snap.procCategories||[]) : procCategories;
   let flatPaper = 0, flatPrint = 0;
   // Every row contributes its real cost. Hand-typed item prices are a selling
   // decision and are collected separately, so the markup can't be applied on
   // top of a price that already includes profit.
   let itemsManualPrice = 0, hasItemPrices = false;
-  flatRows.forEach(r=>{
+  _flat.forEach(r=>{
     const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const totalSheets = sheets + num(r.xtra);
@@ -4317,7 +4625,7 @@ function computeTotals(baseQty){
   });
 
   let bookPaper = 0, bookPrint = 0;
-  bookRows.forEach(r=>{
+  _book.forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
@@ -4326,8 +4634,8 @@ function computeTotals(baseQty){
     bookPrint += sidesEkt * num(r.pricePerSide);
   });
 
-  const fabricTotal = fabricRows.reduce((s,r)=>s+fabricCalc(r, baseQty).cost,0);
-  const procTotal = procCategories.filter(procCategoryApplies).reduce((s,cat)=>s+cat.tasks.reduce((s2,t)=>s2+procTaskCalc(t, baseQty).total,0),0);
+  const fabricTotal = _fabric.reduce((s,r)=>s+fabricCalc(r, baseQty).cost,0);
+  const procTotal = _proc.filter(cat=>procCategoryApplies(cat, snap)).reduce((s,cat)=>s+cat.tasks.reduce((s2,t)=>s2+procTaskCalc(t, baseQty).total,0),0);
 
   const materials = flatPaper + bookPaper + fabricTotal;
   const printing = flatPrint + bookPrint;
@@ -4427,54 +4735,69 @@ function refreshProfitNote(){
 }
 
 // Extras price and markup drive each other, exactly like the main quantity.
-function setExtraPrice(id, value){
-  const e = extraQuantities.find(x=>x.id===id);
-  if(!e) return;
-  e.manualTotal = value;
-  const cost = computeTotals(num(e.qty)).grand;
-  const price = num(value);
-  e.markup = (cost>0 && value!=='' && price>0) ? String(Math.round((price-cost)/cost*100)) : '';
-  updateGrand();
-}
-
-function setExtraMarkup(id, value){
-  const e = extraQuantities.find(x=>x.id===id);
-  if(!e) return;
-  e.markup = value;
-  const cost = computeTotals(num(e.qty)).grand;
-  e.manualTotal = (cost>0 && value!=='') ? (cost * (1 + num(value)/100)).toFixed(2) : '';
-  updateGrand();
-}
-
 // Called only from the approval prompt below — this is the one and only place
 // a quantity gets chosen, so paper ordering, production and Forecasting all
 // agree on the same figure.
 function setApprovedQty(qty){
-  const baseQty = num(document.getElementById('hdrQty').value);
-  const target = num(qty);
-
-  if(target>0 && target!==baseQty){
-    const chosen = extraQuantities.find(e=>num(e.qty)===target);
-    if(chosen){
-      const prevPrice = document.getElementById('fManualTotal').value;
-      const prevMarkup = document.getElementById('fMarkup').value;
-      // Promote the approved quantity into the main one, demote the old main
-      // into its place — so Στοιχεία Προσφοράς, paper ordering and production
-      // all reflect the quantity that was actually approved.
-      document.getElementById('hdrQty').value = target;
-      document.getElementById('fManualTotal').value = chosen.manualTotal || '';
-      document.getElementById('fMarkup').value = chosen.markup || '';
-      chosen.qty = baseQty;
-      chosen.manualTotal = prevPrice;
-      chosen.markup = prevMarkup;
-      renderExtraQuantitiesList();
-      recalcAll();
-    }
-  }
-
-  document.getElementById('fApprovedQty').value = target || '';
+  // Only recorded, never applied. An earlier version promoted the approved
+  // quantity into the main slot and demoted the old one — which rewrote the
+  // offer, so you could no longer see what you had actually quoted. The
+  // quantities stay exactly as they were; production reads this flag instead.
+  document.getElementById('fApprovedQty').value = num(qty) || '';
   markOfferDirty();
+  renderExtraTotals();
+  renderQtyTabs();
   updateGrand();
+}
+
+// A donut drawn as three arcs. Built here rather than with a chart library so it
+// stays inside the single file and needs nothing at load time.
+const COST_SPLIT_COLOURS = { materials:'#2f6fed', printing:'#0e8a45', proc:'#c9a227' };
+
+function renderCostSplit(t){
+  const card = document.getElementById('costSplitCard');
+  if(!card) return;
+  const parts = [
+    { key:'materials', name:'Χαρτιά',       value: t.materials },
+    { key:'printing',  name:'Εκτύπωση',     value: t.printing  },
+    { key:'proc',      name:'Επεξεργασίες', value: t.procTotal }
+  ];
+  const total = parts.reduce((s,p)=>s+p.value, 0);
+  if(!(total > 0)){ card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const R = 42, C = 60, STROKE = 22;
+  const circumference = 2 * Math.PI * R;
+  let offset = 0;
+  const arcs = parts.filter(p=>p.value > 0).map(p=>{
+    const frac = p.value / total;
+    const dash = `${(frac * circumference).toFixed(2)} ${circumference.toFixed(2)}`;
+    // -90° so the first slice starts at the top, which is what people expect.
+    const seg = `<circle cx="${C}" cy="${C}" r="${R}" fill="none"
+      stroke="${COST_SPLIT_COLOURS[p.key]}" stroke-width="${STROKE}"
+      stroke-dasharray="${dash}" stroke-dashoffset="${(-offset).toFixed(2)}"
+      transform="rotate(-90 ${C} ${C})"><title>${esc(p.name)}: ${fmt(p.value)}</title></circle>`;
+    offset += frac * circumference;
+    return seg;
+  }).join('');
+
+  document.getElementById('costSplitPie').innerHTML =
+    `<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="var(--line)" stroke-width="${STROKE}"></circle>`
+    + arcs;
+
+  document.getElementById('costSplitLegend').innerHTML =
+    parts.map(p=>`<div class="cs-row">
+        <span class="cs-swatch" style="background:${COST_SPLIT_COLOURS[p.key]};"></span>
+        <span class="cs-name">${p.name}</span>
+        <span class="cs-pct">${total>0 ? (p.value/total*100).toFixed(0) : 0}%</span>
+        <span class="cs-val">${fmt(p.value)}</span>
+      </div>`).join('')
+    + `<div class="cs-row cs-total">
+        <span class="cs-swatch" style="background:transparent;"></span>
+        <span class="cs-name">Συνολικό κόστος</span>
+        <span class="cs-pct"></span>
+        <span class="cs-val">${fmt(total)}</span>
+      </div>`;
 }
 
 function updateGrand(){
@@ -4489,6 +4812,7 @@ function updateGrand(){
   document.getElementById('sumPrinting').textContent = fmt(t.printing);
   document.getElementById('sumProc').textContent = fmt(t.procTotal);
   document.getElementById('sumGrand').textContent = fmt(t.grand);
+  renderCostSplit(t);
 
   // Mirror into the sticky bar so it stays correct while scrolling.
   document.getElementById('stMaterials').textContent = fmt(t.materials);
@@ -4526,39 +4850,207 @@ function setupStickyTotals(){
 }
 setupStickyTotals();
 
-let extraQuantities = []; // [{id, qty, manualTotal}]
+// Each alternative quantity now carries a frozen copy of the whole offer, so a
+// different run length can also carry different plate prices, extras or tasks —
+// which is how a smaller run is actually quoted. Independent once created.
+let extraQuantities = []; // [{id, qty, manualTotal, label, snap}]
+
+function snapshotOffer(){
+  return JSON.parse(JSON.stringify({
+    flatRows, bookRows, fabricRows, procCategories,
+    multiItem: document.getElementById('fMultiItem').checked,
+    pages: document.getElementById('fPages').value,
+    schemaClosed: document.getElementById('fSchemaClosed').value,
+    // The final price and markup are per-quantity too. Leaving them out meant a
+    // price typed on one tab silently overwrote the other's.
+    manualTotal: document.getElementById('fManualTotal').value,
+    markup: document.getElementById('fMarkup').value,
+    priceDrivenBy
+  }));
+}
+
+function extraQtyTotals(e){
+  const qty = num(e.qty);
+  if(!(qty > 0)) return { grand: 0, unit: 0 };
+  const manual = num(e.manualTotal);
+  const grand = manual > 0 ? manual : computeTotals(qty, e.snap).grand;
+  return { grand, unit: grand / qty };
+}
 let extraQtySeq = 1;
 
 function addExtraQuantity(){
-  extraQuantities.push({ id: extraQtySeq++, qty:'', manualTotal:'' });
+  // The copy is taken now, from what's on screen; later edits to the main offer
+  // don't reach it. The new tab opens immediately, so the Ποσότητα field at the
+  // top is already the one to fill in — no separate box to hunt for.
+  const id = extraQtySeq++;
+  extraQuantities.push({ id, qty:'', manualTotal:'', label:'', snap: snapshotOffer() });
+  forceSwitchQtyTab(id);
   renderExtraQuantitiesList();
   renderExtraTotals();
+  const qtyEl = document.getElementById('hdrQty');
+  qtyEl.scrollIntoView({behavior:'smooth', block:'center'});
+  qtyEl.focus();
+  qtyEl.select();
+  statusMsg('Νέα εναλλακτική — γράψε την ποσότητα στο πεδίο Ποσότητα.');
+}
+
+// switchQtyTab refuses a tab with no quantity yet, which is right for clicking
+// but wrong for a tab that was just created to be filled in.
+function forceSwitchQtyTab(id){
+  stashCurrentTab();
+  editingExtraQtyId = id;
+  const e = extraQuantities.find(x=>x.id===id);
+  if(e) loadTabSnapshot(e.snap || snapshotOffer(), '');
+  renderQtyTabs();
 }
 
 function removeExtraQuantity(id){
-  extraQuantities = extraQuantities.filter(e=>e.id!==id);
+  const e = extraQuantities.find(x=>x.id===id);
+  // Anything customised is worth a question; an untouched copy is not.
+  if(e && e.snapEdited && num(e.qty) > 0
+     && !confirm(`Διαγραφή της εναλλακτικής των ${num(e.qty).toLocaleString('el-GR')} τεμ.;\n\n`
+       + 'Έχει δικές της παραμετροποιήσεις που θα χαθούν.')) return;
+
+  // Deleting the tab you are standing on would leave the form showing rows that
+  // belong to nothing, so it hands back to the main quantity first.
+  if(editingExtraQtyId === id) switchQtyTab(null);
+  extraQuantities = extraQuantities.filter(x=>x.id!==id);
   renderExtraQuantitiesList();
   renderExtraTotals();
-}
-
-function onExtraQtyChange(id, value){
-  const e = extraQuantities.find(x=>x.id===id);
-  if(e) e.qty = value;
-  renderExtraTotals();
+  updateGrand();
 }
 
 function renderExtraQuantitiesList(){
+  renderQtyTabs();
   const el = document.getElementById('extraQuantitiesList');
   if(extraQuantities.length===0){
     el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει έξτρα ποσότητες.</div>';
     return;
   }
-  el.innerHTML = extraQuantities.map(e=>`
-    <div style="display:flex;align-items:center;gap:4px;background:var(--page);border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 10px;">
-      <input type="number" min="0" placeholder="π.χ. 500" value="${e.qty}" style="width:90px;border:none;background:transparent;padding:4px 2px;" oninput="onExtraQtyChange(${e.id}, this.value)">
-      <button class="rowdel" onclick="removeExtraQuantity(${e.id})" title="Διαγραφή">×</button>
-    </div>
-  `).join('');
+  // The tabs above are the whole control now — a second row of chips repeating
+  // the same quantities was redundant, and its delete button sat next to the
+  // field you type in.
+  el.innerHTML = '';
+}
+
+// Editing a copy means loading it into the form, changing it, and putting it
+// back. Doing it in place would need a second full form; swapping the live rows
+// for the copy reuses the one that already exists and behaves identically.
+// Quantities behave like browser tabs: switching away stores what you were
+// doing, switching back brings it up unchanged. No save-or-lose decision at
+// every step, because none of it leaves the offer until the offer is saved.
+let editingExtraQtyId = null;   // null = the main quantity
+
+function stashCurrentTab(){
+  const snap = snapshotOffer();
+  const qty = document.getElementById('hdrQty').value;
+  if(editingExtraQtyId === null){
+    window.__mainOfferBackup = { snap, qty };
+    return;
+  }
+  const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
+  if(e){
+    // Marked as customised only when it really differs from what was copied.
+    if(JSON.stringify(e.snap) !== JSON.stringify(snap)) e.snapEdited = true;
+    e.snap = snap;
+    e.qty = qty;
+    // manualTotal is what the PDF and the totals read, so it's mirrored out of
+    // the snapshot rather than kept in two places that can disagree.
+    e.manualTotal = snap.manualTotal || '';
+    e.markup = snap.markup || '';
+  }
+}
+
+function loadTabSnapshot(snap, qty){
+  flatRows = JSON.parse(JSON.stringify(snap.flatRows || []));
+  bookRows = JSON.parse(JSON.stringify(snap.bookRows || []));
+  fabricRows = JSON.parse(JSON.stringify(snap.fabricRows || []));
+  procCategories = JSON.parse(JSON.stringify(snap.procCategories || []));
+  if(snap.multiItem !== undefined) document.getElementById('fMultiItem').checked = !!snap.multiItem;
+  if(qty !== undefined) document.getElementById('hdrQty').value = qty;
+  document.getElementById('fManualTotal').value = snap.manualTotal || '';
+  document.getElementById('fMarkup').value = snap.markup || '';
+  priceDrivenBy = snap.priceDrivenBy || 'markup';
+  recalcAll();
+}
+
+function switchQtyTab(id){
+  if(id === editingExtraQtyId) return;
+  if(id !== null){
+    const target = extraQuantities.find(x=>x.id===id);
+    if(!target) return;
+    if(!num(target.qty)){ statusMsg('Βάλε πρώτα ποσότητα σε αυτή την καρτέλα.'); return; }
+  }
+  stashCurrentTab();
+  editingExtraQtyId = id;
+
+  if(id === null){
+    const b = window.__mainOfferBackup;
+    if(b) loadTabSnapshot(b.snap, b.qty);
+    statusMsg('Κύρια ποσότητα');
+  } else {
+    const e = extraQuantities.find(x=>x.id===id);
+    loadTabSnapshot(e.snap || snapshotOffer(), e.qty);
+    statusMsg(`Εναλλακτική ποσότητα — ${num(e.qty).toLocaleString('el-GR')} τεμ.`);
+  }
+  renderQtyTabs();
+  renderExtraQuantitiesList();
+  renderExtraTotals();
+}
+
+// Everything the offer knows must come from the main quantity, whichever tab
+// happens to be open — otherwise saving while on a copy would store the copy.
+function withMainQuantity(fn){
+  const wasOn = editingExtraQtyId;
+  if(wasOn !== null) switchQtyTab(null);
+  try { return fn(); } finally { if(wasOn !== null) switchQtyTab(wasOn); }
+}
+
+function renderQtyTabs(){
+  // The tabs live in the Extra Quantities card, above the chips that create
+  // them — the two belong together, and a floating bar at the top of the page
+  // gave no clue what it was attached to.
+  const bar = document.getElementById('qtyTabsBar');
+  if(!bar) return;
+  if(!extraQuantities.length){
+    // Cleared, not just hidden — leaving the old tabs in place kept them
+    // findable and made stale state look live.
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  const mainQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
+    ? window.__mainOfferBackup.qty : document.getElementById('hdrQty').value;
+  // Which quantity the customer accepted, so the tab can say so.
+  const approvedQ = document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε')
+    ? num(document.getElementById('fApprovedQty').value) : 0;
+
+  // The close button lives on the tab, as it does in a browser — and only on
+  // alternatives, since the main quantity can't be removed.
+  const tab = (active, label, sub, onClick, edited, closeId) =>
+    `<button class="qty-tab${active ? ' active' : ''}" onclick="${onClick}">
+       <span class="qt-main">${esc(label)}</span>
+       <span class="qt-sub">${esc(sub)}</span>${edited ? '<span class="qt-dot" title="Παραμετροποιημένο"></span>' : ''}
+       ${closeId != null ? `<span class="qt-close" title="Διαγραφή αυτής της ποσότητας"
+          onclick="event.stopPropagation();removeExtraQuantity(${closeId})">×</span>` : ''}
+     </button>`;
+  bar.style.display = 'flex';
+
+  // Ordered by quantity rather than by when each was added, so the tabs read
+  // like a price ladder. A tab with no quantity yet goes last, where it is
+  // being filled in.
+  const ordered = [{ main:true, qty:num(mainQty) }]
+    .concat(extraQuantities.map(e=>({ main:false, e, qty:num(e.qty) })))
+    .sort((a,b)=>(a.qty||Infinity) - (b.qty||Infinity));
+
+  bar.innerHTML = ordered.map(x => x.main
+    ? tab(editingExtraQtyId === null, x.qty.toLocaleString('el-GR') + ' τεμ.',
+          approvedQ && x.qty === approvedQ ? '✓ εγκεκριμένη' : 'κύρια',
+          'switchQtyTab(null)', false, null)
+    : tab(editingExtraQtyId === x.e.id,
+          x.qty > 0 ? x.qty.toLocaleString('el-GR') + ' τεμ.' : '— τεμ.',
+          x.qty > 0 && x.qty === approvedQ ? '✓ εγκεκριμένη' : 'εναλλακτική',
+          `switchQtyTab(${x.e.id})`, x.e.snapEdited, x.e.id)).join('');
 }
 
 function renderExtraTotals(){
@@ -4567,68 +5059,46 @@ function renderExtraTotals(){
   const isApproved = document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε');
   const approvedQty = num(document.getElementById('fApprovedQty').value);
 
-  // Rebuilding the markup while someone is typing moves the caret to the start
-  // (number inputs won't let it be restored), which reversed digits. So when
-  // nothing structural changed, update the figures in place and leave inputs
-  // alone. A quantity edit IS structural (it reorders/regroups rows), so it
-  // must force a full rebuild rather than silently leaving a stale row behind.
-  const signature = extras.map(e=>e.id+':'+num(e.qty)).join(',') + '|' + isApproved + approvedQty;
-  const existingRows = container.querySelectorAll('.extra-total-row');
-  if(existingRows.length === extras.length && container.dataset.sig === signature){
-    extras.forEach((e, i)=>{
-      const row = existingRows[i];
-      const t = computeTotals(num(e.qty));
-      const vals = row.querySelectorAll('.extra-val');
-      if(vals.length>=4){
-        vals[0].textContent = fmt(t.materials);
-        vals[1].textContent = fmt(t.printing);
-        vals[2].textContent = fmt(t.procTotal);
-        vals[3].textContent = fmt(t.grand);
-      }
-      const price = num(e.manualTotal), profit = price>0 ? price - t.grand : 0;
-      const note = row.querySelector('.extra-note');
-      if(note){
-        note.textContent = price>0 ? 'Κέρδος '+fmt(profit)+' · '+(price/num(e.qty)).toLocaleString('el-GR',{minimumFractionDigits:3,maximumFractionDigits:3})+' €/τεμ' : '';
-        note.style.color = profit<0 ? '#ff9b8f' : '#7ee2a8';
-      }
-      // Only write into an input the user isn't currently editing.
-      row.querySelectorAll('input').forEach(inp=>{
-        if(inp === document.activeElement) return;
-        const want = inp.dataset.field==='markup' ? (e.markup||'') : (e.manualTotal||'');
-        if(inp.value !== want) inp.value = want;
-      });
-    });
-    syncApprovedMarker(isApproved, extras.length);
-    return;
-  }
+  if(!extras.length){ container.innerHTML = ''; syncApprovedMarker(isApproved, 0); return; }
 
-  container.innerHTML = '';
-  container.dataset.sig = signature;
+  // One row of black cards only — the one at the top, which always shows the
+  // open tab. Repeating them per quantity gave two places to type a final price
+  // and no way to tell which one was in force. This is a read-only comparison;
+  // the figures themselves are set on each quantity's own tab.
+  const mainQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
+    ? num(window.__mainOfferBackup.qty) : num(document.getElementById('hdrQty').value);
+  const mainSnap = (window.__mainOfferBackup && editingExtraQtyId !== null)
+    ? window.__mainOfferBackup.snap : null;
+  const mainPrice = mainSnap ? num(mainSnap.manualTotal)
+    : num(document.getElementById('fManualTotal').value);
 
-  extras.forEach(e=>{
-    const eqty = num(e.qty);
-    const t = computeTotals(eqty);
-    const price = num(e.manualTotal);
-    const profit = price>0 ? price - t.grand : 0;
-    const chosen = approvedQty === eqty;
-    const row = document.createElement('div');
-    row.className = 'totals extra-total-row';
-    row.dataset.qty = eqty;
-    row.style.cssText = 'padding-top:2px;grid-template-columns:1fr 1fr 1fr 1fr 0.8fr 1.1fr;margin-top:10px;';
-    row.innerHTML = `
-      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} τεμ. — Χαρτιά</div><div class="val extra-val">${fmt(t.materials)}</div></div>
-      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Εκτύπωση</div><div class="val extra-val">${fmt(t.printing)}</div></div>
-      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Επεξεργασίες</div><div class="val extra-val">${fmt(t.procTotal)}</div></div>
-      <div class="totcard"><div class="lbl">Ποσότητα ${eqty} — Κόστος</div><div class="val extra-val">${fmt(t.grand)}</div></div>
-      <div class="totcard"><div class="lbl">Περιθώριο %</div><input class="val" data-field="markup" type="number" step="1" placeholder="π.χ. 60" value="${esc(e.markup||'')}" oninput="setExtraMarkup(${e.id}, this.value)"></div>
-      <div class="totcard ${chosen?'totcard-approved':''}"><div class="lbl">Τελικό Ποσό (χειροκίνητο)</div>
-        <input class="val" data-field="price" type="number" step="0.01" placeholder="π.χ. 3100" value="${esc(e.manualTotal||'')}" oninput="setExtraPrice(${e.id}, this.value)">
-        <div class="lbl extra-note" style="margin-top:3px;color:${profit<0?'#ff9b8f':'#7ee2a8'};">${price>0 ? 'Κέρδος '+fmt(profit)+' · '+(price/eqty).toLocaleString('el-GR',{minimumFractionDigits:3,maximumFractionDigits:3})+' €/τεμ' : ''}</div>
-        ${chosen ? '<div class="qty-badge">✓ Εγκεκριμένη ποσότητα</div>' : ''}
-      </div>
-    `;
-    container.appendChild(row);
-  });
+  const rows = [{ id:null, qty:mainQty, cost:computeTotals(mainQty, mainSnap).grand,
+                  price:mainPrice, main:true }]
+    .concat(extras.map(e=>({ id:e.id, qty:num(e.qty), cost:computeTotals(num(e.qty), e.snap).grand,
+                             price:num(e.manualTotal), main:false })))
+    // Same order as the tabs — the two lists sat side by side in different
+    // orders, which is what made the whole thing feel muddled.
+    .sort((a,b)=>a.qty - b.qty);
+
+  container.innerHTML = `<div class="qty-compare">
+    <div class="qc-row qc-head">
+      <span>Ποσότητα</span><span>Κόστος</span><span>Τελική τιμή</span><span>€ / τεμ.</span><span>Κέρδος</span>
+    </div>
+    ${rows.map(r=>{
+      const active = (r.id === editingExtraQtyId) || (r.main && editingExtraQtyId === null);
+      const profit = r.price > 0 ? r.price - r.cost : 0;
+      const chosen = isApproved && approvedQty === r.qty;
+      return `<div class="qc-row${active ? ' qc-active' : ''}${chosen ? ' qc-chosen' : ''}"
+          onclick="switchQtyTab(${r.main ? 'null' : r.id})" title="Άνοιγμα αυτής της ποσότητας">
+        <span><b>${r.qty.toLocaleString('el-GR')}</b> τεμ.${r.main ? ' <span class="qc-tag">κύρια</span>' : ''}${chosen ? ' <span class="qc-tag qc-ok">✓ εγκεκριμένη</span>' : ''}</span>
+        <span>${fmt(r.cost)}</span>
+        <span>${r.price > 0 ? fmt(r.price) : '<span class="qc-empty">—</span>'}</span>
+        <span>${r.price > 0 ? (r.price/r.qty).toLocaleString('el-GR',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' €' : '<span class="qc-empty">—</span>'}</span>
+        <span class="${profit < 0 ? 'qc-loss' : 'qc-profit'}">${r.price > 0 ? fmt(profit) : ''}</span>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="empty-note" style="margin-top:6px;">Οι τιμές ορίζονται στα μαύρα πεδία πάνω, για την ποσότητα που έχεις ανοιχτή. Κλικ σε γραμμή για να την ανοίξεις.</div>`;
 
   syncApprovedMarker(isApproved, extras.length);
 }
@@ -4655,7 +5125,24 @@ function syncApprovedMarker(isApproved, extrasCount){
   }
 }
 
-function recalcAll(){ renderFlat(); renderBiblio(); renderFabric(); renderProc(); }
+function recalcAll(){ renderFlat(); renderBiblio(); renderFabric(); refreshAutoFoldTasks(); renderProc(); updateGrand(); }
+
+// The quantity feeds paper, printing and every processing task, so a change has
+// to reach all of them. Before this it only redrew the paper tables, and the
+// processing figures were refreshed by accident — through the book row's own
+// recalculation — which failed whenever there was no book row to recalculate.
+function onHeaderQtyInput(){
+  // On an alternative tab, the header quantity IS that tab's quantity.
+  if(editingExtraQtyId !== null){
+    const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
+    if(e){ e.qty = document.getElementById('hdrQty').value; renderQtyTabs(); }
+  }
+  renderBiblio();
+  renderFlat();
+  refreshAutoFoldTasks();   // folding and sewing follow the sheet count
+  renderProc();             // every other task follows the header quantity
+  updateGrand();
+}
 
 // ===== Συσκευασία & Βάρος =====
 function computeAutoWeightPerUnit(){
@@ -4664,14 +5151,14 @@ function computeAutoWeightPerUnit(){
   // includes offcut waste that never ships).
   let grams = 0;
   flatRows.forEach(r=>{
-    const p = paperByName[r.paperName];
+    const p = findPaper(r.paperName);
     const pps = num(r.piecesPerSheet);
     if(!p || !p.w || !p.l || !p.g || pps<=0) return;
     const pieceArea_m2 = (p.w/100 * p.l/100) / pps;
     grams += pieceArea_m2 * p.g;
   });
   bookRows.forEach(r=>{
-    const p = paperByName[r.paperName];
+    const p = findPaper(r.paperName);
     const pagesPerSheet = num(r.pagesPerSheet);
     const pages = num(r.pages);
     if(!p || !p.w || !p.l || !p.g || pagesPerSheet<=0) return;
@@ -4689,12 +5176,12 @@ function computeAutoThicknessPerUnit(){
   // anything this misses (boards, laminate, binding, etc.).
   let mm = 0;
   flatRows.forEach(r=>{
-    const p = paperByName[r.paperName];
+    const p = findPaper(r.paperName);
     if(!p || !p.g) return;
     mm += (p.g / PAPER_BULK_DENSITY) / 1000;
   });
   bookRows.forEach(r=>{
-    const p = paperByName[r.paperName];
+    const p = findPaper(r.paperName);
     const pages = num(r.pages);
     if(!p || !p.g || pages<=0) return;
     mm += ((p.g / PAPER_BULK_DENSITY) / 1000) * pages;
@@ -5257,7 +5744,17 @@ function applyOfferData(d){
   document.getElementById('pkExtraWeight').value = d.pkExtraWeight||'';
   document.getElementById('pkExtraThickness').value = d.pkExtraThickness||'';
   if(d.extraQuantities && d.extraQuantities.length){
-    extraQuantities = d.extraQuantities.map(e => ({ id: extraQtySeq++, qty: e.qty||'', manualTotal: e.manualTotal||'', markup: e.markup||'' }));
+    // The snapshot is the whole point of an alternative — its papers, its tasks,
+    // its own final price. Rebuilding without it meant every alternative fell
+    // back to a copy of the main offer, so they all showed the same price.
+    extraQuantities = d.extraQuantities.map(e => ({
+      id: extraQtySeq++,
+      qty: e.qty || '',
+      manualTotal: e.manualTotal || '',
+      markup: e.markup || '',
+      snapEdited: !!e.snapEdited,
+      snap: e.snap ? JSON.parse(JSON.stringify(e.snap)) : null
+    }));
   } else {
     // Migrate older offers saved with the old fixed extra1/extra2 fields.
     extraQuantities = [];
@@ -5279,6 +5776,9 @@ function applyOfferData(d){
   } else {
     procCategories = [];
   }
+  // Folding and sewing are derived from the book rows, so they are recomputed on
+  // load — a saved offer otherwise showed the plain header quantity there.
+  refreshAutoFoldTasks();
   renderProc();
   updateGrand();
 }
@@ -5874,6 +6374,14 @@ function toggleEnglishPdfBtn(){
 }
 
 async function saveOffer(){
+  // Whichever tab is open, what gets stored is the main quantity — the switch
+  // back and forth is invisible and keeps the tab you were on.
+  if(editingExtraQtyId !== null){
+    const openTab = editingExtraQtyId;
+    switchQtyTab(null);
+    try { await saveOffer(); } finally { switchQtyTab(openTab); }
+    return;
+  }
   try{
     const data = collectOffer();
     const id = currentOfferId || ('o' + Date.now());
@@ -6118,6 +6626,8 @@ async function deleteOffer(id){
 }
 
 function newOffer(){
+  editingExtraQtyId = null;
+  window.__mainOfferBackup = null;
   window.__linkOfferToTicket = null;   // a blank offer is not a conversion
   window.__offerLinkedTickets = [];
   setTimeout(refreshOfferTicketLink, 0);
@@ -7890,7 +8400,7 @@ async function convertTicketToOffer(){
     const bodyRows = totalPages > 0 ? rows.filter(isBodyRow) : [];
     const flatSrc = rows.filter(r => !bodyRows.includes(r));
 
-    const paperOf = name => paperByName[name]
+    const paperOf = name => findPaper(name)
       || Object.values(paperByName || {}).find(p => sameItemName(p.name, name));
 
     flatRows = [];
@@ -8163,8 +8673,52 @@ function printTicket(){
 }
 
 async function convertOfferToTicket(){
+  // A ticket is made from the main quantity, not from whichever tab is open.
+  if(editingExtraQtyId !== null) return withMainQuantity(convertOfferToTicket);
   // Already has a ticket → open it rather than making a duplicate.
   if(await openLinkedTicketFromOffer()) return;
+
+  // Production starts from an accepted price, not from a draft. Without this a
+  // quote could reach the press before the customer had agreed to anything.
+  const approved = document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε');
+  if(!approved){
+    statusMsg('Η προσφορά δεν έχει εγκριθεί — πάτησε πρώτα «Εκκρεμεί → Εγκρίθηκε».');
+    const btn = document.getElementById('approveBtn');
+    btn.scrollIntoView({behavior:'smooth', block:'center'});
+    btn.classList.add('needs-approval');
+    setTimeout(()=>btn.classList.remove('needs-approval'), 2200);
+    return;
+  }
+
+  // With alternatives, the accepted quantity is the one that goes into
+  // production — while the offer itself keeps every option on record.
+  const chosenQty = num(document.getElementById('fApprovedQty').value);
+  const mainQty = num(document.getElementById('hdrQty').value);
+  const chosenAlt = (chosenQty && chosenQty !== mainQty)
+    ? extraQuantities.find(e => num(e.qty) === chosenQty) : null;
+
+  if(chosenAlt){
+    if(!confirm(`Εγκεκριμένη ποσότητα: ${chosenQty.toLocaleString('el-GR')} τεμ.${'\n'}${'\n'}`
+      + `Το Job Ticket θα φτιαχτεί με αυτή την εναλλακτική`
+      + (chosenAlt.snapEdited ? ' και τα δικά της χαρτιά/επεξεργασίες' : '')
+      + `.${'\n'}Η προσφορά μένει όπως είναι, με όλες τις ποσότητες. Συνέχεια;`)) return;
+    // Build the ticket from the accepted alternative, then put the offer back
+    // exactly as it was — the record of what was quoted must not change.
+    const backup = { snap: snapshotOffer(), qty: document.getElementById('hdrQty').value };
+    loadTabSnapshot(chosenAlt.snap || backup.snap, chosenAlt.qty);
+    try {
+      await convertOfferToTicketInner();
+    } finally {
+      loadTabSnapshot(backup.snap, backup.qty);
+      renderQtyTabs();
+      renderExtraTotals();
+    }
+    return;
+  }
+  return convertOfferToTicketInner();
+}
+
+async function convertOfferToTicketInner(){
   const partial = (typeof approvedItems === 'function') ? approvedItems() : null;
   if(partial && partial.length < flatRows.filter(r=>r.material && r.material.trim()).length){
     if(!confirm(`Θα δημιουργηθεί ένα Job Ticket μόνο για τα ${partial.length} εγκεκριμένα είδη:\n`
@@ -8383,14 +8937,22 @@ async function toggleOfferApprovedInForm(){
       setApprovedQty(picked);
       statusMsg(picked===baseQty
         ? `Εγκρίνεται με την κύρια ποσότητα (${picked} τεμ.) ✓`
-        : `Η ποσότητα ${picked} τεμ. έγινε η κύρια ποσότητα της προσφοράς ✓`);
+        : `Εγκρίνεται με την εναλλακτική των ${picked} τεμ. ✓ — η προσφορά μένει όπως είναι`);
     }
+  } else {
+    // Withdrawing the approval has to clear the chosen quantity too, or the
+    // offer keeps claiming a quantity was accepted after it was un-approved.
+    setApprovedQty('');
   }
 
   if(!currentOfferId) await saveOffer();
   if(!currentOfferId) return;
   const newState = await setOfferApproved(currentOfferId, !currentlyApproved);
   if(newState!=null) updateApproveButton(newState);
+  // Redrawn after the button changes: the tabs and the comparison read the
+  // approval from it, so drawing them earlier showed the previous state.
+  renderQtyTabs();
+  renderExtraTotals();
 }
 
 if(tkPaperRows.length===0) addTkPaperRow();
@@ -8487,7 +9049,7 @@ async function markOrderReceived(id){
       // Roll goods arrive in metres and finished items in pieces, so the stock
       // entry has to carry the order's own unit rather than assume sheets.
       const unit = order.unit || 'φύλλα';
-      if(order.material && paperByName[order.material] && sheets>0){
+      if(order.material && findPaper(order.material) && sheets>0){
         if(!record.stock[order.material]) record.stock[order.material] = { qty:0, unit };
         record.stock[order.material].qty += sheets;
         record.stock[order.material].unit = unit;
@@ -8579,7 +9141,7 @@ async function deleteSelectedOrders(){
       const o = record.orders[id];
       if(!o) return;
       const sheets = num(o.sheets);
-      if(o.status==='received' && o.material && paperByName[o.material] && sheets>0){
+      if(o.status==='received' && o.material && findPaper(o.material) && sheets>0){
         stockLinkedTotal[o.material] = (stockLinkedTotal[o.material]||0) + sheets;
       }
     });
@@ -8595,7 +9157,7 @@ async function deleteSelectedOrders(){
       if(!o) return;
       if(alsoRemoveStock){
         const sheets = num(o.sheets);
-        if(o.status==='received' && o.material && paperByName[o.material] && sheets>0){
+        if(o.status==='received' && o.material && findPaper(o.material) && sheets>0){
           if(record.stock[o.material]) record.stock[o.material].qty = Math.max(0, record.stock[o.material].qty - sheets);
           record.stockLog = record.stockLog || [];
           record.stockLog.unshift({ id:'stk'+Date.now()+Math.random().toString(36).slice(2,6), paper:o.material, type:'remove', qty:sheets, unit:'φύλλα', note:'Μαζική διαγραφή παραγγελιών', date:new Date().toISOString() });
@@ -8622,7 +9184,7 @@ async function deleteOrder(id){
     if(!confirm('Διαγραφή αυτής της παραγγελίας;')) return;
 
     const sheets = num(order.sheets);
-    const linkedToStock = order.status==='received' && order.material && paperByName[order.material] && sheets>0;
+    const linkedToStock = order.status==='received' && order.material && findPaper(order.material) && sheets>0;
     let alsoRemoveStock = false;
     if(linkedToStock){
       const u = order.unit || 'φύλλα';
@@ -12631,7 +13193,7 @@ async function refreshStockReport(){
   try{
     const record = await jbGetRecord();
     // Orders that are actual paper purchases (material matches the paper database).
-    const paperOrders = Object.values(record.orders||{}).filter(o => o.material && paperByName[o.material] && num(o.sheets)>0);
+    const paperOrders = Object.values(record.orders||{}).filter(o => o.material && findPaper(o.material) && num(o.sheets)>0);
 
     if(paperOrders.length===0){
       yearSummaryEl.innerHTML = '';
@@ -12728,7 +13290,7 @@ async function exportStockReportCsv(){
   try{
     const record = await jbGetRecord();
     const yearFilter = document.getElementById('stockReportYear').value;
-    let paperOrders = Object.values(record.orders||{}).filter(o => o.material && paperByName[o.material] && num(o.sheets)>0);
+    let paperOrders = Object.values(record.orders||{}).filter(o => o.material && findPaper(o.material) && num(o.sheets)>0);
     if(yearFilter) paperOrders = paperOrders.filter(o=>(o.date||'').slice(0,4)===yearFilter);
     paperOrders.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
