@@ -199,6 +199,57 @@
     letter-spacing:0.05em;color:var(--muted);flex:none;}
   .ship-quick input{width:150px;font-size:15px;font-weight:700;padding:7px 9px;}
   .ship-quick .ship-eur{font-size:14px;font-weight:700;color:var(--muted);}
+  /* A dense list: the archive is something you search through, not browse. */
+  .archive-list{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .archive-row{display:flex;align-items:center;gap:12px;padding:9px 12px;cursor:pointer;
+    border-top:1px solid var(--line);background:#fff;transition:background 0.1s;}
+  .archive-row:first-child{border-top:none;}
+  .archive-row:hover{background:var(--page);}
+  .archive-row .ar-main{flex:1;min-width:0;}
+  .archive-row .ar-title{font-size:13px;font-weight:600;line-height:1.3;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .archive-row .ar-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+  .archive-row .ar-when{font-size:11px;color:var(--muted);white-space:nowrap;flex:none;
+    font-variant-numeric:tabular-nums;}
+  .archive-row .btn{padding:3px 10px;font-size:11px;flex:none;}
+  .archive-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 2px 2px;font-size:12px;color:var(--muted);flex-wrap:wrap;}
+  .archive-pager .btn{padding:4px 12px;font-size:12px;}
+  .archive-pager .btn[disabled]{opacity:0.4;cursor:default;}
+  /* Setup + rate, the way a print shop states a job — and a box to try a size
+     against it, because a prediction is the only output anyone acts on. */
+  .pt-model{background:var(--page);border:1px solid var(--line);border-radius:9px;
+    padding:10px 12px;margin:10px 0 4px;}
+  .pt-model-weak{background:#fdfbf6;border-color:#ece5d8;}
+  .pt-model-line{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;}
+  .pt-model-num{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .pt-model-lbl{font-size:11px;color:var(--muted);}
+  .pt-model-plus{font-size:15px;color:var(--muted);margin:0 3px;}
+  .pt-predict{display:flex;align-items:center;gap:8px;margin-top:9px;
+    padding-top:9px;border-top:1px dashed var(--line-strong);flex-wrap:wrap;}
+  .pt-predict label{font-size:11px;color:var(--muted);}
+  .pt-predict input{width:100px;font-size:13px;padding:4px 7px;}
+  .pt-predict-out{font-size:14px;font-weight:800;color:#2f6fed;min-width:60px;}
+  /* Job profitability: what it cost in time against what it was charged. */
+  .jp-head{margin-bottom:10px;}
+  .jp-sum{display:flex;gap:26px;flex-wrap:wrap;}
+  .jp-sum-val{display:block;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .jp-sum-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);}
+  .jp-list{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .jp-row{display:grid;grid-template-columns:2.2fr 0.9fr 1fr 1.2fr 1fr 1fr;gap:10px;
+    padding:8px 12px;font-size:12.5px;align-items:baseline;border-top:1px solid var(--line);
+    cursor:pointer;font-variant-numeric:tabular-nums;background:#fff;}
+  .jp-row:first-child{border-top:none;}
+  .jp-row:hover{background:var(--page);}
+  .jp-row-head{background:var(--page);font-size:10px;text-transform:uppercase;
+    letter-spacing:0.04em;color:var(--muted);font-weight:700;cursor:default;}
+  .jp-row-head:hover{background:var(--page);}
+  .jp-row-loss{box-shadow:inset 3px 0 0 #b3243c;}
+  .jp-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .jp-qty{font-size:10.5px;color:var(--muted);font-weight:400;margin-left:6px;}
+  .jp-pos{color:#0e8a45;font-weight:700;}
+  .jp-neg{color:#b3243c;font-weight:700;}
+  .jp-none{color:var(--muted);}
   #qtyTabsBar{display:none;gap:6px;flex-wrap:wrap;margin:-14px -16px 12px;
     padding:10px 16px 0;border-bottom:2px solid var(--line);background:var(--page);}
   .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
@@ -471,19 +522,22 @@
      black block the small grey label was the first thing to disappear; on its
      own strip it reads at a glance and the cards separate cleanly. */
   .totals-compact .totcard{padding:0;overflow:hidden;}
-  .totals-compact .lbl{font-size:9px;letter-spacing:0.02em;line-height:1.3;
-    background:#f2efe8;color:#3a3a38;padding:5px 9px;border-bottom:1px solid var(--ink);
-    display:block;min-height:26px;display:flex;align-items:center;}
-  .totals-compact .val{font-size:15px;padding:9px 9px 10px;box-sizing:border-box;}
+  .totals.totals-compact .lbl{font-size:9px;letter-spacing:0.02em;line-height:1.3;
+    background:#f2efe8;color:#111;font-weight:800;padding:5px 9px;border-bottom:1px solid var(--ink);
+    min-height:26px;display:flex;align-items:center;justify-content:center;text-align:center;}
+  /* Centred: with the heading on its own band, a left-aligned figure underneath
+     read as unfinished. The typed field matches the rest so no one box shouts. */
+  .totals.totals-compact .val{font-size:15px;padding:9px 9px 10px;box-sizing:border-box;text-align:center;}
   /* Padding rather than margins: a stretched flex child keeps its full width and
      adds the margins on top, which pushed the card 18px wider than its column. */
   .totals-compact .totcard{display:flex;flex-direction:column;}
-  .totals-compact input.val{font-size:15px;padding:7px 9px 8px;margin:0;
-    width:100%;box-sizing:border-box;border-bottom:1px solid #555;}
+  .totals.totals-compact input.val{font-size:15px;padding:7px 9px 8px;margin:0;
+    width:100%;box-sizing:border-box;border-bottom:1px solid #555;text-align:center;}
   /* The profit note belongs to the value, not to the heading. */
   /* Shares the .lbl class with the headings, so it needs its own reset. */
-  .totals-compact #profitNote{background:transparent;color:#7ee2a8;border:none;
-    padding:0 9px 8px;min-height:0;font-size:8.5px;box-sizing:border-box;}
+  .totals.totals-compact #profitNote{background:transparent;color:#7ee2a8;border:none;
+    padding:0 9px 8px;min-height:0;font-size:8.5px;box-sizing:border-box;
+    justify-content:center;text-align:center;}
   /* With shipping hidden there are six — they simply share the room. */
   .totals-compact:has(#shipTotCard[style*="display: none"]){grid-template-columns:repeat(5, minmax(0, 1fr));}
   @media (max-width:1150px){
@@ -1347,8 +1401,8 @@ function toggleMobileSidebar(forceClose){
             <th style="width:7%" title="Πόσα φύλλα περίσσεψαν από αυτή τη δουλειά — καταχωρούνται πίσω στην Αποθήκη">Περίσσευμα Χαρτιού</th>
             <th style="width:8%">Σχήμα εκτ/σης</th>
             <th style="width:7%">ΜΟΝΤΑΖ</th><th style="width:5%">Όψεις</th>
-            <th style="width:8%" class="tk-timer-col" title="Χρόνος στησίματος μηχανής — τσίγκοι, πλύσιμο, ρύθμιση">Στήσιμο</th>
-            <th style="width:8%" class="tk-timer-col" title="Χρόνος εκτύπωσης — από την πρώτη καλή κόλλα">Εκτύπωση</th>
+            <th style="width:8%" class="tk-timer-col" title="Make ready της μηχανής εκτύπωσης — τσίγκοι, πλύσιμο, ρύθμιση, μέχρι την πρώτη καλή κόλλα">Make Ready</th>
+            <th style="width:8%" class="tk-timer-col" title="Το τράβηγμα — από την πρώτη καλή κόλλα ως το τέλος">Εκτύπωση</th>
             <th style="width:3%"></th>
           </tr></thead>
           <tbody id="tkPaperBody" oninput="markEmptyTicketCells()"></tbody>
@@ -4083,6 +4137,7 @@ function recalcFabricTotal(){
 // A single starting rate for every operation, until the real ones are measured.
 const DEFAULT_PROC_RATE = 30;
 
+
 const defaultProcCategories = [
   { name: 'ΕΠΕΞΕΡΓΑΣΙΕΣ', tasks: [
     { name: 'ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ', speed: 296 },
@@ -4124,7 +4179,8 @@ function buildDefaultProcCategories(){
     name: cat.name,
     collapsed: true,
     tasks: cat.tasks.map(t => ({
-      id: procTaskSeq++, name: t.name, qty: t.qty || '', speed: t.speed || '',
+      id: procTaskSeq++, name: t.name, qty: t.qty || '',
+      speed: t.speed || '',
       // Every task carries a price from the start, so nothing has to be typed
       // twice. The tick below is what decides whether it reaches the total —
       // a filled-in price on its own must not cost the customer anything.
@@ -5515,6 +5571,7 @@ function recalcWeightThickness(){
 // automatic number is worse than a blank one on a shop-floor ticket.
 let ticketPackagingMode = 'manual';
 let currentTicketLinkGroupId = null;
+let currentTicketMultiItem = false;
 let currentTicketIsChild = false;
 
 function updateDeadlineFieldVisibility(){
@@ -7052,6 +7109,7 @@ async function splitTicketPaperRowToChild(rowId){
   if(!confirm(`Δημιουργία ξεχωριστού, συνδεδεμένου Job Ticket για "${rowLabel}"; Η γραμμή παραμένει κανονικά και εδώ (πλήρης εικόνα) — το νέο ticket θα κινείται ανεξάρτητα στην Παραγωγή, μόνο για αυτό το κομμάτι.`)) return;
 
   if(!currentTicketLinkGroupId) currentTicketLinkGroupId = generateLinkGroupId();
+  const parentIsMulti = currentTicketMultiItem;   // the child inherits it
   const parentLinkId = currentTicketLinkGroupId;
   const parentId = currentTicketId;
   const parentInfo = document.getElementById('tkInfo').value;
@@ -7059,6 +7117,7 @@ async function splitTicketPaperRowToChild(rowId){
   const parentClient = document.getElementById('tkClient').value;
   const parentSchema = document.getElementById('tkSchema').value;
   const parentSelides = document.getElementById('tkSelides').value;
+  const parentDeadline = document.getElementById('tkDeadline').value;
   const parentProcRows = tkProcRows.map(p => ({ label: p.label, details: p.details }));
   const childId = 'split_' + Date.now();
 
@@ -7077,11 +7136,14 @@ async function splitTicketPaperRowToChild(rowId){
   newTicket();
   currentTicketLinkGroupId = parentLinkId;
   currentTicketIsChild = true;
+  currentTicketMultiItem = parentIsMulti;
   updateDeadlineFieldVisibility();
   document.getElementById('tkInfo').value = [parentInfo, rowLabel].filter(Boolean).join(' — ');  // parent already carries the date code
   // A row with its own quantity is a separate item, so that figure travels with
   // it; otherwise the child would inherit the whole order's quantity.
   document.getElementById('tkQty').value = num(row.qty) > 0 ? row.qty : parentQty;
+  // The part shares the job's deadline: it has to be ready when the whole is.
+  document.getElementById('tkDeadline').value = parentDeadline || '';
   document.getElementById('tkClient').value = parentClient;
   document.getElementById('tkSchema').value = parentSchema;
   document.getElementById('tkSelides').value = parentSelides;
@@ -7112,7 +7174,11 @@ async function splitTicketPaperRowToChild(rowId){
     const data = collectTicket();
     const record = await jbGetRecord();
     const firstStage = defaultTicketStage(record);
-    record.tickets[childId] = { label: data.info || 'Χωρίς τίτλο', date:'', savedAt: new Date().toISOString(), deadlineDate:'', stage: firstStage, data };
+    // The part is due when the whole job is due — an empty deadline left the
+    // child looking like it had no date at all on the board.
+    record.tickets[childId] = { label: data.info || 'Χωρίς τίτλο', date:'',
+      savedAt: new Date().toISOString(), deadlineDate: parentDeadline || '',
+      stage: firstStage, data };
     await jbPutRecord(record);
   }catch(e){
     console.error('Split ticket error:', e);
@@ -7305,6 +7371,7 @@ async function postLeftoverToStock(rowId){
 // Saved straight away, because the main ticket is still an unsaved form at this
 // point — the two are linked so they read as parts of the same order.
 async function buildSeparateGangTicket(gangRows, gangSheets, client){
+  const parentIsMulti = currentTicketMultiItem;
   const names = gangRows.map(r=>r.material || r.paperName).join(' + ');
   const linkId = currentTicketLinkGroupId || generateLinkGroupId();
   currentTicketLinkGroupId = linkId;
@@ -7321,15 +7388,26 @@ async function buildSeparateGangTicket(gangRows, gangSheets, client){
   newTicket();
   currentTicketLinkGroupId = linkId;
   currentTicketIsChild = true;
+  currentTicketMultiItem = parentIsMulti;
   updateDeadlineFieldVisibility();
   document.getElementById('tkInfo').value = `${mainInfo} — ΣΥΝΕΚΤΥΠΩΣΗ: ${names}`;
   document.getElementById('tkClient').value = client;
   document.getElementById('tkQty').value = gangSheets;
+  // Printed for the same job, so due on the same day.
+  document.getElementById('tkDeadline').value = mainForm.deadline || '';
   setTicketMultiItem(false);
   tkPaperRows = [];
   addTkPaperRow({ tipos:'Συνεκτύπωση', xarti: gangRows[0].paperName || '',
                   fyllaNet: gangSheets, fylla: gangSheets, tatgab:'ΣΥΝΕΚΤΥΠΩΣΗ' });
   tkProcRows = [];
+  // A task with no item chosen ("— όλα —") belongs to the whole job, so it is
+  // listed once. Matching only on the item name dropped every such task, which
+  // is why finishing work vanished from a gang ticket.
+  procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
+    if(t.name && procTaskIsActive(t) && !String(t.itemMaterial||'').trim()){
+      addTkProcRow({ label:t.name, details:'' });
+    }
+  }));
   gangRows.forEach(gr=>{
     procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
       if(t.name && procTaskIsActive(t) && sameItemName(t.itemMaterial, gr.material)){
@@ -7389,6 +7467,7 @@ async function splitGangRowsToChild(){
   newTicket();
   currentTicketLinkGroupId = parentLinkId;
   currentTicketIsChild = true;
+  currentTicketMultiItem = parentIsMulti;
   updateDeadlineFieldVisibility();
   document.getElementById('tkInfo').value = [parentInfo, `ΣΥΝΕΚΤΥΠΩΣΗ: ${names}`].join(' — ');
   document.getElementById('tkClient').value = parentClient;
@@ -7447,7 +7526,7 @@ function renderTkPaper(){
       <td data-l="Σχήμα εκτ/σης"><input value="${esc(r.sxima)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).sxima=this.value"></td>
       <td data-l="Μοντάζ"><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tatgab=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tatgab)}</textarea></td>
       <td data-l="Όψεις"><input value="${esc(r.opseis)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).opseis=this.value"></td>
-      <td data-l="Στήσιμο" class="tk-timer-col">${paperTimerHtml(r,'mr')}</td>
+      <td data-l="Make Ready" class="tk-timer-col">${paperTimerHtml(r,'mr')}</td>
       <td data-l="Εκτύπωση" class="tk-timer-col">${paperTimerHtml(r,'prod')}</td>
       <td style="white-space:nowrap;"><button class="own-ticket-btn" onclick="splitTicketPaperRowToChild(${r.id})" title="Δημιουργία ξεχωριστού, συνδεδεμένου Job Ticket για αυτή τη γραμμή (παραμένει και εδώ — το νέο κινείται ανεξάρτητα στην Παραγωγή)">🎫</button><button class="rowdel" onclick="removeTkPaperRow(${r.id})">×</button></td>
     `;
@@ -7478,9 +7557,10 @@ function currentElapsed(r, type){
   return seconds;
 }
 
-// Printing is where the hours actually go — plate change, wash-up, make-ready,
-// then the run. Timing it on the paper row means the press time is recorded
-// where the press work is described, using the same two-phase model as post-press.
+// Printing is where the hours actually go. The two phases are the press's own:
+// "Make Ready" is plates, wash-up and adjustment up to the first good sheet;
+// "Εκτύπωση" is the run itself. Timed on the paper row, because each component
+// of a job is a separate pass on the machine.
 function togglePaperTimer(rowId, type){
   const r = tkPaperRows.find(x=>x.id===rowId);
   if(!r) return;
@@ -7495,6 +7575,28 @@ function togglePaperTimer(rowId, type){
   }
   renderTkPaper();
   markTicketDirty();
+}
+
+// A timer left running overnight, or started on the wrong row, otherwise stays
+// wrong for ever — and a wrong figure quietly distorts the costing. Reset is on
+// right-click so the row keeps two controls instead of four.
+function resetTimer(kind, rowId, type){
+  const rows = kind === 'paper' ? tkPaperRows : tkProcRows;
+  const r = rows.find(x=>x.id===rowId);
+  if(!r) return;
+  const label = type === 'mr' ? 'Make Ready' : (kind === 'paper' ? 'Εκτύπωση' : 'Production');
+  const shown = formatDuration(currentElapsed(r, type));
+  if(num(r[type+'Seconds']) <= 0 && !r[type+'Running']){
+    statusMsg('Το χρονόμετρο είναι ήδη στο μηδέν.');
+    return;
+  }
+  if(!confirm(`Μηδενισμός «${label}»;\n\nΘα χαθεί η μέτρηση ${shown}.`)) return;
+  r[type+'Seconds'] = 0;
+  r[type+'Running'] = false;
+  r[type+'StartedAt'] = null;
+  if(kind === 'paper') renderTkPaper(); else renderTkProc();
+  markTicketDirty();
+  statusMsg(`Μηδενίστηκε το «${label}».`);
 }
 
 function toggleProcTimer(taskId, type){
@@ -7541,12 +7643,15 @@ function paperTimerHtml(r, type){
   // the Production Time report counts, so it's marked as such on screen.
   const done = !running && elapsed > 0;
   return `<div style="display:flex;align-items:center;gap:5px;" title="${
-      running ? 'Μετράει τώρα — δεν έχει περάσει ακόμα στις Αναφορές'
-              : (done ? 'Ολοκληρωμένη μέτρηση — μετράει στο Production Time'
-                      : 'Δεν έχει ξεκινήσει')}">
+      (type === 'mr' ? 'Make ready της μηχανής — ' : 'Τράβηγμα — ') + (
+      running ? 'μετράει τώρα, δεν έχει περάσει ακόμα στις Αναφορές'
+              : (done ? 'ολοκληρωμένη μέτρηση, μετράει στο Production Time'
+                      : 'δεν έχει ξεκινήσει'))}">
       <button class="btn timer-btn" style="padding:3px 7px;font-size:11px;${running?'background:#c0392b;color:#fff;border-color:#c0392b;':''}"
         onclick="togglePaperTimer(${r.id},'${type}')">${running ? '⏸' : '▶'}</button>
-      <span class="timer-${type}-display" style="font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:700;${
+      <span class="timer-${type}-display" oncontextmenu="event.preventDefault();resetTimer('paper',${r.id},'${type}')"
+        title="Δεξί κλικ για μηδενισμό"
+        style="font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:700;cursor:context-menu;${
         done ? 'color:#0e8a45;' : (running ? 'color:#c0392b;' : '')}">${formatDuration(elapsed)}${done ? ' ✓' : ''}</span>
     </div>`;
 }
@@ -7561,7 +7666,9 @@ function timerCellHtml(r, type, label){
                 : (done ? 'Ολοκληρωμένη μέτρηση — μετράει στο Production Time'
                         : 'Δεν έχει ξεκινήσει')}">
       <button class="btn" style="padding:4px 8px;font-size:11px;${running?'background:#c0392b;color:#fff;':''}" onclick="toggleProcTimer(${r.id},'${type}')">${running ? '⏸' : '▶'}</button>
-      <span class="timer-${type}-display" style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;${
+      <span class="timer-${type}-display" oncontextmenu="event.preventDefault();resetTimer('proc',${r.id},'${type}')"
+        title="Δεξί κλικ για μηδενισμό"
+        style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;cursor:context-menu;${
         done ? 'color:#0e8a45;' : (running ? 'color:#c0392b;' : '')}">${formatDuration(elapsed)}${done ? ' ✓' : ''}</span>
     </div>
   `;
@@ -7619,6 +7726,10 @@ function collectTicket(){
     tkBoxesPerPallet: document.getElementById('tkBoxesPerPallet').value,
     linkGroupId: currentTicketLinkGroupId,
     isLinkChild: currentTicketIsChild,
+    // Whether this job came from a multi-item offer. A split-off part of such a
+    // job still has no single quantity to put on a card, so the flag travels
+    // with it rather than being re-derived from rows that no longer show it.
+    multiItem: currentTicketMultiItem,
     attachments: ticketAttachments
   };
 }
@@ -7664,6 +7775,7 @@ function applyTicketData(d, topLevelDeadline){
   if(ticketAttachments.length) openTicketSection('tkAttachBody','tkAttachToggle');
   currentTicketLinkGroupId = d.linkGroupId || null;
   currentTicketIsChild = d.isLinkChild === true;
+  currentTicketMultiItem = d.multiItem === true;
   updateDeadlineFieldVisibility();
   renderLinkedTicketsIndicator();
 }
@@ -8974,19 +9086,27 @@ async function convertOfferToTicketInner(){
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const xtra = num(r.xtra);
     const totalSheets = sheets + xtra;
+    // A ganged item is printed on the gang ticket's sheets, not on its own. Its
+    // sheet figures are left blank here so the same paper is not shown twice —
+    // the number that matters is on the gang ticket.
+    const onGangTicket = isGanged(r) && gangSheets > 0;
     addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, qty: num(r.qty) || '',
-      fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: r.sides || '',
+      fyllaNet: onGangTicket ? '' : (sheets || ''),
+      fyllaXtra: onGangTicket ? '' : (xtra || ''),
+      fylla: onGangTicket ? '' : (totalSheets || ''),
+      opseis: r.sides || '',
       tatgab: isGanged(r) ? 'ΣΥΝΕΚΤΥΠΩΣΗ' : '', gangRow: isGanged(r),
       // Each item keeps its own closed size, since a multi-item ticket has no
       // single shape to speak of.
       itemShape: r.simShape || schemaClosedVal || '',
       // With a separate press ticket, these rows stay for the full picture but
       // their paper is consumed there — not twice.
-      movedToChild: isGanged(r) && gangSheets > 0 });
+      movedToChild: onGangTicket });
   });
   // In a multi-item offer the book table is hidden and irrelevant — its default
   // "Σώμα" row would otherwise arrive on the ticket as a phantom paper line.
   const skipBook = (document.getElementById('fMultiItem')||{}).checked;
+  currentTicketMultiItem = skipBook;
   (skipBook ? [] : bookRows).filter(r=>r.material || r.paperName).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
@@ -9002,7 +9122,10 @@ async function convertOfferToTicketInner(){
   procCategories.filter(procCategoryApplies).forEach(cat => cat.tasks.forEach(t => {
     if(t.name && procTaskIsActive(t)){
       const est = procTaskCalc(t, baseQty);
-      addTkProcRow({ label: t.name, details: '', estimatedSeconds: est.hours * 3600 });
+      // The item is named in the details so a multi-item ticket says which part
+      // each operation belongs to.
+      addTkProcRow({ label: t.name, details: String(t.itemMaterial||'').trim(),
+                     estimatedSeconds: est.hours * 3600 });
     }
   }));
   if(tkProcRows.length===0) addTkProcRow();
@@ -10871,6 +10994,27 @@ async function applyLabelRulesToAll(announce, knownRules){
   }
 }
 
+// A job made of several items has no single quantity — one item may be 1.000
+// and another 200. Printing one of them on the card invites the press to run
+// the wrong number, so it is left off and the ticket itself is the reference.
+// A split-off ticket is a single item and keeps its quantity.
+function ticketQtyIsAmbiguous(data){
+  const d = data || {};
+  const rows = (d.paperRows || []).filter(r => (r.tipos||'').trim() || (r.xarti||'').trim());
+
+  // A job from a multi-item offer has no single quantity, and neither does a
+  // part split off from it — the flag is inherited, so both cards say the same.
+  if(d.multiItem === true) return true;
+
+  // A ticket split from an ordinary job is one item with one figure, and that
+  // figure is what the press needs.
+  if(d.isLinkChild) return false;
+
+  if(rows.some(r => r.gangRow || /ΣΥΝΕΚΤΥΠΩΣΗ/i.test(String(r.tatgab||'')))) return true;
+  // Older tickets carry no flag, so multi-item is inferred from the rows.
+  return rows.filter(r => num(r.qty) > 0).length > 1;
+}
+
 async function refreshProductionBoard(){
   const boardEl = document.getElementById('productionBoard');
   const key = getJbKey(), bin = getJbBin();
@@ -11097,7 +11241,8 @@ async function refreshProductionBoard(){
           card.draggable = true;
           card.setAttribute('data-id', t.id);
           const metaBits = [];
-          if(info.qty) metaBits.push('📦 ' + info.qty + ' τεμ.');
+          if(info.qty && !ticketQtyIsAmbiguous(info)) metaBits.push('📦 ' + info.qty + ' τεμ.');
+          else if(ticketQtyIsAmbiguous(info)) metaBits.push('<span title="Πολλαπλά είδη με διαφορετικές ποσότητες — δες το ticket">📦 πολλαπλά</span>');
           const assignedLabels = (t.labels||[]).map(lid => (record.labels||[]).find(l=>l.id===lid)).filter(Boolean);
           const labelsHtml = assignedLabels.map(l => `<span style="background:${l.color};color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;">${esc(l.name)}</span>`).join('');
           // Figure out which divider (if any) this card currently sits under, for pre-selecting the dropdown.
@@ -11570,7 +11715,9 @@ async function refreshInvoicingBoard(){
         const assigned = (t.labels||[]).map(lid => (record.labels||[]).find(l=>l.id===lid)).filter(Boolean);
         const labelsHtml = assigned.map(l => `<span style="background:${l.color};color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;">${esc(l.name)}</span>`).join('');
         const metaBits = [];
-        if(info.qty) metaBits.push('📦 ' + info.qty + ' τεμ.');
+        // Same rule as the production board — invoicing reads the same cards.
+        if(info.qty && !ticketQtyIsAmbiguous(info)) metaBits.push('📦 ' + info.qty + ' τεμ.');
+        else if(ticketQtyIsAmbiguous(info)) metaBits.push('📦 πολλαπλά');
         if(t.deadlineDate) metaBits.push('🗓 ' + fmtDateShort(t.deadlineDate));
         const linked = findLinkedOffer(record, t);
         const offerId = linked ? linked.id : null;
@@ -11635,6 +11782,9 @@ async function archiveTicket(id){
     const record = await jbGetRecord();
     if(record.tickets[id]){
       record.tickets[id].archived = true;
+      // Recorded so the card can say when — "savedAt" is when the job was last
+      // edited, which is not the same thing.
+      record.tickets[id].archivedAt = new Date().toISOString();
       await jbMergePath(SLICE_MAIN, ['tickets', id], record.tickets[id]);
     }
     statusMsg('Αρχειοθετήθηκε ✓ (βρίσκεται στα "📦 Αρχειοθετημένα")');
@@ -11662,6 +11812,12 @@ async function restoreTicket(id){
 }
 
 let archiveViewOpen = false;
+let archivePage = 0;
+
+function setArchivePage(n){
+  archivePage = Math.max(0, n);
+  refreshArchiveList();
+}
 
 function toggleArchiveView(){
   archiveViewOpen = !archiveViewOpen;
@@ -11681,18 +11837,39 @@ async function refreshArchiveList(){
       return;
     }
     archived.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
-    el.innerHTML = archived.map(t=>{
-      const info = t.data||{};
-      return `
-        <div class="fc-job-row">
-          <div><div class="name">${esc(info.info || t.label || '')}</div><div class="client">${esc(t.stage||'')}${info.qty?' · '+esc(info.qty)+' τεμ.':''}</div></div>
-          <div class="btns">
-            <button class="btn" onclick="loadTicket('${t.id}', true)">Άνοιγμα</button>
-            <button class="btn solid" onclick="restoreTicket('${t.id}')">Επαναφορά</button>
-          </div>
-        </div>
-      `;
-    }).join('');
+    // A list, paged. The archive grows without limit, and rendering hundreds of
+    // cards made the board slow to open and impossible to scan.
+    const perPage = 20;
+    const pages = Math.max(1, Math.ceil(archived.length / perPage));
+    if(archivePage >= pages) archivePage = pages - 1;
+    if(archivePage < 0) archivePage = 0;
+    const slice = archived.slice(archivePage * perPage, (archivePage + 1) * perPage);
+
+    el.innerHTML = `
+      <div class="archive-list">
+        ${slice.map(t=>{
+          const info = t.data||{};
+          const when = (t.archivedAt || t.savedAt || '').slice(0,10);
+          const labels = (t.labels||[]).map(id=>(record.labels||[]).find(l=>l.id===id)).filter(Boolean);
+          return `
+          <div class="archive-row" onclick="loadTicket('${t.id}', true)" title="Άνοιγμα">
+            <div class="ar-main">
+              <div class="ar-title">${esc(info.info || t.label || 'Χωρίς τίτλο')}${
+                labels.map(l=>`<span class="card-label" style="background:${esc(l.color)};">${esc(l.name)}</span>`).join('')}</div>
+              <div class="ar-sub">${esc(t.stage || '')}${info.qty ? ' · ' + num(info.qty).toLocaleString('el-GR') + ' τεμ.' : ''}</div>
+            </div>
+            <div class="ar-when">${when ? esc(fmtDate(when)) : ''}</div>
+            <button class="btn" onclick="event.stopPropagation();restoreTicket('${t.id}')"
+              title="Επιστροφή στην Παραγωγή">↩ Επαναφορά</button>
+          </div>`;
+        }).join('')}
+      </div>
+      ${pages > 1 ? `
+      <div class="archive-pager">
+        <button class="btn" onclick="setArchivePage(${archivePage-1})" ${archivePage===0?'disabled':''}>‹ Προηγούμενα</button>
+        <span>Σελίδα <b>${archivePage+1}</b> από ${pages} · ${archived.length} συνολικά</span>
+        <button class="btn" onclick="setArchivePage(${archivePage+1})" ${archivePage===pages-1?'disabled':''}>Επόμενα ›</button>
+      </div>` : `<div class="empty-note" style="padding-top:8px;">${archived.length} αρχειοθετημένες δουλειές.</div>`}`;
   }catch(e){
     console.error('Archive list error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
@@ -12130,7 +12307,7 @@ function collectProdTimeGroups(record, rangeDays, category){
       const mr = num(r.mrSeconds), prod = num(r.prodSeconds), est = num(r.estimatedSeconds);
       if(mr<=0 && prod<=0) return;
       const key = name.toUpperCase();
-      if(!groups[key]) groups[key] = { name, count:0, mrTotal:0, prodTotal:0, qtyTotal:0, mrCount:0, prodCount:0, mrMin:null, mrMax:null, prodMin:null, prodMax:null, estTotal:0, estCount:0, unitTotal:0, rateSamples:[] };
+      if(!groups[key]) groups[key] = { name, count:0, mrTotal:0, prodTotal:0, qtyTotal:0, mrCount:0, prodCount:0, mrMin:null, mrMax:null, prodMin:null, prodMax:null, estTotal:0, estCount:0, unitTotal:0, rateSamples:[], points:[] };
       const g = groups[key];
       g.count++;
       if(mr>0){
@@ -12151,6 +12328,10 @@ function collectProdTimeGroups(record, rangeDays, category){
         if(volume>0){
           g.unitTotal += volume;
           g.rateSamples.push(prod / (volume/1000)); // sec per 1000 of that unit
+          // The whole measurement, kept as a point. Jobs are timed end to end,
+          // so setup and run speed have to be separated afterwards — and that
+          // needs the pairs, not their averages.
+          g.points.push({ v: volume, t: mr + prod });
         }
       }
     });
@@ -12158,17 +12339,68 @@ function collectProdTimeGroups(record, rangeDays, category){
   return Object.values(groups).sort((a,b)=>b.count-a.count);
 }
 
-// Spread of the measurements tells us whether an average is trustworthy at all.
+// Jobs are timed as a whole, so the two figures a print shop actually thinks in
+// — "so many minutes to set up, then so many sheets an hour" — are recovered by
+// fitting a straight line through the measurements: time = setup + volume/rate.
+// Two jobs of different sizes are enough to separate them; more make it steadier.
+function fitSetupAndRate(points){
+  const pts = (points || []).filter(p => p.v > 0 && p.t > 0);
+  if(pts.length < 2) return null;
+
+  const n = pts.length;
+  const sx = pts.reduce((s,p)=>s+p.v, 0);
+  const sy = pts.reduce((s,p)=>s+p.t, 0);
+  const sxx = pts.reduce((s,p)=>s+p.v*p.v, 0);
+  const sxy = pts.reduce((s,p)=>s+p.v*p.t, 0);
+  const denom = n*sxx - sx*sx;
+  if(!denom) return null;                       // every job the same size
+
+  let slope = (n*sxy - sx*sy) / denom;          // seconds per unit
+  let intercept = (sy - slope*sx) / n;          // setup seconds
+
+  // A negative slope or a negative setup means the measurements don't describe
+  // a fixed setup plus a steady rate. Rather than print a nonsense figure, fall
+  // back to the plain average and say so.
+  if(!(slope > 0)) return null;
+  if(intercept < 0) intercept = 0;
+
+  // How well the line matches, so a wild set of numbers doesn't look precise.
+  const meanY = sy/n;
+  const ssTot = pts.reduce((s,p)=>s+Math.pow(p.t-meanY,2), 0);
+  const ssRes = pts.reduce((s,p)=>s+Math.pow(p.t-(intercept+slope*p.v),2), 0);
+  const fit = ssTot > 0 ? 1 - ssRes/ssTot : 0;
+
+  return { setup: intercept, secPerUnit: slope, perHour: 3600/slope, fit, n };
+}
+
+function predictInto(input, setup, secPerUnit, hourlyRate){
+  const out = input.parentElement.querySelector('.pt-predict-out');
+  const v = num(input.value);
+  if(!(v > 0)){ out.textContent = '—'; return; }
+  const secs = setup + secPerUnit * v;
+  const cost = hourlyRate > 0 ? (secs/3600) * hourlyRate : 0;
+  out.textContent = formatDuration(secs) + (cost > 0
+    ? ' · ' + cost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '');
+}
+
 function rateReliability(samples){
   if(!samples || samples.length < 2) return { label:'λίγα δεδομένα', cls:'pt-none' };
   const mean = samples.reduce((a,b)=>a+b,0)/samples.length;
   if(mean<=0) return { label:'λίγα δεδομένα', cls:'pt-none' };
   const sd = Math.sqrt(samples.reduce((s,v)=>s+Math.pow(v-mean,2),0)/samples.length);
   const cv = sd/mean;
-  if(samples.length < 4) return { label:`${samples.length} μετρήσεις — ενδεικτικό`, cls:'pt-none' };
-  if(cv < 0.25) return { label:`${samples.length} μετρήσεις — σταθερό`, cls:'pt-fast' };
-  if(cv < 0.5) return { label:`${samples.length} μετρήσεις — μέτρια διασπορά`, cls:'pt-ontrack' };
-  return { label:`${samples.length} μετρήσεις — μεγάλη διασπορά`, cls:'pt-slow' };
+  // The spread is quoted in real terms, because "μεγάλη διασπορά" on its own
+  // says something is wrong without saying what to look at.
+  const lo = Math.min(...samples), hi = Math.max(...samples);
+  const span = `από ${formatDuration(lo)} έως ${formatDuration(hi)} ανά 1.000`;
+  if(samples.length < 4) return { label:`${samples.length} μετρήσεις — ενδεικτικό`, cls:'pt-none',
+    detail:'Λίγες μετρήσεις ακόμα — ' + span };
+  if(cv < 0.25) return { label:`${samples.length} μετρήσεις — σταθερό`, cls:'pt-fast',
+    detail:'Οι μετρήσεις συμφωνούν — ' + span };
+  if(cv < 0.5) return { label:`${samples.length} μετρήσεις — μέτρια διασπορά`, cls:'pt-ontrack',
+    detail:span };
+  return { label:`${samples.length} μετρήσεις — μεγάλη διασπορά`, cls:'pt-slow',
+    detail:'Μάλλον μετριούνται διαφορετικές δουλειές με το ίδιο όνομα — ' + span };
 }
 
 async function setTaskMachine(taskName, machine){
@@ -12184,6 +12416,84 @@ async function setTaskMachine(taskName, machine){
   }
 }
 
+// ===== Κερδοφορία ανά δουλειά =====
+// The question this view exists to answer is "did this job pay?". That is a
+// per-job question, and euros are the only unit every part of it shares — which
+// is also why the earlier speed comparisons kept contradicting themselves.
+const DEFAULT_SHOP_HOURLY = 30;
+
+function jobLabourCost(ticket, record){
+  const d = ticket.data || {};
+  const rates = record.machineRates || {};
+  const map = record.taskMachineMap || {};
+  let seconds = 0, cost = 0;
+
+  const add = (name, secs) => {
+    if(!(secs > 0)) return;
+    seconds += secs;
+    const machine = map[String(name||'').toUpperCase().trim()] || '';
+    const rate = num(rates[machine]) || DEFAULT_SHOP_HOURLY;
+    cost += (secs/3600) * rate;
+  };
+
+  (d.paperRows || []).forEach(r=>{
+    // Press time lives on the paper rows: make ready plus the run, both charged
+    // at the rate set for ΕΚΤΥΠΩΣΗ.
+    add('ΕΚΤΥΠΩΣΗ', num(r.mrSeconds) + num(r.prodSeconds));
+  });
+  (d.procRows || []).forEach(r=>{
+    add(r.label, num(r.mrSeconds) + num(r.prodSeconds));
+  });
+  return { seconds, cost };
+}
+
+function collectJobProfit(record, rangeDays){
+  const cutoff = rangeDays ? Date.now() - rangeDays*86400000 : 0;
+  const rows = [];
+  Object.entries(record.tickets || {}).forEach(([id, t])=>{
+    const when = Date.parse(t.savedAt || '') || 0;
+    if(cutoff && when && when < cutoff) return;
+    const labour = jobLabourCost(t, record);
+    if(!(labour.seconds > 0)) return;   // nothing was timed, nothing to judge
+
+    const d = t.data || {};
+    const offer = d.offerId ? (record.offers || {})[d.offerId] : null;
+    const od = offer ? (offer.data || {}) : null;
+    // What the customer pays, and what the paper and printing cost — both come
+    // from the offer, because that is where they were agreed.
+    const price = od ? num(od.manualTotal) : 0;
+    // Paper and printing as the offer priced them. Processing is left out on
+    // purpose: that is the part the timers are measuring for real.
+    let materials = 0;
+    if(od){
+      const q = num(od.qty) || num(d.qty);
+      const t2 = computeTotals(q, od);
+      materials = t2.materials + t2.printing;
+    }
+
+    rows.push({
+      id, name: d.info || t.label || 'Χωρίς τίτλο',
+      qty: num(d.qty),
+      seconds: labour.seconds,
+      labour: labour.cost,
+      price, materials,
+      hasOffer: !!offer,
+      profit: price > 0 ? price - materials - labour.cost : null,
+      when: (t.savedAt || '').slice(0,10)
+    });
+  });
+  return rows.sort((a,b)=>(b.when||'').localeCompare(a.when||''));
+}
+
+function toggleProcStats(){
+  const wrap = document.getElementById('ptStatsWrap');
+  const caret = document.getElementById('ptStatsCaret');
+  if(!wrap) return;
+  const showing = wrap.style.display !== 'none';
+  wrap.style.display = showing ? 'none' : '';
+  if(caret) caret.textContent = showing ? '▶' : '▼';
+}
+
 async function refreshProdTimeList(){
   const el = document.getElementById('prodTimeList');
   const key = getJbKey(), bin = getJbBin();
@@ -12194,13 +12504,50 @@ async function refreshProdTimeList(){
   try{
     const record = await jbGetRecord();
     const rangeDays = prodTimeRange==='30' ? 30 : null;
+    // Jobs first: this view exists to say whether a job paid.
+    const jobs = collectJobProfit(record, rangeDays);
+    const priced = jobs.filter(j=>j.profit !== null);
+    const totalLabour = jobs.reduce((s,j)=>s+j.labour, 0);
+    const totalProfit = priced.reduce((s,j)=>s+j.profit, 0);
+    const losers = priced.filter(j=>j.profit < 0);
+
+    const jobsHtml = jobs.length ? `
+      <div class="jp-head">
+        <div class="jp-sum">
+          <div><span class="jp-sum-val">${fmt(totalLabour)}</span><span class="jp-sum-lbl">κόστος χρόνου</span></div>
+          ${priced.length ? `<div><span class="jp-sum-val ${totalProfit<0?'jp-neg':'jp-pos'}">${fmt(totalProfit)}</span><span class="jp-sum-lbl">κέρδος σε ${priced.length} τιμολογημένες</span></div>` : ''}
+          ${losers.length ? `<div><span class="jp-sum-val jp-neg">${losers.length}</span><span class="jp-sum-lbl">με ζημιά</span></div>` : ''}
+        </div>
+      </div>
+      <div class="jp-list">
+        <div class="jp-row jp-row-head">
+          <span>Δουλειά</span><span>Χρόνος</span><span>Κόστος χρόνου</span>
+          <span>Χαρτί + εκτύπωση</span><span>Χρεώθηκε</span><span>Κέρδος</span>
+        </div>
+        ${jobs.map(j=>`
+        <div class="jp-row${j.profit !== null && j.profit < 0 ? ' jp-row-loss' : ''}"
+             onclick="loadTicket('${j.id}', true)" title="Άνοιγμα ticket">
+          <span class="jp-name">${esc(j.name)}${j.qty ? `<span class="jp-qty">${j.qty.toLocaleString('el-GR')} τεμ.</span>` : ''}</span>
+          <span>${formatDuration(j.seconds)}</span>
+          <span>${fmt(j.labour)}</span>
+          <span>${j.hasOffer ? fmt(j.materials) : '<span class="jp-none">—</span>'}</span>
+          <span>${j.price > 0 ? fmt(j.price) : '<span class="jp-none">χωρίς τιμή</span>'}</span>
+          <span class="${j.profit === null ? 'jp-none' : (j.profit < 0 ? 'jp-neg' : 'jp-pos')}">${
+            j.profit === null ? '—' : fmt(j.profit)}</span>
+        </div>`).join('')}
+      </div>
+      <div class="empty-note" style="margin:8px 0 18px;">
+        Κόστος χρόνου = μετρημένα χρονόμετρα × €/ώρα μηχανής (${DEFAULT_SHOP_HOURLY} €/ώρα όπου δεν έχει οριστεί).
+        Το κέρδος δεν αφαιρεί μεταφορικά ή γενικά έξοδα.
+      </div>` : '';
+
     const groups = collectProdTimeGroups(record, rangeDays, prodTimeCategory);
     const machines = record.machines || [];
     const machineRates = record.machineRates || {};
     const taskMachineMap = record.taskMachineMap || {};
     const machineDetails = record.machineDetails || {};
     if(groups.length===0){
-      el.innerHTML = '<div class="empty-note">Δεν υπάρχουν ακόμα ολοκληρωμένες μετρήσεις. '
+      el.innerHTML = jobsHtml + '<div class="empty-note">Δεν υπάρχουν ακόμα ολοκληρωμένες μετρήσεις. '
       + 'Χρησιμοποίησε τα χρονόμετρα στα Job Tickets — μια μέτρηση περνά εδώ όταν <b>σταματήσει</b> (πράσινο ✓). '
       + 'Χρονόμετρα που τρέχουν ακόμα δεν προσμετρώνται.</div>';
       return;
@@ -12221,15 +12568,19 @@ async function refreshProdTimeList(){
       const assignedMachine = taskMachineMap[g.name.toUpperCase()] || '';
       const rate = assignedMachine ? num(machineRates[assignedMachine]) : 0;
       const avgCost = rate>0 ? (totalAvg/3600)*rate : null;
+      // Setup is part of the job, so planning and costing per 1.000 include it:
+      // quoting only the run time is how short runs end up losing money.
+      const setupShare = g.prodCount > 0 ? (g.mrTotal / g.prodCount) : 0;
+      const per1000All = secPer1000 > 0 && g.unitTotal > 0
+        ? secPer1000 + (g.mrTotal / (g.unitTotal/1000)) : secPer1000;
+      const costPer1000 = (rate > 0 && per1000All > 0) ? (per1000All/3600)*rate : null;
 
-      const estAvg = g.estCount ? g.estTotal/g.estCount : 0;
-      let comparisonBadge = `<span class="pt-badge pt-none">Χωρίς εκτίμηση προσφοράς</span>`;
-      if(estAvg>0 && prodAvg>0){
-        const diffPct = ((prodAvg-estAvg)/estAvg*100);
-        if(diffPct>15) comparisonBadge = `<span class="pt-badge pt-slow">⚠ ${diffPct.toFixed(0)}% πιο αργά από εκτίμηση (${formatDuration(estAvg)})</span>`;
-        else if(diffPct<-15) comparisonBadge = `<span class="pt-badge pt-fast">✓ ${Math.abs(diffPct).toFixed(0)}% πιο γρήγορα από εκτίμηση (${formatDuration(estAvg)})</span>`;
-        else comparisonBadge = `<span class="pt-badge pt-ontrack">≈ Κοντά στην εκτίμηση (${formatDuration(estAvg)})</span>`;
-      }
+      // Comparing with the offers was removed: an offer prices ΚΟΠΗ per piece
+      // while the floor measures it per sheet, so the two were never the same
+      // quantity and the comparison invented a discrepancy. What is left is only
+      // what was actually observed.
+      const measuredPerHour = secPer1000 > 0 ? (1000 / (secPer1000/3600)) : 0;
+      const model = fitSetupAndRate(g.points);
 
       const machineSelect = `
         <select style="font-size:10.5px;padding:2px 3px;" onchange="setTaskMachine('${esc(g.name.toUpperCase())}', this.value)">
@@ -12238,14 +12589,9 @@ async function refreshProdTimeList(){
         </select>
       `;
 
+      // The rated-speed badge went with it: it divided sheets per hour by a
+      // machine figure that may be quoted in different units again.
       let speedBadge = '';
-      const md = assignedMachine ? machineDetails[assignedMachine] : null;
-      if(md && num(md.speed)>0 && throughput>0){
-        const ratedSpeed = num(md.speed);
-        const effPct = Math.round(throughput/ratedSpeed*100);
-        const effClass = effPct>=90 ? 'pt-fast' : (effPct<70 ? 'pt-slow' : 'pt-ontrack');
-        speedBadge = `<span class="pt-badge ${effClass}" title="Ονομαστική ταχύτητα μηχανής: ${ratedSpeed.toLocaleString('el-GR')} ${esc(md.speedUnit||'')}/ώρα">${effPct}% της ονομαστικής ταχύτητας μηχανής</span>`;
-      }
 
       return `
         <div class="pt-card">
@@ -12256,7 +12602,26 @@ async function refreshProdTimeList(){
             </div>
             <div class="pt-total-time">${formatDuration(totalAvg)}<div class="pt-total-label">Μ.Ο. συνολικός χρόνος</div></div>
           </div>
-          ${totalAvg>0 ? `
+          ${model ? `
+          <div class="pt-model">
+            <div class="pt-model-line">
+              <span class="pt-model-num">${formatDuration(model.setup)}</span>
+              <span class="pt-model-lbl">στήσιμο</span>
+              <span class="pt-model-plus">+</span>
+              <span class="pt-model-num">${Math.round(model.perHour).toLocaleString('el-GR')}</span>
+              <span class="pt-model-lbl">${esc(unitLabel.toLowerCase())}/ώρα</span>
+            </div>
+            <div class="pt-predict">
+              <label>Πόσο θα κάνει;</label>
+              <input type="number" min="0" placeholder="${esc(unitLabel.toLowerCase())}"
+                oninput="predictInto(this, ${model.setup.toFixed(2)}, ${model.secPerUnit.toFixed(6)}, ${rate})">
+              <span class="pt-predict-out">—</span>
+            </div>
+          </div>` : `
+          <div class="pt-model pt-model-weak">
+            <div class="pt-model-lbl">Δεν βγαίνει ακόμα σταθερό μοτίβο — χρειάζονται μετρήσεις σε δουλειές διαφορετικού μεγέθους.</div>
+          </div>`}
+          ${false ? `
           <div class="pt-bar" title="Make Ready ${mrPct}% / Production ${prodPct}%">
             <div class="pt-bar-mr" style="width:${mrPct}%;"></div>
             <div class="pt-bar-prod" style="width:${prodPct}%;"></div>
@@ -12266,17 +12631,30 @@ async function refreshProdTimeList(){
             <span><span class="pt-dot pt-dot-prod"></span>Production: <b>${formatDuration(prodAvg)}</b> (${prodPct}%)</span>
           </div>` : ''}
           <div class="pt-stats">
-            <div class="pt-stat"><div class="pt-stat-val">${throughput>0 ? throughput.toLocaleString('el-GR',{maximumFractionDigits:0}) : '—'}</div><div class="pt-stat-label">τεμάχια/ώρα</div></div>
-            <div class="pt-stat" title="Χρόνος παραγωγής ανά 1.000 ${unitLabel.toLowerCase()} — η μονάδα που μετράει πραγματικά αυτή η μηχανή. Ορίζεται στη Διαχείριση Μηχανών."><div class="pt-stat-val">${secPer1000>0 ? formatDuration(secPer1000) : '—'}</div><div class="pt-stat-label">ανά 1.000 ${esc(unitLabel.toLowerCase())}</div></div>
-            <div class="pt-stat"><div class="pt-stat-val">${avgCost!==null ? avgCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—'}</div><div class="pt-stat-label">κόστος/φορά</div></div>
-            <div class="pt-stat pt-stat-badge">${comparisonBadge}</div>
-            <div class="pt-stat pt-stat-badge"><span class="pt-badge ${reliability.cls}">${esc(reliability.label)}</span></div>
+            <div class="pt-stat" title="Μέσος χρόνος μιας δουλειάς αυτής της εργασίας, όπως μετρήθηκε."><div class="pt-stat-val">${formatDuration(totalAvg)}</div><div class="pt-stat-label">μ.ο. ανά δουλειά</div></div>
+            <div class="pt-stat" title="Το εύρος των μετρήσεων — από τη μικρότερη ως τη μεγαλύτερη δουλειά."><div class="pt-stat-val">${g.points.length ? Math.min(...g.points.map(p=>p.v)).toLocaleString('el-GR') + '–' + Math.max(...g.points.map(p=>p.v)).toLocaleString('el-GR') : '—'}</div><div class="pt-stat-label">${esc(unitLabel.toLowerCase())} ανά δουλειά</div></div>
+            <div class="pt-stat" title="${rate>0 ? 'Με ' + rate.toLocaleString('el-GR') + ' €/ώρα για ' + esc(assignedMachine) : 'Όρισε μηχανή και €/ώρα στη Διαχείριση Μηχανών για να υπολογιστεί'}"><div class="pt-stat-val">${avgCost!==null ? avgCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—'}</div><div class="pt-stat-label">μ.ο. κόστος</div></div>
+            <div class="pt-stat pt-stat-badge"><span class="pt-badge ${reliability.cls}" title="${esc(reliability.detail||'')}">${esc(reliability.label)}</span></div>
           </div>
           ${speedBadge ? `<div style="margin-top:8px;text-align:right;">${speedBadge}</div>` : ''}
         </div>
       `;
     }).join('');
-    el.innerHTML = `<div class="pt-grid">${cards}</div>`;
+    // Per-operation statistics are folded away until there is enough measured
+    // work to make them mean something. The code stays; only the display waits.
+    el.innerHTML = jobsHtml + (cards ? `
+      <div class="sectitle" style="margin-top:4px;display:flex;align-items:center;gap:8px;cursor:pointer;"
+           onclick="toggleProcStats()">
+        <span id="ptStatsCaret" style="font-size:10px;color:var(--muted);">▶</span>
+        <span>Ανά εργασία</span>
+        <span style="font-size:11px;font-weight:400;color:var(--muted);">${groups.length} εργασίες · υπό συλλογή δεδομένων</span>
+      </div>
+      <div id="ptStatsWrap" style="display:none;">
+        <div class="empty-note" style="margin-bottom:10px;">
+          Οι μέσοι όροι ανά εργασία γίνονται αξιόπιστοι μετά από αρκετές μετρήσεις σε δουλειές διαφορετικού μεγέθους.
+        </div>
+        <div class="pt-grid">${cards}</div>
+      </div>` : '');
   }catch(e){
     console.error('Prod time list error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
