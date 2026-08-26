@@ -79,7 +79,9 @@
   #viewForm, #viewTicketForm{background:#eeeae1;margin:-20px;padding:20px;min-height:calc(100vh - 40px);}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .topbar h1{font-size:21px;margin:0;font-weight:600;}
-  .topbar .actions{display:flex;gap:10px;}
+  /* Wraps rather than pushing the page wider: a tablet has room for the buttons
+     on two lines, but no room to scroll the whole page sideways. */
+  .topbar .actions{display:flex;gap:10px;flex-wrap:wrap;min-width:0;}
   /* Slim and wide rather than chunky: toolbars hold a lot of these, and the
      height is what makes a row of them feel heavy. */
   button.btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.5;}
@@ -136,6 +138,26 @@
   /* On a phone the ticket tables stop being tables: each row becomes a card and
      each cell carries its own label. A 12-column grid can't be read on 390px,
      however much the columns are squeezed. */
+  /* Tablets keep the table but let it scroll sideways inside its card, rather
+     than pushing the whole page wider — a page that scrolls horizontally makes
+     every other tap land in the wrong place. */
+  @media (min-width:781px) and (max-width:1100px){
+    /* The wrapper carries an inline padding:0, which beat a class selector —
+       scoped by id so the scroll actually applies. */
+    #viewTicketForm #tkPaperTableWrap, #viewTicketForm #tkProcTableWrap,
+    #viewTicketForm .card-body{overflow-x:auto !important;-webkit-overflow-scrolling:touch;}
+    #viewTicketForm table{min-width:860px;}
+    #viewTicketForm td, #viewTicketForm th{font-size:12.5px;}
+    #viewTicketForm td input, #viewTicketForm td select, #viewTicketForm td textarea{font-size:12.5px;}
+    #viewTicketForm .btn{font-size:12.5px;}
+    #viewTicketForm #tkInfo, #viewTicketForm #tkQty{font-size:15px;}
+    #viewTicketForm .field input, #viewTicketForm .field textarea,
+    #viewTicketForm .field select{font-size:12.5px;}
+    /* The view itself must not exceed its column — a few stray pixels are still
+       enough to make the whole page slide under a thumb. */
+    #viewTicketForm{max-width:100%;overflow-x:hidden;}
+  }
+
   @media (max-width:780px){
     #viewTicketForm table thead{display:none;}
     #viewTicketForm table, #viewTicketForm tbody{display:block;width:100%;}
@@ -148,14 +170,29 @@
     #tkPaperBody td:has(input.is-empty), #tkPaperBody td:has(textarea.is-empty),
     #tkProcBody td:has(input.is-empty), #tkProcBody td:has(textarea.is-empty){display:none;}
     #tkPaperBody td[data-l]::before, #tkProcBody td[data-l]::before{
-      content:attr(data-l);flex:0 0 105px;font-size:10.5px;font-weight:700;
+      content:attr(data-l);flex:0 0 100px;font-size:11px;font-weight:700;
       text-transform:uppercase;letter-spacing:0.03em;color:var(--muted);}
     /* The cells that identify the row stay even when empty. */
     #tkPaperBody td[data-l="Τύπος"], #tkPaperBody td[data-l="Χαρτί"],
     #tkProcBody td[data-l="Εργασία"]{display:flex;}
-    #tkPaperBody input, #tkPaperBody textarea, #tkPaperBody .cell-grow,
-    #tkProcBody input, #tkProcBody textarea, #tkProcBody .cell-grow{
-      flex:1;min-height:40px;font-size:15px;}
+    /* Text fields fill the row and are tall enough for a thumb. Checkboxes are
+       excluded: stretched to full width they became 338 × 40 blocks that looked
+       like empty fields rather than ticks. */
+    #tkPaperBody input:not([type=checkbox]), #tkPaperBody textarea, #tkPaperBody .cell-grow,
+    #tkProcBody input:not([type=checkbox]), #tkProcBody textarea, #tkProcBody .cell-grow{
+      flex:1;min-height:38px;font-size:14px;}
+    #tkPaperBody input[type=checkbox], #tkProcBody input[type=checkbox]{
+      flex:0 0 22px;width:22px;height:22px;min-height:0;margin:0;}
+    /* One size for everything in a row, so a ticket reads as one document
+       rather than a stack of differently-weighted fields. */
+    #viewTicketForm td, #viewTicketForm .btn, #viewTicketForm select{font-size:14px;}
+    #viewTicketForm .btn{min-height:36px;padding:7px 12px;}
+    #viewTicketForm .field input, #viewTicketForm .field textarea,
+    #viewTicketForm .field select{font-size:14px;min-height:38px;}
+    /* The job name and quantity were set apart at 18px. On a narrow screen that
+       reads as three different documents rather than one form. */
+    #viewTicketForm #tkInfo, #viewTicketForm #tkQty{font-size:15px;font-weight:700;}
+    #viewTicketForm .field label{font-size:11px;}
     #viewTicketForm .field input, #viewTicketForm .field textarea,
     #viewTicketForm .field select{min-height:44px;font-size:15px;}
     #viewTicketForm button.btn{min-height:44px;padding:8px 16px;font-size:13.5px;}
@@ -193,12 +230,9 @@
   @keyframes needsApproval{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,0);}
     50%{box-shadow:0 0 0 5px rgba(201,162,39,0.55);}}
   .needs-approval{animation:needsApproval 0.7s ease-in-out 3;}
-  .ship-quick{display:flex;align-items:center;gap:10px;background:var(--page);
-    border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:10px;}
-  .ship-quick label{font-size:10.5px;font-weight:800;text-transform:uppercase;
-    letter-spacing:0.05em;color:var(--muted);flex:none;}
-  .ship-quick input{width:150px;font-size:15px;font-weight:700;padding:7px 9px;}
-  .ship-quick .ship-eur{font-size:14px;font-weight:700;color:var(--muted);}
+  .ship-line{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;}
+  .ship-title{font-weight:700;font-size:14px;flex:none;}
+  .ship-line input{width:130px;font-size:15px;font-weight:700;padding:6px 9px;}
   /* A dense list: the archive is something you search through, not browse. */
   .archive-list{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
   .archive-row{display:flex;align-items:center;gap:12px;padding:9px 12px;cursor:pointer;
@@ -250,6 +284,55 @@
   .jp-pos{color:#0e8a45;font-weight:700;}
   .jp-neg{color:#b3243c;font-weight:700;}
   .jp-none{color:var(--muted);}
+  /* Offer stage: a chain, coloured by how far along it is. */
+  .ost{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:20px;cursor:pointer;white-space:nowrap;
+    border:1px solid transparent;transition:filter 0.12s;}
+  .ost:hover{filter:brightness(0.96);}
+  .ost-draft{background:#f0eeea;color:#6b665c;border-color:#e2ded6;}
+  .ost-sent{background:#eaf1fe;color:#1f4f9e;border-color:#cfe0fb;}
+  .ost-approved{background:#e6f4ec;color:#0e6b3a;border-color:#c9e6d6;}
+  /* Fixed widths: the workings under each figure are wider than the figure, so
+     an auto table let them stretch their column and the sums looked adrift. */
+  .pa-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;
+    table-layout:fixed;}
+  /* Widths declared on the header only. Applied to every td as well, they hit
+     the wrong cells in the footer — whose first cell spans five columns — and
+     dragged the totals a hundred pixels left of their own column. */
+  .pa-table thead th:nth-child(1){width:13%;}
+  .pa-table thead th:nth-child(2){width:8%;}
+  .pa-table thead th:nth-child(3){width:6%;}
+  .pa-table thead th:nth-child(4){width:8%;}
+  .pa-table thead th:nth-child(5){width:9%;}
+  .pa-table thead th:nth-child(6),
+  .pa-table thead th:nth-child(7),
+  .pa-table thead th:nth-child(8),
+  .pa-table thead th:nth-child(9),
+  .pa-table thead th:nth-child(10){width:12.8%;}
+  .pa-table th{text-align:right;font-size:9.5px;text-transform:uppercase;letter-spacing:0.03em;
+    color:var(--muted);font-weight:700;padding:5px 6px;border-bottom:1px solid var(--line);}
+  .pa-table th:first-child, .pa-table th:nth-child(2){text-align:left;}
+  .pa-table td{text-align:right;padding:6px;border-bottom:1px solid var(--line);}
+  /* Scoped to the body: the footer's second cell is the plates total, not the
+     colour column, and the generic rule was left-aligning it out of its own
+     column while every other total stayed right-aligned. */
+  .pa-table tbody td:first-child, .pa-table tbody td:nth-child(2){text-align:left;}
+  .pa-table tfoot td:first-child{text-align:left;}
+  .pa-name{font-weight:600;}
+  .pa-cov{width:52px;text-align:right;font-size:12px;padding:2px 5px;}
+  .pa-row-total{font-weight:800;}
+  .pa-table tfoot td{border-top:2px solid var(--ink);border-bottom:none;font-weight:800;padding-top:9px;}
+  /* The workings sit directly beneath their own figure, inside the same cell —
+     a separate row put them under the wrong column. */
+  .pa-note{font-size:9.5px;color:var(--muted);line-height:1.4;margin-top:3px;font-weight:400;
+    overflow-wrap:anywhere;}
+  .pa-table tbody td{vertical-align:top;padding-bottom:9px;}
+  .pa-compare{display:flex;justify-content:space-between;align-items:baseline;
+    padding:10px 6px 2px;font-size:13px;}
+  .fc-headcard{position:relative;}
+  .fc-headcard .fc-headsub{font-size:10px;color:#b9b9b5;margin-top:3px;}
+  .fc-headcard.fc-invoiced{background:#12452c;}
+  .fc-headcard.fc-pending{background:#3d3524;}
   #qtyTabsBar{display:none;gap:6px;flex-wrap:wrap;margin:-14px -16px 12px;
     padding:10px 16px 0;border-bottom:2px solid var(--line);background:var(--page);}
   .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
@@ -273,6 +356,9 @@
      to see — but recedes so the ones in play stand out. */
   #procList tr.proc-off input:not(.proc-use), #procList tr.proc-off select,
   #procList tr.proc-off .auto{opacity:0.45;}
+  /* Same treatment for paper rows that were switched off. */
+  tr.row-off input:not(.proc-use), tr.row-off select, tr.row-off .auto{opacity:0.4;}
+  tr.row-off{background:#fbfbfa;}
   #procList tr.proc-on{background:#f2f8f4;}
   #procList tr.proc-on td:first-child{border-left:3px solid #0e8a45;}
   input[type=checkbox].proc-use{appearance:none;-webkit-appearance:none;width:18px;height:18px;
@@ -489,6 +575,34 @@
   body.tk-locked #viewTicketForm .lo-input{background:#fff;border-color:#4a9d6e;
     box-shadow:0 0 0 2px rgba(74,157,110,0.15);}
   .fixed{background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:5px 6px;text-align:center;color:var(--ink);}
+  /* The arrows stack vertically in a narrow strip: three controls side by side
+     did not fit the 57px the table gives this column, and pushed the delete
+     button off the card. */
+  /* ▦ for gang printing: several items sharing one sheet. Kept distinct from
+     ⧉, which already means "duplicate" everywhere else in the app. */
+  /* Fields that only make sense for one item: with several on a ticket, a single
+     quantity, shape or page count describes none of them. */
+  body.tk-multi-mode #tkQtyField,
+  body.tk-multi-mode #tkSchemaField,
+  body.tk-multi-mode #tkSelidesField{display:none !important;}
+  /* Three ticks in a row said three different things and looked identical. Each
+     now has its own narrow column, a word instead of a symbol, and a colour:
+     dark = counts in the price, blue = printed together, green = customer said
+     yes. */
+  .cb-head{width:44px;font-size:8.5px;letter-spacing:0;text-align:center;
+    white-space:nowrap;color:var(--muted);}
+  .cb-cell{text-align:center;width:44px;}
+  .cb-cell input[type=checkbox]{width:16px;height:16px;min-width:16px;margin:0;cursor:pointer;}
+  .cb-cost{accent-color:#2b2b28;}
+  .cb-gang{accent-color:#2f6fed;}
+  .cb-appr{accent-color:#1c7a4f;}
+  .rowmove-stack{display:inline-flex;flex-direction:column;gap:1px;vertical-align:middle;}
+  .rowmove{border:1px solid var(--line);background:#fff;border-radius:3px;cursor:pointer;
+    font-size:7px;line-height:1;padding:2px 4px;color:var(--muted);}
+  .rowmove:hover:not([disabled]){background:var(--page);color:var(--ink);}
+  .rowmove[disabled]{opacity:0.22;cursor:default;}
+  .tk-rowtools{white-space:nowrap;text-align:right;}
+  .tk-rowtools .rowdel{margin-left:3px;vertical-align:middle;}
   .rowdel{width:24px;height:24px;border:1px solid var(--line-strong);background:#fff;border-radius:5px;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;}
   .rowdel:hover{background:#fbe6e5;color:#a3312a;border-color:#a3312a;}
   tfoot td{padding:8px 6px;font-weight:700;}
@@ -513,31 +627,29 @@
   .fc-uns-item .v{font-size:12.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
   .fc-uns-total{display:flex;justify-content:space-between;font-size:12px;font-weight:800;
     color:#8a6d1f;border-top:1px solid #eddcae;padding-top:8px;margin-top:8px;}
-  /* Seven figures on one line: adding the shipping box pushed the last one onto
-     a second row, because the grid still declared six tracks. Sized so they all
-     fit, and allowed to wrap only when the window is genuinely too narrow. */
-  .totals-compact{grid-template-columns:repeat(7, minmax(0, 1fr));gap:8px;}
+  /* A light strip rather than seven black blocks: the figures are a running
+     total, so they read better as one continuous band with dividers than as
+     separate cards competing for attention. The last one is the answer, so it
+     alone is emphasised. */
+  .totals-compact{grid-template-columns:repeat(7, minmax(0, 1fr));gap:0;
+    background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+  .totals.totals-compact .totcard{background:transparent;border:none;border-left:1px solid var(--line);
+    border-radius:0;padding:11px 12px 12px;}
+  .totals.totals-compact .totcard:first-child{border-left:none;}
+  .totals.totals-compact .lbl{background:transparent;color:var(--muted);border-bottom:none;
+    font-size:9px;font-weight:700;padding:0;min-height:24px;justify-content:flex-start;text-align:left;}
+  .totals.totals-compact .val{color:var(--ink);font-size:16px;padding:2px 0 0;text-align:left;}
+  .totals.totals-compact input.val{color:var(--ink);border-bottom:1px solid var(--line-strong);
+    padding:2px 0 3px;text-align:left;}
+  .totals.totals-compact input.val:focus{border-bottom-color:#2f6fed;}
+  /* The final figure carries the weight — it is the one being decided. */
+  .totals.totals-compact .totcard:last-child{background:var(--ink);}
+  .totals.totals-compact .totcard:last-child .lbl{color:#b9b9b5;}
+  .totals.totals-compact .totcard:last-child .val,
+  .totals.totals-compact .totcard:last-child input.val{color:#fff;border-bottom-color:#555;}
   /* Six when there is no shipping: its box and the combined total both go. */
-  /* The heading sits in a pale band at the top of each card. Against a solid
-     black block the small grey label was the first thing to disappear; on its
-     own strip it reads at a glance and the cards separate cleanly. */
-  .totals-compact .totcard{padding:0;overflow:hidden;}
-  .totals.totals-compact .lbl{font-size:9px;letter-spacing:0.02em;line-height:1.3;
-    background:#f2efe8;color:#111;font-weight:800;padding:5px 9px;border-bottom:1px solid var(--ink);
-    min-height:26px;display:flex;align-items:center;justify-content:center;text-align:center;}
-  /* Centred: with the heading on its own band, a left-aligned figure underneath
-     read as unfinished. The typed field matches the rest so no one box shouts. */
-  .totals.totals-compact .val{font-size:15px;padding:9px 9px 10px;box-sizing:border-box;text-align:center;}
-  /* Padding rather than margins: a stretched flex child keeps its full width and
-     adds the margins on top, which pushed the card 18px wider than its column. */
-  .totals-compact .totcard{display:flex;flex-direction:column;}
-  .totals.totals-compact input.val{font-size:15px;padding:7px 9px 8px;margin:0;
-    width:100%;box-sizing:border-box;border-bottom:1px solid #555;text-align:center;}
-  /* The profit note belongs to the value, not to the heading. */
-  /* Shares the .lbl class with the headings, so it needs its own reset. */
-  .totals.totals-compact #profitNote{background:transparent;color:#7ee2a8;border:none;
-    padding:0 9px 8px;min-height:0;font-size:8.5px;box-sizing:border-box;
-    justify-content:center;text-align:center;}
+  .totals-compact .totcard{display:flex;flex-direction:column;overflow:hidden;}
+  #profitNote{display:none;}   /* the margin is not part of the price decision here */
   /* With shipping hidden there are six — they simply share the room. */
   .totals-compact:has(#shipTotCard[style*="display: none"]){grid-template-columns:repeat(5, minmax(0, 1fr));}
   @media (max-width:1150px){
@@ -969,7 +1081,7 @@ function toggleMobileSidebar(forceClose){
     <button class="sidebar-link" id="navList" onclick="switchView('list');toggleMobileSidebar(true)"><span class="icon">📄</span><span class="label">Προσφορές</span></button>
     <button class="sidebar-link" id="navTicket" onclick="switchView('ticketlist');toggleMobileSidebar(true)"><span class="icon">🎫</span><span class="label">Job Tickets</span></button>
     <button class="sidebar-link" id="navProduction" onclick="switchView('production');toggleMobileSidebar(true)"><span class="icon">🏭</span><span class="label">Παραγωγή</span></button>
-    <button class="sidebar-link" id="navInvoicing" onclick="switchView('invoicing');toggleMobileSidebar(true)"><span class="icon">🧾</span><span class="label">Τιμολόγηση</span></button>
+    <button class="sidebar-link" id="navInvoicing" onclick="switchView('invoicing');toggleMobileSidebar(true)"><span class="icon">📃</span><span class="label">Τιμολόγηση</span></button>
     <button class="sidebar-link" id="navClients" onclick="switchView('clients');toggleMobileSidebar(true)"><span class="icon">👥</span><span class="label">Πελάτες</span></button>
     <button class="sidebar-link" id="navOrders" onclick="switchView('orders');toggleMobileSidebar(true)"><span class="icon">📦</span><span class="label">Παραγγελίες Υλικών</span></button>
     <button class="sidebar-link" id="navStock" onclick="switchView('stock');toggleMobileSidebar(true)"><span class="icon">🏬</span><span class="label">Αποθήκη</span></button>
@@ -1025,6 +1137,15 @@ function toggleMobileSidebar(forceClose){
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:12.5px;color:var(--muted);">Αναζήτηση:</span>
             <input id="offerSearch" oninput="offerListPage=0;renderOfferTable()" style="width:220px;">
+          </div>
+          <div class="field" style="min-width:170px;">
+            <label>Κατάσταση</label>
+            <select id="offerStageFilter" onchange="offerListPage=0;renderOfferTable()">
+              <option value="">— Όλες —</option>
+              <option value="draft">📝 Υπολογισμός</option>
+              <option value="sent">📤 Στάλθηκε / Αναμονή απάντησης</option>
+              <option value="approved">✓ Εγκρίθηκε</option>
+            </select>
           </div>
         </div>
         <div id="offerListTableWrap"></div>
@@ -1141,7 +1262,9 @@ function toggleMobileSidebar(forceClose){
       <table>
         <thead>
           <tr>
-            <th style="width:3%" class="mi-col" title="🧩 συνεκτύπωση · ✓ εγκεκριμένο από τον πελάτη" style="font-size:9px;">🧩 ✓</th>
+            <th class="cb-head" title="Μετράει στο κόστος της προσφοράς — οι ασημείωτες γραμμές αγνοούνται">ΚΟΣΤΟΣ</th>
+            <th class="cb-head mi-col" title="Τυπώνεται μαζί με άλλα είδη στο ίδιο φύλλο">ΣΥΝΕΚΤ.</th>
+            <th class="cb-head mi-col" title="Εγκρίθηκε από τον πελάτη">ΕΓΚΡΙΘ.</th>
             <th style="width:7%" id="flatMaterialHead">Χαρτιά</th>
             <th style="width:13%">Τύπος χαρτιού</th>
             <th style="width:6%">Ποσότητα</th>
@@ -1164,7 +1287,7 @@ function toggleMobileSidebar(forceClose){
           </tr>
         </thead>
         <tbody id="flatBody"></tbody>
-        <tfoot><tr><td colspan="16" style="text-align:right;" id="flatTotalLabel">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="20" style="text-align:right;" id="flatTotalLabel">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
       </table>
     </div>
   </div>
@@ -1181,6 +1304,7 @@ function toggleMobileSidebar(forceClose){
       <table>
         <thead>
           <tr>
+            <th class="cb-head" title="Μετράει στο κόστος της προσφοράς — οι ασημείωτες γραμμές αγνοούνται">ΚΟΣΤΟΣ</th>
             <th style="width:7%">Χαρτιά</th>
             <th style="width:14%">Τύπος χαρτιού</th>
             <th style="width:6%">Σελίδες</th>
@@ -1207,7 +1331,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div class="card book-only">
-    <div class="card-head"><div class="title">🧵 Υφάσματα / Υλικά Ρολού</div>
+    <div class="card-head"><div class="title">▤ Υφάσματα / Υλικά Ρολού</div>
       <div style="display:flex;gap:8px;">
         <button class="btn" onclick="toggleCardBody('fabricCardBody', this)">Εμφάνιση</button>
         <button class="btn" onclick="addFabricRow()">+ Γραμμή</button>
@@ -1262,24 +1386,15 @@ function toggleMobileSidebar(forceClose){
     <div class="card-body" id="procList" style="padding:16px;"></div>
   </div>
 
-  <div class="card book-only" id="shippingCard">
-    <div class="card-head"><div class="title">🚚 Μεταφορικά</div>
-      <button class="btn" id="shipToggle" onclick="toggleTicketSection('shipBody','shipToggle')">▶ Εμφάνιση</button>
-    </div>
-    <div class="card-body" id="shipBody" style="display:none;">
-      <div class="empty-note" style="margin-bottom:10px;">
-        Προστίθενται στο τέλος, <b>χωρίς περιθώριο</b> — μετακυλίονται στον πελάτη, δεν κοστολογούνται σαν παραγωγή.
-      </div>
-
-      <!-- The common case is one figure for the whole delivery, so it gets its
-           own line at the top instead of being one row among many. -->
-      <div class="ship-quick">
-        <label for="shipSimple">ΜΕΤΑΦΟΡΙΚΑ</label>
-        <input id="shipSimple" type="number" step="0.01" placeholder="π.χ. 120"
-          oninput="onShipSimpleInput(this.value)">
-        <span class="ship-eur">€</span>
-      </div>
-
+  <!-- One line, no card to open: it is a single figure and hiding it behind a
+       toggle cost more clicks than the field is worth. -->
+  <!-- Not book-only: a job of assorted printed items is delivered just the same,
+       and the cost is passed on the same way. -->
+  <div class="card" id="shippingCard">
+    <div class="ship-line">
+      <span class="ship-title">🚚 Μεταφορικά</span>
+      <input id="shipSimple" type="number" step="0.01" placeholder="0,00"
+        oninput="onShipSimpleInput(this.value)"> €
       <div id="shipTotal" style="display:none;"></div>
     </div>
   </div>
@@ -1314,6 +1429,11 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <input type="hidden" id="fApprovedQty" value="">
+  <!-- Which option was accepted: "main" or an alternative's index. The
+       quantity alone cannot identify it once two options share one. -->
+  <input type="hidden" id="fApprovedOption" value="">
+  <!-- A name for the main option, alongside the ones the alternatives carry. -->
+  <input type="hidden" id="fMainLabel" value="">
   <input type="hidden" id="tkOfferId" value="">
 
   <div id="stickyTotals">
@@ -1324,14 +1444,31 @@ function toggleMobileSidebar(forceClose){
     <span class="st-item st-final" id="stFinalWrap" style="display:none;"><span class="st-lbl">Τελικό Ποσό</span><span class="st-val" id="stFinal">—</span></span>
   </div>
 
-  <div class="card book-only">
+  <!-- Not book-only: a multi-item offer is quoted at alternative run lengths just
+       as often, and hiding the card made saved alternatives look deleted. -->
+  <div class="card">
     <div class="card-head"><div class="title">Έξτρα Ποσότητες (εναλλακτικές τιμές στο PDF)</div><button class="btn" onclick="addExtraQuantity()">+ Ποσότητα</button></div>
     <div class="card-body">
       <div id="qtyTabsBar"></div>
-      <div class="empty-note" style="margin-bottom:8px;">π.χ. 500, 1000, 1500, 2000 — κάθε μία εμφανίζεται σαν εναλλακτική τιμή στο PDF. Κάνε κλικ σε καρτέλα για να δουλέψεις σε εκείνη την ποσότητα.</div>
+      <div id="altNameRow" style="display:none;align-items:center;gap:9px;margin-bottom:10px;flex-wrap:wrap;">
+        <label style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Όνομα επιλογής</label>
+        <input id="altName" type="text" placeholder="π.χ. σε Munken 90gr" style="max-width:280px;"
+          oninput="onAltNameInput(this.value)">
+        <span class="empty-note" style="margin:0;flex:1;">Ξεχωρίζει επιλογές με ίδια ποσότητα.</span>
+        <button class="btn" onclick="recalcOfferNow()"
+          title="Ξαναϋπολογίζει τα πάντα αμέσως — χαρτιά, επεξεργασίες, σύνολα, ανάλυση">↻ Επαναϋπολογισμός</button>
+      </div>
+      <div class="empty-note" style="margin-bottom:8px;">Κάθε επιλογή εμφανίζεται σαν εναλλακτική στο PDF. Κάνε κλικ σε καρτέλα για να δουλέψεις πάνω της.</div>
       <div id="extraQuantitiesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;"></div>
       <div id="extraTotals"></div>
     </div>
+  </div>
+
+  <div class="card" id="printAnalysisCard">
+    <div class="card-head"><div class="title">🖨 Ανάλυση κόστους εκτύπωσης</div>
+      <button class="btn" id="paToggle" onclick="toggleTicketSection('paBody','paToggle');renderPrintAnalysis()">▶ Εμφάνιση</button>
+    </div>
+    <div class="card-body" id="paBody" style="display:none;"></div>
   </div>
 
   <div style="display:none;">
@@ -1369,15 +1506,15 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">Στοιχεία Job Ticket</div></div>
       <div class="card-body">
         <div class="fieldgrid c2">
-          <div class="field"><label>Πελάτης / Προϊόν</label><input id="tkInfo" style="font-size:18px;font-weight:800;" placeholder="π.χ. GABRILAKIS — FOSS NOTEPAD"></div>
-          <div class="field" id="tkQtyField" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" style="font-size:18px;font-weight:800;"></div>
+          <div class="field"><label>Πελάτης / Προϊόν</label><input id="tkInfo" class="tk-lead" placeholder="π.χ. GABRILAKIS — FOSS NOTEPAD"></div>
+          <div class="field" id="tkQtyField" style="background:#f0efe9;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;"><label>Ποσότητα</label><input id="tkQty" type="number" min="0" class="tk-lead"></div>
         </div>
         <div class="fieldgrid c3">
           <div class="field"><label>Πελάτης</label><input id="tkClient" list="clientOptions" placeholder="Διάλεξε ή γράψε πελάτη" title="Χρησιμεύει για να βρίσκεις όλες τις δουλειές ενός πελάτη"></div>
           <div class="field" id="tkDeadlineField"><label>Deadline (Ημερομηνία Παράδοσης)</label><input id="tkDeadline" type="date"></div>
           <div class="field" id="tkDeadlineChildNote" style="display:none;"><label>Deadline (Ημερομηνία Παράδοσης)</label><div class="empty-note" style="padding:8px 0;">Καθορίζεται από το κύριο ticket της παραγγελίας (δείτε πιο πάνω) — αυτό εδώ χρησιμοποιείται μόνο στην Παραγωγή.</div></div>
           <div class="field" id="tkSchemaField"><label>Σχήμα</label><input id="tkSchema"></div>
-          <div class="field"><label>Σελίδες</label><input id="tkSelides" placeholder="π.χ. 288+4"></div>
+          <div class="field" id="tkSelidesField"><label>Σελίδες</label><input id="tkSelides" placeholder="π.χ. 288+4"></div>
         </div>
       </div>
     </div>
@@ -1896,14 +2033,14 @@ function toggleMobileSidebar(forceClose){
 
   <div id="viewInvoicing" style="display:none;">
     <div class="card">
-      <div class="card-head"><div class="title">🧾 Τιμολόγηση</div>
+      <div class="card-head"><div class="title">📃 Τιμολόγηση</div>
         <div style="display:flex;gap:8px;">
           <span class="board-zoom-chip" id="invZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('invoicing',100)">100%</span>
           <button class="btn" onclick="openBoardColourPicker('invoicing', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">Φόντο</button>
           <button class="btn" onclick="addInvoicingColumn()">+ Νέα Στήλη</button>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Οι δουλειές έρχονται εδώ όταν πατήσεις «🧾 Τιμολόγηση» στην τελευταία στήλη της Παραγωγής. Σύρε τις κάρτες ανάμεσα στις στήλες. Κλικ σε μια κάρτα ανοίγει το ticket. <b>Δεξί κλικ σε κάρτα</b> την επιστρέφει στην Παραγωγή.</div>
+      <div class="card-body" style="color:var(--muted);font-size:12px;">Οι δουλειές έρχονται εδώ όταν πατήσεις «📃 Τιμολόγηση» στην τελευταία στήλη της Παραγωγής. Σύρε τις κάρτες ανάμεσα στις στήλες. Κλικ σε μια κάρτα ανοίγει το ticket. <b>Δεξί κλικ σε κάρτα</b> την επιστρέφει στην Παραγωγή.</div>
     </div>
     <div id="invoicingBoard" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:50px;align-items:flex-start;scroll-behavior:smooth;"></div>
   </div>
@@ -1999,6 +2136,27 @@ function toggleMobileSidebar(forceClose){
         <div id="storageUsageInfo" class="empty-note">Πάτα "Ανανέωση" για να δεις το τρέχον μέγεθος των δεδομένων σου.</div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-head"><div class="title">🖨 Κόστη Εκτύπωσης</div>
+        <button class="btn" onclick="toggleTicketSection('printCostsBody','printCostsToggle')" id="printCostsToggle">▶ Εμφάνιση</button></div>
+      <div class="card-body" id="printCostsBody" style="display:none;">
+        <div class="empty-note" style="margin-bottom:10px;">Χρησιμοποιούνται στην <b>Ανάλυση εκτύπωσης</b> (📊 δίπλα στο κόστος κάθε γραμμής).</div>
+        <div class="grid3">
+          <div class="field"><label>Τιμή τσίγκου (€)</label>
+            <input id="setPlateCost" type="number" step="0.01" placeholder="4.45" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Τιμή μελανιού (€/κιλό)</label>
+            <input id="setInkPerKg" type="number" step="0.1" placeholder="20" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Make ready ανά όψη (λεπτά)</label>
+            <input id="setMakeReady" type="number" step="1" placeholder="15" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Προεπιλεγμένη κάλυψη (%)</label>
+            <input id="setCoverage" type="number" step="1" placeholder="80" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Μελάνι στο 100% (γρ./m²)</label>
+            <input id="setGramsSqm" type="number" step="0.1" placeholder="1.1" oninput="savePrintCosts()"
+              title="Τυπική τιμή για offset — άλλαξέ την αν μετράς διαφορετικά"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-head"><div class="title">🏭 Διαχείριση Μηχανών</div><button class="btn" onclick="toggleMachinesManagerCard()" id="machinesManagerToggleBtn">Εμφάνιση</button></div>
       <div id="machinesManagerBody" style="display:none;">
@@ -2234,6 +2392,8 @@ async function loadClients(){
   try{
     const record = await jbGetRecord();
     clientsCache = record.clients || [];
+    window.__printCosts = record.printCosts || {};
+    fillPrintCostFields();
     refreshClientOptions();
   }catch(e){
     // no connection yet — silently keep whatever is cached locally
@@ -2869,6 +3029,243 @@ let bookRows = [], bookSeq = 0;
 let fabricRows = [], fabricSeq = 0;
 // procCategories declared below near proc functions
 
+// Paper rows count unless switched off. Older offers have no flag at all, so
+// "missing" has to mean on — otherwise every saved offer would lose its costs.
+function rowIsOn(r){ return r.on !== false; }
+
+// ===== Ανάλυση κόστους εκτύπωσης =====
+// Three costs that behave differently: plates are paid once per plate whatever
+// the run, ink scales with sheets, and labour scales with hours. A single €/side
+// figure hides all three, which is why short and long runs both come out wrong.
+const PRINT_DEFAULTS = { plateCost: 4.45, inkPerKg: 20, makeReadyMin: 15,
+                         coverage: 80, gramsPerSqm: 1.1 };
+
+let printCostsSaveTimer = null;
+function savePrintCosts(){
+  const vals = {
+    plateCost:   num(document.getElementById('setPlateCost').value)   || PRINT_DEFAULTS.plateCost,
+    inkPerKg:    num(document.getElementById('setInkPerKg').value)    || PRINT_DEFAULTS.inkPerKg,
+    makeReadyMin:num(document.getElementById('setMakeReady').value)   || PRINT_DEFAULTS.makeReadyMin,
+    coverage:    num(document.getElementById('setCoverage').value)    || PRINT_DEFAULTS.coverage,
+    gramsPerSqm: num(document.getElementById('setGramsSqm').value)    || PRINT_DEFAULTS.gramsPerSqm
+  };
+  window.__printCosts = vals;
+  // Written once typing settles, not on every keystroke.
+  clearTimeout(printCostsSaveTimer);
+  printCostsSaveTimer = setTimeout(async ()=>{
+    printCostsSaveTimer = null;
+    try{ await jbMergePath(SLICE_MAIN, ['printCosts'], vals); statusMsg('Τα κόστη εκτύπωσης αποθηκεύτηκαν ✓'); }
+    catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+  }, 600);
+}
+
+function fillPrintCostFields(){
+  const v = printSettings();
+  const set = (id, val) => { const el = document.getElementById(id); if(el && document.activeElement !== el) el.value = val; };
+  set('setPlateCost', v.plateCost);
+  set('setInkPerKg', v.inkPerKg);
+  set('setMakeReady', v.makeReadyMin);
+  set('setCoverage', v.coverage);
+  set('setGramsSqm', v.gramsPerSqm);
+}
+
+function printSettings(){
+  return Object.assign({}, PRINT_DEFAULTS, window.__printCosts || {});
+}
+
+// CMYK needs four plates a side; black or a single Pantone needs one. "CMYK+2"
+// means four process plus two spot.
+function platesPerSide(colour){
+  const s = String(colour||'').toUpperCase().replace(/\s/g,'');
+  if(!s) return 1;
+  let n = /CMYK|4X|4\/|^4$/.test(s) ? 4 : 0;
+  const spot = s.match(/(?:\+|PANTONE|PMS)\s*(\d*)/);
+  if(spot) n += num(spot[1]) || 1;
+  if(!n) n = /(\d+)/.test(s) ? Math.min(num(RegExp.$1) || 1, 8) : 1;
+  return Math.max(1, n);
+}
+
+// Two different counts, and conflating them is what made a book come out
+// hundreds of times too expensive:
+//
+//   plateSides   — how many printing sides the job has in total. A 160-page
+//                  book at 16pp is ten signatures, twenty sides. This drives
+//                  plates and make ready: each side is its own plate and its
+//                  own setup.
+//   passesPerSheet — how many times one physical sheet goes through the press.
+//                  Two when both sides are printed, whatever the page count.
+//                  This drives ink and run time, because the sheet total
+//                  already covers every signature.
+function plateSidesForRow(r, kind){
+  if(kind === 'book'){
+    const pages = num(r.pages), pps = num(r.pagesPerSheet);
+    return pps > 0 ? ceilSafe(pages/(pps/2)) : 0;
+  }
+  return passesPerSheetForRow(r, kind);
+}
+
+function passesPerSheetForRow(r, kind){
+  if(kind === 'book') return 2;          // a signature is printed on both sides
+  const s = String(r.sides != null ? r.sides : r.opseis || '').trim();
+  const m = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if(m) return (num(m[1]) > 0 ? 1 : 0) + (num(m[2]) > 0 ? 1 : 0);
+  return Math.max(1, num(s) || 1);
+}
+
+// One table for the whole job. Printing costs are not really per-row — the same
+// press, the same crew, one after another — and the question being asked is what
+// the printing of this job costs, not of this line.
+async function renderPrintAnalysis(){
+  const el = document.getElementById('paBody');
+  if(!el || el.style.display === 'none') return;
+  try{
+    const record = await jbGetRecord();
+    window.__printCosts = record.printCosts || {};
+    const mName = (record.taskMachineMap||{})['ΕΚΤΥΠΩΣΗ'] || '';
+    window.__printMachine = Object.assign({ name:mName }, (record.machineDetails||{})[mName] || {});
+  }catch(e){ /* offline — defaults */ }
+
+  const cfg = printSettings();
+  const m = window.__printMachine || {};
+  const baseQty = num(document.getElementById('hdrQty').value);
+  const multi = document.getElementById('fMultiItem').checked;
+
+  const rows = [
+    ...(multi ? [] : bookRows.filter(r => rowIsOn(r) && (r.material || r.paperName)).map(r=>({r, kind:'book'}))),
+    ...flatRows.filter(r => rowIsOn(r) && (r.material || r.paperName)).map(r=>({r, kind:'flat'}))
+  ].map(x => Object.assign({}, x, { b: printBreakdown(x.r, x.kind, baseQty) }))
+   .filter(x => x.b.sides > 0);
+
+  if(!rows.length){
+    el.innerHTML = '<div class="empty-note">Συμπλήρωσε χαρτιά και όψεις για να υπολογιστεί το κόστος εκτύπωσης.</div>';
+    return;
+  }
+
+  const sum = k => rows.reduce((s,x)=>s + x.b[k], 0);
+  const totPlates = sum('plates'), totInk = sum('ink'), totLabour = sum('labour');
+  const totMachine = sum('machineCost');
+  const totAll = totPlates + totInk + totLabour + totMachine;
+  const totQuoted = sum('quoted');
+
+  const warn = !num(m.speed)
+    ? '<div class="empty-note" style="color:#b3243c;margin-bottom:10px;">Δεν έχει οριστεί ταχύτητα για τη μηχανή εκτύπωσης — το κόστος εργασίας βγαίνει 0. Ρυθμίσεις → Διαχείριση Μηχανών.</div>' : '';
+
+  el.innerHTML = warn + `
+    <table class="pa-table">
+      <thead><tr>
+        <th>Γραμμή</th><th>Χρώμα</th><th>Όψεις</th><th>Φύλλα</th>
+        <th title="Κάλυψη ανά μελάνι">Κάλυψη</th>
+        <th>Τσίγκοι</th><th>Μελάνι</th><th>Εργασία</th><th>Μηχανή</th><th>Σύνολο</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(x=>`
+        <tr>
+          <td class="pa-name">${esc(x.r.material || x.r.paperName)}</td>
+          <td>${esc(x.r.color || '—')}</td>
+          <td>${x.b.sides}</td>
+          <td>${x.b.sheets.toLocaleString('el-GR')}</td>
+          <td><input type="number" min="0" max="400" value="${esc(String(x.b.coverage))}" class="pa-cov"
+              oninput="onCoverageInput('${x.kind}',${x.r.id},this.value)"> %</td>
+          <td>${fmt(x.b.plates)}<div class="pa-note">${x.b.perSide} × ${x.b.sides}${x.b.sets>1?` × ${x.b.sets}`:''} = ${x.b.plateCount} τσίγκοι<br>× ${fmt(cfg.plateCost)}</div></td>
+          <td>${fmt(x.b.ink)}<div class="pa-note">${x.b.inkKgPerColour.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά × ${x.b.inkCount} ${x.b.inkCount===1?'μελάνι':'μελάνια'}<br>× ${fmt(cfg.inkPerKg)}/κιλό</div></td>
+          <td>${fmt(x.b.labour)}<div class="pa-note">${formatDuration(x.b.hours*3600)} συνολικά<br>× ${x.b.operators} ${x.b.operators===1?'άτομο':'άτομα'} × ${fmt(x.b.hourly)}/ώρα</div></td>
+          <td>${fmt(x.b.machineCost)}<div class="pa-note">MR ${formatDuration(x.b.mrHours*3600)} + ${formatDuration(x.b.runHours*3600)}<br>${
+            (x.b.sheets*x.b.passes).toLocaleString('el-GR')} περάσματα${x.b.speed>0?` ÷ ${x.b.speed.toLocaleString('el-GR')}/ώρα`:''}<br>× ${fmt(x.b.machineRate)}/ώρα</div></td>
+          <td class="pa-row-total">${fmt(x.b.total)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="5">Σύνολο</td>
+        <td>${fmt(totPlates)}</td><td>${fmt(totInk)}</td><td>${fmt(totLabour)}</td><td>${fmt(totMachine)}</td>
+        <td class="pa-row-total">${fmt(totAll)}</td>
+      </tr></tfoot>
+    </table>
+    <div class="pa-compare">
+      <span>Στην προσφορά (€/όψη): <b>${fmt(totQuoted)}</b></span>
+      <span class="${totQuoted - totAll < 0 ? 'jp-neg' : 'jp-pos'}">Διαφορά ${fmt(totQuoted - totAll)}</span>
+    </div>
+    <div class="empty-note" style="margin-top:8px;">
+      Τσίγκοι ${fmt(cfg.plateCost)} · Μελάνι ${fmt(cfg.inkPerKg)}/κιλό · Make ready ${cfg.makeReadyMin}΄ ανά όψη${
+        m.name ? ` · ${esc(m.name)}: ${fmt(num(m.machineRate))}/ώρα μηχανή, ${fmt(num(m.laborRate))}/ώρα ανά άτομο` : ''}.
+      Αλλάζουν στις Ρυθμίσεις. Η ανάλυση δεν επηρεάζει την τιμή της προσφοράς.
+    </div>`;
+}
+
+function onCoverageInput(kind, id, value){
+  const rows = kind === 'book' ? bookRows : flatRows;
+  const r = rows.find(x=>x.id===id);
+  if(!r) return;
+  r.coverage = value;
+  markOfferDirty();
+  clearTimeout(window.__paTimer);
+  window.__paTimer = setTimeout(renderPrintAnalysis, 400);
+}
+
+function printBreakdown(r, kind, baseQty){
+  const cfg = printSettings();
+  const paper = paperByName[r.paperName];
+  const sides = plateSidesForRow(r, kind);      // plates and make ready
+  const passes = passesPerSheetForRow(r, kind);  // ink and run time
+
+  // Sheets, the same way the row itself counts them.
+  let sheets = 0;
+  if(kind === 'book'){
+    const pages = num(r.pages), pps = num(r.pagesPerSheet);
+    sheets = pps > 0 ? ceilSafe((baseQty*pages)/pps) + Math.round(num(r.xtra)*(pages/pps)) : 0;
+  } else {
+    const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
+    sheets = pps > 0 ? ceilSafe(qty/pps) + num(r.xtra) : 0;
+  }
+
+  // Plates: paid per plate, once, however long the run. "sides" is the number of
+  // passes, so a 20-side book at CMYK needs 4 × 20 plates.
+  const perSide = platesPerSide(r.color);
+  const sets = Math.max(1, num(r.plateSets) || 1);
+  const plateCount = perSide * sides * sets;
+  const plates = plateCount * cfg.plateCost;
+
+  // Ink is bought by the can, one per colour: a CMYK run consumes four inks, and
+  // the coverage figure describes each of them. Treating it as a single ink
+  // undercounted a four-colour job fourfold.
+  const areaM2 = (paper && paper.w && paper.l) ? (paper.w * paper.l) / 10000 : 0;
+  const coverage = (r.coverage != null && r.coverage !== '') ? num(r.coverage) : cfg.coverage;
+  const inkCount = perSide;                       // colours = plates on one side
+  const inkKgPerColour = areaM2 * cfg.gramsPerSqm * (coverage/100) * sheets * passes / 1000;
+  const inkKg = inkKgPerColour * inkCount;
+  const ink = inkKg * cfg.inkPerKg;
+
+  // Labour: make ready once per pass, then the run at the press's own speed.
+  const machine = (window.__printMachine || {});
+  const speed = num(machine.speed) || 0;
+  const operators = Math.max(1, num(machine.operators) || 1);
+  const hourly = num(machine.laborRate) || 0;
+  const machineRate = num(machine.machineRate) || 0;   // press per hour, crew aside
+  const mrHours = (cfg.makeReadyMin/60) * sides;
+  const runHours = speed > 0 ? (sheets * passes) / speed : 0;
+  const hours = mrHours + runHours;
+  const labour = hours * operators * hourly;
+  const machineCost = hours * machineRate;
+
+  return { sheets, sides, passes, perSide, sets, plateCount, plates,
+           areaM2, coverage, inkCount, inkKgPerColour, inkKg, ink,
+           mrHours, runHours, hours, operators, hourly, speed, labour,
+           machineRate, machineCost,
+           total: plates + ink + labour + machineCost,
+           quoted: kind === 'book'
+             ? (num(r.pagesPerSheet) > 0 ? ceilSafe(num(r.pages)/(num(r.pagesPerSheet)/2)) * num(r.pricePerSide) : 0)
+             : sides * sets * num(r.pricePerSide) };
+}
+
+function toggleRowOn(kind, id, on){
+  const rows = kind === 'book' ? bookRows : flatRows;
+  const r = rows.find(x=>x.id===id);
+  if(!r) return;
+  r.on = !!on;
+  if(kind === 'book') renderBiblio(); else renderFlat();
+  updateGrand();
+  markOfferDirty();
+}
+
 function addFlatRow(vals){
   const id = flatSeq++;
   flatRows.push(Object.assign({id, material:'', paperName:'', qty:'', piecesPerSheet:'', xtra:'', priceKg:'', priceSheet:'', printType:'', color:'', sides:1, plateSets:'', pricePerSide:'', simShape:'', manualPrice:'', gangPick:false, itemApproved:false}, vals||{}));
@@ -2921,15 +3318,21 @@ function renderFlat(){
     // When some items are approved, the rest are dimmed — you can still edit
     // them, but it's obvious they're not part of the order.
     if(flatRows.some(x=>x.itemApproved) && !r.itemApproved) tr.classList.add('item-not-approved');
+    if(!rowIsOn(r)) tr.classList.add('row-off');
     tr.innerHTML = `
-      <td class="mi-col" style="text-align:center;white-space:nowrap;">
-        <input type="checkbox" class="gang-pick" data-id="${r.id}" ${r.gangPick ? 'checked' : ''} onchange="onGangPick(${r.id}, this.checked)" title="Επιλογή για συνεκτύπωση" style="width:15px;height:15px;min-width:15px;margin:0;">
-        <input type="checkbox" class="item-approved" data-id="${r.id}" ${r.itemApproved ? 'checked' : ''} onchange="onItemApproved(${r.id}, this.checked)" title="Εγκρίθηκε από τον πελάτη" style="width:15px;height:15px;min-width:15px;margin:0 0 0 3px;accent-color:#1c7a4f;"></td>
+      <td class="cb-cell"><input type="checkbox" class="cb-cost" ${rowIsOn(r) ? 'checked' : ''}
+        onchange="toggleRowOn('flat',${r.id},this.checked)" title="Μετράει στο κόστος"></td>
+      <td class="cb-cell mi-col"><input type="checkbox" class="cb-gang gang-pick" data-id="${r.id}"
+        ${r.gangPick ? 'checked' : ''} onchange="onGangPick(${r.id}, this.checked)"
+        title="Τυπώνεται μαζί με άλλα είδη στο ίδιο φύλλο"></td>
+      <td class="cb-cell mi-col"><input type="checkbox" class="cb-appr item-approved" data-id="${r.id}"
+        ${r.itemApproved ? 'checked' : ''} onchange="onItemApproved(${r.id}, this.checked)"
+        title="Εγκρίθηκε από τον πελάτη"></td>
       <td><input list="flatMaterialOptions" value="${r.material}" placeholder="Εξώφυλλο..." oninput="flatRows.find(x=>x.id===${r.id}).material=this.value"></td>
       <td data-l="Χαρτί"><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('flat',${r.id},this.value)"></td>
       <td><input type="number" value="${r.qty}" placeholder="${document.getElementById('hdrQty').value || ''}" oninput="flatRows.find(x=>x.id===${r.id}).qty=this.value;recalcFlatRow(${r.id})"></td>
       <td class="mi-col"><input class="c-simshape" value="${esc(r.simShape||'')}" placeholder="π.χ. 9x5" oninput="flatRows.find(x=>x.id===${r.id}).simShape=this.value" title="Σχήμα τεμαχίου σε cm"></td>
-      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="${r.simShape ? 'Μοντάζ με σχήμα ' + esc(r.simShape) + ' — κλικ για αλλαγή' : 'Προσομοίωση χωρητικότητας φύλλου (μοντάζ)'}" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
+      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="${r.simShape ? 'Μοντάζ με σχήμα ' + esc(r.simShape) + ' — κλικ για αλλαγή' : 'Προσομοίωση χωρητικότητας φύλλου (μοντάζ)'}" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
       <td><div class="auto c-sheets">0</div></td>
       <td><input type="number" value="${r.xtra}" oninput="flatRows.find(x=>x.id===${r.id}).xtra=this.value;recalcFlatRow(${r.id})"></td>
       <td><div class="auto c-totalsheets">0</div></td>
@@ -2952,6 +3355,11 @@ function renderFlat(){
 }
 
 function recalcFlatRow(id){
+  // In multi-item mode the tab is labelled by the sum of its items.
+  if(editingExtraQtyId !== null && document.getElementById('fMultiItem').checked){
+    const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
+    if(e){ e.qty = currentTabQty(); setTimeout(renderQtyTabs, 0); }
+  }
   const r = flatRows.find(x=>x.id===id);
   const tr = document.querySelector(`#flatBody tr[data-id="${id}"]`);
   if(!r || !tr) return;
@@ -3030,7 +3438,7 @@ function recalcFlatTotal(){
   const multi = (document.getElementById('fMultiItem')||{}).checked;
 
   let costTotal = 0, priceTotal = 0, pricedRows = 0;
-  flatRows.forEach(r=>{
+  flatRows.filter(rowIsOn).forEach(r=>{
     const cost = flatRowTotalCost(r, baseQty)
                + (r.material ? assignedTaskCostForItem(r.material) : 0);
     costTotal += cost;
@@ -3072,11 +3480,14 @@ function renderBiblio(){
   bookRows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', r.id);
+    if(!rowIsOn(r)) tr.classList.add('row-off');
     tr.innerHTML = `
+      <td class="cb-cell"><input type="checkbox" class="cb-cost" ${rowIsOn(r) ? 'checked' : ''}
+        onchange="toggleRowOn('book',${r.id},this.checked)" title="Μετράει στο κόστος"></td>
       <td><input value="${r.material}" placeholder="π.χ. ΣΩΜΑ" oninput="bookRows.find(x=>x.id===${r.id}).material=this.value"></td>
       <td><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('book',${r.id},this.value)"></td>
       <td><input type="number" value="${r.pages}" oninput="bookRows.find(x=>x.id===${r.id}).pages=this.value;recalcBookRow(${r.id})"></td>
-      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-pagesPerSheet" value="${r.pagesPerSheet}" oninput="bookRows.find(x=>x.id===${r.id}).pagesPerSheet=this.value;recalcBookRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου βάσει Σχήματος" onclick="simulateBookFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
+      <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-pagesPerSheet" value="${r.pagesPerSheet}" oninput="bookRows.find(x=>x.id===${r.id}).pagesPerSheet=this.value;recalcBookRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου βάσει Σχήματος" onclick="simulateBookFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
       <td><div class="auto c-sheets">0</div></td>
       <td><input type="number" value="${r.xtra}" oninput="bookRows.find(x=>x.id===${r.id}).xtra=this.value;recalcBookRow(${r.id})"></td>
       <td><div class="auto c-totalsheets">0</div></td>
@@ -3224,7 +3635,7 @@ function onProcTaskQtyInput(catId, taskId, value){
 function recalcBookTotal(){
   const baseQty = num(document.getElementById('hdrQty').value);
   let grandTotal = 0;
-  bookRows.forEach(r=>{
+  bookRows.filter(rowIsOn).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
@@ -3651,7 +4062,7 @@ function updateGangBar(){
     document.getElementById('gangBarText').textContent =
       picked.length === 1
         ? '1 είδος επιλεγμένο — διάλεξε τουλάχιστον 2 για συνεκτύπωση'
-        : `🧩 ${picked.length} είδη σημειωμένα για συνεκτύπωση — θα τυπωθούν μαζί σε ένα φύλλο`;
+        : `▦ ${picked.length} είδη σημειωμένα για συνεκτύπωση — θα τυπωθούν μαζί σε ένα φύλλο`;
   }
 }
 
@@ -3668,7 +4079,7 @@ function simulateFlatFit(id, keepModalOpen){
   const r = flatRows.find(x=>x.id===id);
   const p = findPaper(r.paperName);
   if(!p || !p.w || !p.l){
-    openEmptyImpositionModal('Μοντάζ — Flat Work', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 🧮.');
+    openEmptyImpositionModal('Μοντάζ — Flat Work', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 📐.');
     return;
   }
   const impoSchemaField = document.getElementById('impoSchema');
@@ -3872,7 +4283,7 @@ function simulateBookFit(id, keepModalOpen){
   const r = bookRows.find(x=>x.id===id);
   const p = findPaper(r.paperName);
   if(!p || !p.w || !p.l){
-    openEmptyImpositionModal('Μοντάζ — Βιβλίο', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 🧮.');
+    openEmptyImpositionModal('Μοντάζ — Βιβλίο', 'Διάλεξε πρώτα χαρτί με γνωστές διαστάσεις σε αυτή τη γραμμή, μετά ξαναπάτα 📐.');
     return;
   }
   const impoSchemaField = document.getElementById('impoSchema');
@@ -4090,7 +4501,7 @@ function renderFabric(){
       <td><input type="number" value="${r.patternW}" oninput="fabricRows.find(x=>x.id===${r.id}).patternW=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" value="${r.patternL}" oninput="fabricRows.find(x=>x.id===${r.id}).patternL=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${r.qty}" oninput="fabricRows.find(x=>x.id===${r.id}).qty=this.value;recalcFabricRow(${r.id})"></td>
-      <td style="display:flex;align-items:center;justify-content:space-between;"><div class="auto c-across">0</div><button title="Προσομοίωση χωρητικότητας πλάτους ρολού" onclick="simulateFabricFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">🧮</button></td>
+      <td style="display:flex;align-items:center;justify-content:space-between;"><div class="auto c-across">0</div><button title="Προσομοίωση χωρητικότητας πλάτους ρολού" onclick="simulateFabricFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
       <td><div class="auto c-meters">0</div></td>
       <td><input type="number" step="0.01" value="${r.xtraMeters}" oninput="fabricRows.find(x=>x.id===${r.id}).xtraMeters=this.value;recalcFabricRow(${r.id})"></td>
       <td><div class="auto c-totalmeters">0</div></td>
@@ -4423,6 +4834,7 @@ function addDays(iso, days){
 
 function buildOfferPrintHtml(){
   if(hdrQtyTimer) applyHeaderQty();
+  if(recalcTimer) recalcAllNow();
   // The PDF always shows the main quantity plus its alternatives, regardless of
   // which tab happens to be open.
   if(editingExtraQtyId !== null) return withMainQuantity(buildOfferPrintHtml);
@@ -4734,7 +5146,7 @@ function computeTotals(baseQty, snap){
   // decision and are collected separately, so the markup can't be applied on
   // top of a price that already includes profit.
   let itemsManualPrice = 0, hasItemPrices = false;
-  _flat.forEach(r=>{
+  _flat.filter(rowIsOn).forEach(r=>{
     const qty = num(r.qty) || baseQty, pps = num(r.piecesPerSheet);
     const sheets = pps>0 ? ceilSafe(qty/pps) : 0;
     const totalSheets = sheets + num(r.xtra);
@@ -4745,7 +5157,7 @@ function computeTotals(baseQty, snap){
   });
 
   let bookPaper = 0, bookPrint = 0;
-  _book.forEach(r=>{
+  _book.filter(rowIsOn).forEach(r=>{
     const pages = num(r.pages), pps = num(r.pagesPerSheet);
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
@@ -4860,12 +5272,13 @@ function refreshProfitNote(){
 // Called only from the approval prompt below — this is the one and only place
 // a quantity gets chosen, so paper ordering, production and Forecasting all
 // agree on the same figure.
-function setApprovedQty(qty){
+function setApprovedQty(qty, optionKey){
   // Only recorded, never applied. An earlier version promoted the approved
   // quantity into the main slot and demoted the old one — which rewrote the
   // offer, so you could no longer see what you had actually quoted. The
   // quantities stay exactly as they were; production reads this flag instead.
   document.getElementById('fApprovedQty').value = num(qty) || '';
+  if(optionKey !== undefined) document.getElementById('fApprovedOption').value = optionKey || '';
   markOfferDirty();
   renderExtraTotals();
   renderQtyTabs();
@@ -4994,6 +5407,7 @@ function snapshotOffer(){
 // pay for the conversion twice.
 function snapshotOfferRaw(){
   if(hdrQtyTimer) applyHeaderQty();   // never snapshot a half-applied quantity
+  if(recalcTimer) recalcAllNow();     // nor a half-applied edit
   return JSON.stringify({
     flatRows, bookRows, fabricRows, procCategories, shipRows,
     multiItem: document.getElementById('fMultiItem').checked,
@@ -5026,6 +5440,16 @@ function addExtraQuantity(){
   const raw = snapshotOfferRaw();
   extraQuantities.push({ id, qty:'', manualTotal:'', label:'', snap: JSON.parse(raw), snapRaw: raw });
   forceSwitchQtyTab(id);
+  if(document.getElementById('fMultiItem').checked){
+    // Its quantity is the sum of its items, so the copy is usable immediately —
+    // change the per-item quantities and the tab follows.
+    const e = extraQuantities.find(x=>x.id===id);
+    if(e) e.qty = currentTabQty();
+    renderExtraQuantitiesList();
+    renderExtraTotals();
+    statusMsg('Νέα εναλλακτική — άλλαξε τις ποσότητες των ειδών.');
+    return;
+  }
   renderExtraQuantitiesList();
   renderExtraTotals();
   const qtyEl = document.getElementById('hdrQty');
@@ -5082,8 +5506,18 @@ function renderExtraQuantitiesList(){
 // every step, because none of it leaves the offer until the offer is saved.
 let editingExtraQtyId = null;   // null = the main quantity
 
+// In multi-item mode the header quantity field is hidden — each item carries its
+// own — so a tab is identified by the total of its items instead.
+function currentTabQty(){
+  if(document.getElementById('fMultiItem').checked){
+    const sum = flatRows.reduce((s,r)=>s + num(r.qty), 0);
+    return sum > 0 ? String(sum) : document.getElementById('hdrQty').value;
+  }
+  return document.getElementById('hdrQty').value;
+}
+
 function stashCurrentTab(){
-  const qty = document.getElementById('hdrQty').value;
+  const qty = currentTabQty();
   if(editingExtraQtyId === null){
     window.__mainOfferBackup = { snap: snapshotOffer(), qty };
     return;
@@ -5151,7 +5585,35 @@ function withMainQuantity(fn){
   try { return fn(); } finally { if(wasOn !== null) switchQtyTab(wasOn); }
 }
 
+function onAltNameInput(value){
+  if(editingExtraQtyId === null){
+    document.getElementById('fMainLabel').value = value;
+    renderQtyTabs();
+    renderExtraTotals();
+    markOfferDirty();
+    return;
+  }
+  const e = extraQuantities.find(x=>x.id===editingExtraQtyId);
+  if(!e) return;
+  e.label = value;
+  renderQtyTabs();
+  renderExtraTotals();
+  markOfferDirty();
+}
+
 function renderQtyTabs(){
+  // The name box belongs to whichever alternative is open.
+  // The main quantity is nameable too: with several options open, "κύρια" says
+  // nothing about what makes it different — the paper, the page count, the run.
+  const nameRow = document.getElementById('altNameRow');
+  const nameEl = document.getElementById('altName');
+  if(nameRow && nameEl){
+    const open = extraQuantities.find(x=>x.id===editingExtraQtyId);
+    nameRow.style.display = 'flex';
+    const label = open ? (open.label || '') : (document.getElementById('fMainLabel').value || '');
+    if(document.activeElement !== nameEl) nameEl.value = label;
+    nameEl.placeholder = open ? 'π.χ. σε Munken 90gr' : 'π.χ. 64 σελίδες';
+  }
   // The tabs live in the Extra Quantities card, above the chips that create
   // them — the two belong together, and a floating bar at the top of the page
   // gave no clue what it was attached to.
@@ -5167,8 +5629,10 @@ function renderQtyTabs(){
   const mainQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
     ? window.__mainOfferBackup.qty : document.getElementById('hdrQty').value;
   // Which quantity the customer accepted, so the tab can say so.
-  const approvedQ = document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε')
-    ? num(document.getElementById('fApprovedQty').value) : 0;
+  // Which option was accepted, by identity rather than by quantity — quantities
+  // are not unique once alternatives differ in paper instead of run length.
+  const approvedId = document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε')
+    ? (document.getElementById('fApprovedOption').value || '') : '';
 
   // The close button lives on the tab, as it does in a browser — and only on
   // alternatives, since the main quantity can't be removed.
@@ -5181,20 +5645,23 @@ function renderQtyTabs(){
      </button>`;
   bar.style.display = 'flex';
 
-  // Ordered by quantity rather than by when each was added, so the tabs read
-  // like a price ladder. A tab with no quantity yet goes last, where it is
-  // being filled in.
+  // The main quantity always leads: it is the offer, and the alternatives hang
+  // off it. Sorting it in among them by figure made it move about as the
+  // numbers changed, which is disorienting. The rest follow by quantity.
   const ordered = [{ main:true, qty:num(mainQty) }]
-    .concat(extraQuantities.map(e=>({ main:false, e, qty:num(e.qty) })))
-    .sort((a,b)=>(a.qty||Infinity) - (b.qty||Infinity));
+    .concat(extraQuantities.map(e=>({ main:false, e, qty:num(e.qty) }))
+      .sort((a,b)=>(a.qty||Infinity) - (b.qty||Infinity)));
 
   bar.innerHTML = ordered.map(x => x.main
     ? tab(editingExtraQtyId === null, x.qty.toLocaleString('el-GR') + ' τεμ.',
-          approvedQ && x.qty === approvedQ ? '✓ εγκεκριμένη' : 'κύρια',
+          approvedId === 'main' ? '✓ εγκεκριμένη'
+          : (String((document.getElementById('fMainLabel')||{}).value||'').trim() || 'κύρια'),
           'switchQtyTab(null)', false, null)
     : tab(editingExtraQtyId === x.e.id,
           x.qty > 0 ? x.qty.toLocaleString('el-GR') + ' τεμ.' : '— τεμ.',
-          x.qty > 0 && x.qty === approvedQ ? '✓ εγκεκριμένη' : 'εναλλακτική',
+          // The name distinguishes options that share a quantity — two runs of
+          // 1.000 on different paper are not the same offer.
+          approvedId === ('alt' + extraQuantities.indexOf(x.e)) ? '✓ εγκεκριμένη' : (String(x.e.label||'').trim() || 'εναλλακτική'),
           `switchQtyTab(${x.e.id})`, x.e.snapEdited, x.e.id)).join('');
 }
 
@@ -5277,9 +5744,8 @@ function renderExtraTotals(){
                   price:mainPrice, main:true }]
     .concat(extras.map(e=>({ id:e.id, qty:num(e.qty), cost:computeTotals(num(e.qty), e.snap).grand,
                              price:num(e.manualTotal), main:false })))
-    // Same order as the tabs — the two lists sat side by side in different
-    // orders, which is what made the whole thing feel muddled.
-    .sort((a,b)=>a.qty - b.qty);
+    // Same order as the tabs: main first, alternatives by quantity.
+    .sort((a,b)=> (a.main ? -1 : b.main ? 1 : a.qty - b.qty));
 
   container.innerHTML = `<div class="qty-compare">
     <div class="qc-row qc-head">
@@ -5326,7 +5792,34 @@ function syncApprovedMarker(isApproved, extrasCount){
   }
 }
 
-function recalcAll(){ renderFlat(); renderBiblio(); renderFabric(); renderShip(); refreshAutoFoldTasks(); renderProc(); updateGrand(); }
+// Rebuilding all five tables costs about 110 ms, which is longer than the gap
+// between keystrokes — so a burst of edits queued a burst of rebuilds and the
+// form felt stuck. The rebuild now happens once, shortly after editing stops.
+let recalcTimer = null;
+function recalcAll(){
+  clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(recalcAllNow, 140);
+}
+
+// The immediate version, for anything that reads the result: saving, snapshots,
+// the PDF. Those must never see a half-applied edit.
+function recalcAllNow(){
+  clearTimeout(recalcTimer);
+  recalcTimer = null;
+  renderFlat(); renderBiblio(); renderFabric(); renderShip();
+  refreshAutoFoldTasks(); renderProc(); updateGrand();
+}
+
+// The button: forces everything through at once, so there is a way to be
+// certain the figures on screen are current.
+function recalcOfferNow(){
+  applyHeaderQty();
+  recalcAllNow();
+  renderQtyTabs();
+  renderExtraTotals();
+  if(document.getElementById('paBody') && document.getElementById('paBody').style.display !== 'none') renderPrintAnalysis();
+  statusMsg('Όλα τα στοιχεία ανανεώθηκαν ✓');
+}
 
 // The quantity feeds paper, printing and every processing task, so a change has
 // to reach all of them. Before this it only redrew the paper tables, and the
@@ -5347,7 +5840,11 @@ function onHeaderQtyInput(){
 }
 
 function applyHeaderQty(){
+  // Clearing the timeout is not enough: the variable kept the old timer id, so
+  // every later check saw "work pending" and re-rendered all the tables. That
+  // turned a free snapshot into a 38 ms one, on every tab switch.
   clearTimeout(hdrQtyTimer);
+  hdrQtyTimer = null;
   renderQtyTabs();
   renderBiblio();
   renderFlat();
@@ -5913,12 +6410,18 @@ function collectOffer(){
     paymentTerms: document.getElementById('fPaymentTerms').value,
     vat: document.getElementById('fVat').value,
     validityDays: document.getElementById('fValidityDays').value,
+    // Set by the status badge, not by the form — carried through so saving the
+    // offer doesn't undo "sent".
+    sentAt: (window.__currentOfferSentAt || ''),
     showProcInOffer: document.getElementById('fShowProcInOffer').checked,
     multiItem: document.getElementById('fMultiItem').checked,
     englishPdf: document.getElementById('fEnglishPdf').checked,
     manualTotal: document.getElementById('fManualTotal').value,
     markup: document.getElementById('fMarkup').value,
     approvedQty: document.getElementById('fApprovedQty').value,
+    approvedOption: document.getElementById('fApprovedOption').value,
+    mainLabel: document.getElementById('fMainLabel').value,
+    approvedOption: document.getElementById('fApprovedOption').value,
     // snapRaw is a cache of snap — storing both would double the saved size.
     shipRows: shipRows.map(({id, ...rest})=>rest),
     extraQuantities: extraQuantities.map(({id, snapRaw, ...rest})=>rest),
@@ -5948,6 +6451,7 @@ function applyOfferData(d){
   document.getElementById('fPaymentTerms').value = d.paymentTerms||'';
   document.getElementById('fVat').value = d.vat||'';
   document.getElementById('fValidityDays').value = d.validityDays||15;
+  window.__currentOfferSentAt = d.sentAt || '';
   // Off unless the offer was saved with it on. It used to default to on, so an
   // offer saved before this change has no flag — and must not switch itself on.
   document.getElementById('fShowProcInOffer').checked = d.showProcInOffer === true;
@@ -5958,6 +6462,8 @@ function applyOfferData(d){
   document.getElementById('fManualTotal').value = d.manualTotal||'';
   document.getElementById('fMarkup').value = d.markup||'';
   document.getElementById('fApprovedQty').value = d.approvedQty||'';
+  document.getElementById('fApprovedOption').value = d.approvedOption||'';
+  document.getElementById('fMainLabel').value = d.mainLabel||'';
   document.getElementById('pkExtraWeight').value = d.pkExtraWeight||'';
   document.getElementById('pkExtraThickness').value = d.pkExtraThickness||'';
   if(d.extraQuantities && d.extraQuantities.length){
@@ -5969,6 +6475,7 @@ function applyOfferData(d){
       qty: e.qty || '',
       manualTotal: e.manualTotal || '',
       markup: e.markup || '',
+      label: e.label || '',        // the name that tells same-quantity options apart
       snapEdited: !!e.snapEdited,
       snap: e.snap ? JSON.parse(JSON.stringify(e.snap)) : null,
       snapRaw: e.snap ? JSON.stringify(e.snap) : undefined
@@ -6080,6 +6587,7 @@ function viewFromHash(){
 
 function switchView(view){
   pushViewHistory(view);
+  window.__currentView = view;   // the live poller only runs on the boards
   // The board tint belongs to the board; every other tab starts clean.
   if(view !== 'production' && view !== 'invoicing') clearWorkArea();
   document.getElementById('viewHome').style.display = view==='home' ? 'block' : 'none';
@@ -6114,6 +6622,7 @@ function switchView(view){
   if(view==='ticketlist') refreshTicketList();
   if(view==='orders') refreshOrdersList();
   if(view==='forecast') refreshForecastList();
+  if((view==='production' || view==='invoicing') && !liveTimer) startLiveUpdates();
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
   if(view==='production' || view==='invoicing'){
@@ -6215,6 +6724,76 @@ async function getAuthToken(){
 // We must never write back a slice we couldn't read, otherwise a restricted
 // user's save would push an empty object over everyone else's data.
 let readableSlices = { offers:false, forecast:false };
+
+// ===== Ζωντανή ενημέρωση πίνακα =====
+// Every write stamps updated_at, so a tiny query for that column alone tells us
+// whether anyone changed anything — a few bytes, against re-downloading the
+// whole record. The board refetches only when the stamp actually moves.
+//
+// Deliberately silent: the board simply shows the truth, and a notice every few
+// seconds in a busy shop is noise rather than information.
+let liveTimer = null;
+let liveStamp = '';
+let liveBusy = false;
+
+async function fetchUpdateStamp(){
+  const key = getJbKey(), url = getJbBin();
+  if(!key || !url) return '';
+  const token = await getAuthToken();
+  const res = await fetch(`${url}/rest/v1/app_data?select=updated_at`, {
+    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }, cache: 'no-store'
+  });
+  if(!res.ok) return '';
+  const rows = await res.json();
+  return (rows || []).map(r=>r.updated_at || '').sort().pop() || '';
+}
+
+// Our own writes move the stamp too. Recording it after each save stops the
+// board redrawing itself for a change it already shows.
+async function noteOwnWrite(){
+  try{ liveStamp = await fetchUpdateStamp(); }catch(e){}
+}
+
+function liveShouldPause(){
+  // Never redraw mid-gesture: a board that rebuilds under a dragged card drops
+  // the card. Nor behind an open menu or a hidden tab.
+  if(document.hidden) return true;
+  if(document.querySelector('.kanban-col-dragging, .kanban-card.dragging, .dragover')) return true;
+  // A field being edited on the board (inline rename, note) must not be wiped.
+  const ae = document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest('#productionBoard, #invoicingBoard')) return true;
+  const menu = document.getElementById('cardContextMenu');
+  if(menu && menu.style.display && menu.style.display !== 'none') return true;
+  const overlay = document.querySelector('.impo-overlay.show, .modal-overlay.show');
+  if(overlay) return true;
+  return false;
+}
+
+async function livePoll(){
+  if(liveBusy) return;
+  const view = window.__currentView;
+  if(view !== 'production' && view !== 'invoicing') return;
+  if(liveShouldPause()) return;
+  liveBusy = true;
+  try{
+    const stamp = await fetchUpdateStamp();
+    if(stamp && liveStamp && stamp !== liveStamp){
+      liveStamp = stamp;
+      if(view === 'production') await refreshProductionBoard();
+      else await refreshInvoicingBoard();
+    } else if(stamp && !liveStamp){
+      liveStamp = stamp;
+    }
+  }catch(e){ /* offline or blocked — try again next tick */ }
+  finally{ liveBusy = false; }
+}
+
+function startLiveUpdates(){
+  clearInterval(liveTimer);
+  liveTimer = setInterval(livePoll, 6000);
+  // A tab returning to the foreground has probably missed something.
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) livePoll(); });
+}
 
 async function jbGetRecord(){
   const key = getJbKey(), url = getJbBin();
@@ -6576,6 +7155,9 @@ function toggleMultiItemMode(){
   // Which processing categories apply depends on the type, so both the list
   // and the totals need rebuilding.
   if(typeof renderProc === 'function' && procCategories.length) renderProc();
+  // Shipping is shown in both modes now, so its field has to be redrawn too —
+  // otherwise the amount stayed in the totals but vanished from the box.
+  if(typeof renderShip === 'function') renderShip();
   if(typeof refreshStickyTotals === 'function') refreshStickyTotals();
 }
 
@@ -6607,6 +7189,7 @@ function toggleProcInOfferBtn(){
 }
 
 async function saveOffer(){
+  if(recalcTimer) recalcAllNow();   // save what the figures actually are
   // Whichever tab is open, what gets stored is the main quantity — the switch
   // back and forth is invisible and keeps the tab you were on.
   if(editingExtraQtyId !== null){
@@ -6822,6 +7405,9 @@ async function loadOffer(id){
     currentOfferId = id;
     switchView('form');
     updateApproveButton(o.approved || false);
+    // After the button, not before: the tabs read the approval from it.
+    renderQtyTabs();
+    renderExtraTotals();
     markOfferClean();
     refreshOfferTicketLink();
     statusMsg('Φορτώθηκε ✓');
@@ -6859,6 +7445,7 @@ async function deleteOffer(id){
 }
 
 function newOffer(){
+  window.__currentOfferSentAt = '';   // a fresh offer has not been sent
   editingExtraQtyId = null;
   window.__mainOfferBackup = null;
   window.__linkOfferToTicket = null;   // a blank offer is not a conversion
@@ -6935,6 +7522,79 @@ function setOfferSort(col){
 
 // A multi-item offer has no single quantity — the header field is hidden while
 // editing it, so showing its leftover default here would be a plain lie.
+// ===== Κατάσταση προσφοράς =====
+// Three stages, in the order they actually happen. "Approved" stays the flag it
+// always was, so nothing that reads it needs to change; the sent stage is what
+// is new, and it carries a date because the useful question is not "what state
+// is this in" but "which ones am I still waiting on, and for how long".
+function offerMatchesStageFilter(o){
+  const f = (document.getElementById('offerStageFilter')||{}).value || '';
+  return !f || offerStage(o) === f;
+}
+
+function offerStage(o){
+  if(o.approved) return 'approved';
+  return (o.data && o.data.sentAt) ? 'sent' : 'draft';
+}
+
+function daysSince(iso){
+  const t = Date.parse(iso || '');
+  if(!t) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
+function offerStatusBadge(o){
+  const stage = offerStage(o);
+  const d = o.data || {};
+
+  if(stage === 'approved'){
+    const partial = o.approvedCount && o.itemCount && o.approvedCount < o.itemCount;
+    return `<span class="ost ost-approved" onclick="cycleOfferStage('${o.id}')"
+      title="${partial ? 'Εγκρίθηκαν ' + o.approvedCount + ' από ' + o.itemCount + ' είδη' : 'Εγκρίθηκε — κλικ για αλλαγή'}">✓ ${
+      partial ? `Μερικώς ${o.approvedCount}/${o.itemCount}` : 'Εγκρίθηκε'}</span>`;
+  }
+
+  if(stage === 'sent'){
+    const days = daysSince(d.sentAt);
+    const when = days === null ? '' : (days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`);
+    return `<span class="ost ost-sent" onclick="cycleOfferStage('${o.id}')"
+      title="Στάλθηκε ${esc(when)}. Κλικ για επόμενο στάδιο.">📤 Στάλθηκε / Αναμονή απάντησης</span>`;
+  }
+
+  return `<span class="ost ost-draft" onclick="cycleOfferStage('${o.id}')"
+    title="Δεν έχει σταλεί ακόμα — κλικ για «Στάλθηκε»">📝 Υπολογισμός</span>`;
+}
+
+// Draft → sent → approved, and round again. Approval keeps its own prompt, so
+// the click hands over to it rather than duplicating the quantity question.
+async function cycleOfferStage(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.offers[id];
+    if(!o) return;
+    const stage = offerStage(o);
+
+    if(stage === 'draft'){
+      o.data = o.data || {};
+      o.data.sentAt = new Date().toISOString();
+      await jbMergePath(SLICE_OFFERS, ['offers', id], o);
+      if(currentOfferId === id) window.__currentOfferSentAt = o.data.sentAt;
+      statusMsg('Σημειώθηκε ως σταλμένη — αναμονή απάντησης.');
+      refreshOfferList();
+      return;
+    }
+    if(stage === 'sent'){
+      await toggleOfferApproved(id);      // asks which quantity, as before
+      return;
+    }
+    // Approved → back to waiting, without losing the date it was sent.
+    await toggleOfferApproved(id);
+  }catch(e){
+    console.error('Offer stage error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 function offerListQty(o){
   const d = o.data || {};
   if(d.multiItem){
@@ -6964,6 +7624,7 @@ function renderOfferTable(){
 
   const search = (document.getElementById('offerSearch').value||'').toLowerCase().trim();
   let list = offersCache.filter(o=>{
+    if(!offerMatchesStageFilter(o)) return false;
     if(!search) return true;
     const hay = [o.label, o.number, (o.data||{}).title].join(' ').toLowerCase();
     return hay.includes(search);
@@ -7005,12 +7666,7 @@ function renderOfferTable(){
         <td style="font-weight:600;">${esc(o.label)}</td>
         <td>${esc(d.title||'')}</td>
         <td style="text-align:right;" title="${esc(offerListQty(o).title)}">${esc(offerListQty(o).text)}</td>
-        <td onclick="event.stopPropagation()"><span class="order-badge${o.approved?' received':''}" style="cursor:pointer;" onclick="toggleOfferApproved('${o.id}')" title="${o.approved && o.approvedCount && o.itemCount && o.approvedCount < o.itemCount ? 'Εγκρίθηκαν ' + o.approvedCount + ' από ' + o.itemCount + ' είδη — ' + fmt(num(o.approvedTotal)) + ' από ' + fmt(num(o.total)) : ''}">${
-  o.approved
-    ? (o.approvedCount && o.itemCount && o.approvedCount < o.itemCount
-        ? `Μερικώς ${o.approvedCount}/${o.itemCount}`
-        : 'Εγκρίθηκε')
-    : 'Εκκρεμεί'}</span></td>
+        <td onclick="event.stopPropagation()">${offerStatusBadge(o)}</td>
         <td style="text-align:right;">${totalStr}</td>
         <td style="white-space:nowrap;" onclick="event.stopPropagation()">
           <button class="btn" title="Αντιγραφή (νέα προσφορά με ίδια στοιχεία)" onclick="duplicateOffer('${o.id}')" style="padding:5px 8px;">⧉</button>
@@ -7205,12 +7861,10 @@ function setTicketMultiItem(on){
   document.body.classList.toggle('tk-multi-mode', ticketMultiItem);
   const btn = document.getElementById('tkMultiBtn');
   if(btn) btn.classList.toggle('solid', ticketMultiItem);
-  const qtyField = document.getElementById('tkQtyField');
-  if(qtyField) qtyField.style.display = ticketMultiItem ? 'none' : '';
-  // With several items on one ticket a single shape at the top means nothing —
-  // each row carries its own.
-  const schemaField = document.getElementById('tkSchemaField');
-  if(schemaField) schemaField.style.display = ticketMultiItem ? 'none' : '';
+  // Hidden by the body class rather than inline styles: quantity, shape and page
+  // count all belong to a single item, and with several on one ticket they mean
+  // nothing. Inline display was being reset by other code that runs during load,
+  // so the fields reappeared on a saved multi-item ticket.
   renderTkPaper();
 }
 
@@ -7674,11 +8328,24 @@ function timerCellHtml(r, type, label){
   `;
 }
 
+// Post-press runs in an order, and the ticket is read on the floor in that
+// order. Arrows rather than dragging: the table becomes a stack of cards on a
+// phone, where HTML5 drag does not work by touch at all.
+function moveTkProcRow(id, dir){
+  const i = tkProcRows.findIndex(r=>r.id===id);
+  if(i < 0) return;
+  const j = i + dir;
+  if(j < 0 || j >= tkProcRows.length) return;
+  [tkProcRows[i], tkProcRows[j]] = [tkProcRows[j], tkProcRows[i]];
+  renderTkProc();
+  markTicketDirty();
+}
+
 function renderTkProc(){
   setTimeout(()=>{ markEmptyTicketCells(); growAllCells(); }, 0);
   const body = document.getElementById('tkProcBody');
   body.innerHTML = '';
-  tkProcRows.forEach(r=>{
+  tkProcRows.forEach((r, idx)=>{
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', r.id);
     tr.setAttribute('data-id', r.id);
@@ -7690,7 +8357,13 @@ function renderTkProc(){
       <td data-l="Λεπτομέρειες"><textarea class="cell-grow" rows="1" oninput="tkProcRows.find(x=>x.id===${r.id}).details=this.value;growCell(this)">${esc(r.details)}</textarea></td>
       <td>${timerCellHtml(r,'mr','Make Ready')}</td>
       <td>${timerCellHtml(r,'prod','Production')}</td>
-      <td><button class="rowdel" onclick="removeTkProcRow(${r.id})">×</button></td>
+      <td class="tk-rowtools" data-l="Σειρά">
+        <span class="rowmove-stack">
+          <button class="rowmove" onclick="moveTkProcRow(${r.id},-1)" title="Πάνω" ${idx===0?'disabled':''}>▲</button>
+          <button class="rowmove" onclick="moveTkProcRow(${r.id},1)" title="Κάτω" ${idx===tkProcRows.length-1?'disabled':''}>▼</button>
+        </span>
+        <button class="rowdel" onclick="removeTkProcRow(${r.id})" title="Διαγραφή">×</button>
+      </td>
     `;
     body.appendChild(tr);
   });
@@ -7729,7 +8402,9 @@ function collectTicket(){
     // Whether this job came from a multi-item offer. A split-off part of such a
     // job still has no single quantity to put on a card, so the flag travels
     // with it rather than being re-derived from rows that no longer show it.
-    multiItem: currentTicketMultiItem,
+    // Distinct from multiItem above, which is this ticket's own form mode — the
+    // two shared a key and the second silently erased the first.
+    fromMultiOffer: currentTicketMultiItem,
     attachments: ticketAttachments
   };
 }
@@ -7775,7 +8450,8 @@ function applyTicketData(d, topLevelDeadline){
   if(ticketAttachments.length) openTicketSection('tkAttachBody','tkAttachToggle');
   currentTicketLinkGroupId = d.linkGroupId || null;
   currentTicketIsChild = d.isLinkChild === true;
-  currentTicketMultiItem = d.multiItem === true;
+  // Older tickets wrote this under multiItem, so both are accepted on read.
+  currentTicketMultiItem = (d.fromMultiOffer === true) || (d.multiItem === true);
   updateDeadlineFieldVisibility();
   renderLinkedTicketsIndicator();
 }
@@ -9257,36 +9933,44 @@ async function toggleOfferApprovedInForm(){
     const extras = extraQuantities.filter(e=>num(e.qty)>0);
     if(extras.length>0){
       // The header field holds the open tab's quantity, so on an alternative it
-      // returns that alternative — listing it twice and hiding the main one.
-      // The main quantity is read from where it is parked instead.
+      // returns that alternative — the main one is read from where it is parked.
       const baseQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
         ? num(window.__mainOfferBackup.qty)
         : num(document.getElementById('hdrQty').value);
-      // Duplicates removed as well: an alternative set to the same figure as the
-      // main one would otherwise appear twice in the list.
-      const options = [...new Set([baseQty].concat(extras.map(e=>num(e.qty))))]
-        .filter(q => q > 0).sort((a,b)=>a-b);
+
+      // Numbered, not matched by quantity: two options may both be 1.000 pieces
+      // and differ only in the paper, and a quantity cannot tell them apart.
+      // Keyed by position, not by the runtime id — ids are handed out afresh each
+      // time an offer is loaded, so a stored id would stop matching.
+      const opts = [{ key:'main', qty:baseQty,
+                      name:String(document.getElementById('fMainLabel').value||'').trim() || 'κύρια' }]
+        .concat(extras.map((e,i)=>({ key:'alt'+extraQuantities.indexOf(e), qty:num(e.qty),
+                                     name:String(e.label||'').trim() || 'εναλλακτική' })));
+      const listed = opts.map((o,i)=>`${i+1}. ${o.qty.toLocaleString('el-GR')} τεμ. — ${o.name}`).join('\n');
+      const openKey = editingExtraQtyId === null ? 'main'
+        : 'alt' + extraQuantities.findIndex(e => e.id === editingExtraQtyId);
+      const openIdx = opts.findIndex(o => o.key === openKey);
       const answer = prompt(
-        `Για ποια ποσότητα εγκρίθηκε η προσφορά;\n\nΔιαθέσιμες ποσότητες: ${options.join(', ')} τεμ.\n\nΓράψε την ποσότητα:`,
-        String(editingExtraQtyId !== null
-          ? num(document.getElementById('hdrQty').value)   // the tab you are on
-          : baseQty)
+        `Ποια επιλογή εγκρίθηκε;${'\n'}${'\n'}${listed}${'\n'}${'\n'}Γράψε τον αριθμό:`,
+        String((openIdx >= 0 ? openIdx : 0) + 1)
       );
       if(answer===null) return; // cancelled — don't approve
-      const picked = num(answer);
-      if(!options.includes(picked)){
-        statusMsg(`Η ποσότητα ${answer} δεν υπάρχει στην προσφορά — διάλεξε μία από: ${options.join(', ')}.`);
+      const idx = num(answer) - 1;
+      const chosenOpt = opts[idx];
+      const picked = chosenOpt ? chosenOpt.qty : NaN;
+      if(!chosenOpt){
+        statusMsg(`Δεν υπάρχει επιλογή «${answer}» — γράψε έναν αριθμό από 1 ως ${opts.length}.`);
         return;
       }
-      setApprovedQty(picked);
-      statusMsg(picked===baseQty
-        ? `Εγκρίνεται με την κύρια ποσότητα (${picked} τεμ.) ✓`
-        : `Εγκρίνεται με την εναλλακτική των ${picked} τεμ. ✓ — η προσφορά μένει όπως είναι`);
+      setApprovedQty(picked, chosenOpt.key);
+      statusMsg(chosenOpt.key === 'main'
+        ? `Εγκρίνεται η κύρια επιλογή (${picked.toLocaleString('el-GR')} τεμ.) ✓`
+        : `Εγκρίνεται «${chosenOpt.name}» — ${picked.toLocaleString('el-GR')} τεμ. ✓ — η προσφορά μένει όπως είναι`);
     }
   } else {
-    // Withdrawing the approval has to clear the chosen quantity too, or the
-    // offer keeps claiming a quantity was accepted after it was un-approved.
-    setApprovedQty('');
+    // Withdrawing the approval has to clear the chosen option too, or the offer
+    // keeps claiming something was accepted after it was un-approved.
+    setApprovedQty('', '');
   }
 
   if(!currentOfferId) await saveOffer();
@@ -10080,6 +10764,28 @@ async function refreshForecastList(){
       return;
     }
 
+    // Three figures at the top: what is on the books in total, and how that
+    // splits between money already invoiced and money still to come. The
+    // yearly columns answer "when"; these answer "how much, and how much of it
+    // is real yet".
+    const invoiced = list.filter(o => o.status === 'invoiced');
+    const pending  = list.filter(o => o.status !== 'invoiced');
+    const sumOf = arr => arr.reduce((s,o)=>s+num(o.amount), 0);
+    const totInvoiced = sumOf(invoiced), totPending = sumOf(pending);
+    const grand = totInvoiced + totPending;
+
+    const headCard = (label, value, count, cls) => {
+      const d = document.createElement('div');
+      d.className = 'totcard fc-headcard' + (cls ? ' ' + cls : '');
+      d.innerHTML = `<div class="lbl">${label}</div><div class="val">${fmt(value)}</div>`
+        + `<div class="fc-headsub">${count} ${count === 1 ? 'δουλειά' : 'δουλειές'}${
+             grand > 0 && cls ? ' · ' + Math.round(value/grand*100) + '%' : ''}</div>`;
+      return d;
+    };
+    summaryEl.appendChild(headCard('Σύνολο (εκκρεμείς + τιμολογημένες)', grand, list.length, ''));
+    summaryEl.appendChild(headCard('Τιμολογημένες', totInvoiced, invoiced.length, 'fc-invoiced'));
+    summaryEl.appendChild(headCard('Σε εκκρεμότητα', totPending, pending.length, 'fc-pending'));
+
     // Yearly totals — grouped separately from the month columns below.
     const byYear = {};
     list.forEach(o=>{
@@ -10260,6 +10966,24 @@ function ensureColumnOrder(record, stage, cardsInStage){
   return record.columnOrder[stage];
 }
 
+async function reorderInvoicingStage(srcStage, targetStage){
+  try{
+    const record = await jbGetRecord();
+    const stages = record.invoicingStages || [];
+    const srcIdx = stages.indexOf(srcStage);
+    if(srcIdx === -1) return;
+    stages.splice(srcIdx, 1);
+    const targetIdx = stages.indexOf(targetStage);
+    stages.splice(targetIdx === -1 ? stages.length : targetIdx, 0, srcStage);
+    await jbMergePath(SLICE_MAIN, ['invoicingStages'], stages);
+    noteOwnWrite();
+    refreshInvoicingBoard();
+  }catch(e){
+    console.error('Reorder invoicing stage error:', e);
+    statusMsg('Σφάλμα αναδιάταξης στήλης: ' + e.message);
+  }
+}
+
 async function reorderProductionStage(srcStage, targetStage){
   try{
     const record = await jbGetRecord();
@@ -10270,6 +10994,7 @@ async function reorderProductionStage(srcStage, targetStage){
     const targetIdx = stages.indexOf(targetStage);
     stages.splice(targetIdx===-1 ? stages.length : targetIdx, 0, srcStage);
     await jbPutRecord(record);
+    noteOwnWrite();
     refreshProductionBoard();
   }catch(e){
     console.error('Reorder stage error:', e);
@@ -11004,7 +11729,7 @@ function ticketQtyIsAmbiguous(data){
 
   // A job from a multi-item offer has no single quantity, and neither does a
   // part split off from it — the flag is inherited, so both cards say the same.
-  if(d.multiItem === true) return true;
+  if(d.fromMultiOffer === true || d.multiItem === true) return true;
 
   // A ticket split from an ordinary job is one item with one figure, and that
   // figure is what the press needs.
@@ -11274,7 +11999,7 @@ async function refreshProductionBoard(){
             <div class="meta">${metaBits.join(' · ')}</div>
             ${stage===stages[stages.length-1] ? `<div class="kanban-done-actions">
               <div class="kanban-archive-btn">✓ Αρχειοθέτηση</div>
-              <div class="kanban-invoice-btn">🧾 Τιμολόγηση</div>
+              <div class="kanban-invoice-btn">📃 Τιμολόγηση</div>
             </div>` : ''}
           `;
           // Same rule as the card marking above: a group of one is not a group,
@@ -11352,6 +12077,9 @@ async function refreshProductionBoard(){
     // preserve, and the whole point is to keep the scrollbar where it was.
     applyBoardZoom('production');
     clearStaleLinkHighlight();
+    // Baseline for the live poller, taken the moment the board is drawn — set
+    // lazily on the first poll instead, it silently swallowed the first change.
+    if(!liveStamp) noteOwnWrite();
     const searchTerm = (document.getElementById('boardSearch')||{}).value;
     if(searchTerm) filterProductionBoard(searchTerm);
     bindBoardFit();
@@ -11764,10 +12492,39 @@ async function refreshInvoicingBoard(){
         });
         await moveInvoiceCardTo(id, stage);
       });
+
+      // Columns reorder by dragging their heading, exactly as on the production
+      // board — the two boards behave the same, so the habit carries over.
+      const headEl = col.querySelector('.kanban-col-head');
+      if(headEl){
+        headEl.style.cursor = 'grab';
+        headEl.draggable = true;
+        headEl.addEventListener('dragstart', e=>{
+          e.dataTransfer.setData('text/plain', 'column:' + stage);
+          e.dataTransfer.effectAllowed = 'move';
+          col.classList.add('kanban-col-dragging');
+        });
+        headEl.addEventListener('dragend', ()=>col.classList.remove('kanban-col-dragging'));
+        headEl.addEventListener('dragover', e=>{
+          e.preventDefault(); e.dataTransfer.dropEffect = 'move'; headEl.classList.add('dragover');
+        });
+        headEl.addEventListener('dragleave', ()=>headEl.classList.remove('dragover'));
+        headEl.addEventListener('drop', async e=>{
+          e.preventDefault(); e.stopPropagation();
+          headEl.classList.remove('dragover');
+          const data = e.dataTransfer.getData('text/plain');
+          if(!data || !data.startsWith('column:')) return;
+          const src = data.slice(7);
+          if(src === stage) return;
+          await reorderInvoicingStage(src, stage);
+        });
+      }
+
       boardEl.appendChild(col);
     });
     applyBoardZoom('invoicing');
     clearStaleLinkHighlight();
+    if(!liveStamp) noteOwnWrite();
     bindBoardFit();
     setTimeout(()=>fitBoardToViewport('invoicing'), 60);
   }catch(e){
