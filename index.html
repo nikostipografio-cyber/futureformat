@@ -892,6 +892,7 @@
   /* An alternative with a different specification prints as its own block, so
      the customer compares products rather than bare numbers. */
   .op-alt{margin-top:18px;padding-top:14px;border-top:1px dashed #bbb;page-break-inside:avoid;}
+  .op-optname{color:#6b665c;font-weight:400;font-size:0.92em;}
   .op-alt-head{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;
     margin-bottom:8px;}
   /* These rows sit outside .op-infogrid, so they need the same layout applied
@@ -4939,7 +4940,7 @@ function buildOfferPrintHtml(){
 
       return `
       <div class="op-alt">
-        <div class="op-alt-head">${t('Εναλλακτική')} — ${q.toLocaleString('el-GR')} ${t('τεμ.')}</div>
+        <div class="op-alt-head">${esc(String(e.label||'').trim()) || t('Εναλλακτική')} — ${q.toLocaleString('el-GR')} ${t('τεμ.')}</div>
 
         <div class="op-infogrid">
           <div>${row(t('Ποσότητα'), q.toLocaleString('el-GR') + ' ' + t('τεμ.'))
@@ -4980,7 +4981,10 @@ function buildOfferPrintHtml(){
     const manual = num(e.manualTotal);
     const eGrand = extraQtyTotals(e).grand;
     const eUnit = eqty>0 ? eGrand/eqty : 0;
-    return `<tr><td>${eqty} ${t('τεμ.')}</td><td>${eGrand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${eUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>`;
+    // The name the offer gives an option belongs on the customer's copy too —
+    // otherwise two rows of the same quantity look like a mistake.
+    const eName = String(e.label||'').trim();
+    return `<tr><td>${eqty} ${t('τεμ.')}${eName ? ` <span class="op-optname">${esc(eName)}</span>` : ''}</td><td>${eGrand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${eUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>`;
   }).join('');
 
   const pagesLabel = v('fPages');
