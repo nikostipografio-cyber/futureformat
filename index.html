@@ -329,6 +329,38 @@
   .pa-table tbody td{vertical-align:top;padding-bottom:9px;}
   .pa-compare{display:flex;justify-content:space-between;align-items:baseline;
     padding:10px 6px 2px;font-size:13px;}
+  .pa-proc thead th:nth-child(1){width:14%;} .pa-proc thead th:nth-child(2){width:14%;}
+  .pa-proc thead th:nth-child(3){width:8%;}  .pa-proc thead th:nth-child(4){width:11%;}
+  .pa-proc thead th:nth-child(5){width:19%;}
+  .pa-proc thead th:nth-child(6),.pa-proc thead th:nth-child(7){width:11%;}
+  .pa-proc thead th:nth-child(8){width:12%;}
+  .pa-proc tbody td:first-child,.pa-proc tbody td:nth-child(2){text-align:left;}
+  .pa-grand-wrap{display:flex;align-items:center;gap:26px;flex-wrap:wrap;}
+  .pa-grand-wrap .pa-grand{flex:1;min-width:340px;}
+  .pa-chart{display:flex;align-items:center;gap:14px;flex:none;}
+  .pa-legend{display:flex;flex-direction:column;gap:6px;}
+  .pa-leg{display:flex;align-items:center;gap:7px;font-size:12px;white-space:nowrap;}
+  .pa-dot{width:10px;height:10px;border-radius:3px;flex:none;}
+  .pa-leg-name{color:var(--muted);}
+  .pa-leg-pct{font-weight:700;font-variant-numeric:tabular-nums;}
+  @media (max-width:900px){ .pa-grand-wrap{justify-content:center;} }
+  .pa-grand{table-layout:auto;}
+  .pa-grand td{padding:8px 6px;font-size:13px;}
+  .pa-grand td:first-child{text-align:left;font-weight:700;width:16%;}
+  .pa-grand .pa-note-cell{text-align:left;font-size:11px;color:var(--muted);}
+  .pa-grand tfoot td{font-size:14.5px;}
+  /* The label lives in the row, not the header: only two of a dozen operations
+     have anything here, so a column title would name a field most rows lack. */
+  .proc-foil-lbl{display:block;font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.04em;color:var(--muted);margin-bottom:2px;}
+  .proc-foil input{width:100%;font-size:12px;}
+  .proc-foil .c-foil{font-size:9.5px;margin-top:2px;}
+  .pa-machine{font-size:11.5px;padding:3px 5px;max-width:100%;width:100%;}
+  .pa-glue{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;
+    background:var(--page);border:1px solid var(--line);border-radius:9px;flex-wrap:wrap;}
+  .pa-glue label{font-size:10.5px;font-weight:800;text-transform:uppercase;
+    letter-spacing:0.04em;color:var(--muted);}
+  .pa-glue input{width:80px;text-align:right;}
   .fc-headcard{position:relative;}
   .fc-headcard .fc-headsub{font-size:10px;color:#b9b9b5;margin-top:3px;}
   .fc-headcard.fc-invoiced{background:#12452c;}
@@ -789,6 +821,10 @@
   .pt-badge.pt-none{background:var(--page);color:var(--muted);}
 
   .machine-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .machine-name{font-weight:700;font-size:13.5px;border:1px solid transparent;
+    background:transparent;padding:3px 6px;border-radius:5px;flex:1;min-width:0;}
+  .machine-name:hover{border-color:var(--line);background:#fff;}
+  .machine-name:focus{border-color:#2f6fed;background:#fff;}
   .machine-card-head{display:flex;justify-content:space-between;align-items:center;font-size:14px;}
   .order-card .del-link{font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
   .ord-filter-btn.solid{background:var(--ink);color:#fff;}
@@ -1466,8 +1502,12 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div class="card" id="printAnalysisCard">
-    <div class="card-head"><div class="title">🖨 Ανάλυση κόστους εκτύπωσης</div>
-      <button class="btn" id="paToggle" onclick="toggleTicketSection('paBody','paToggle');renderPrintAnalysis()">▶ Εμφάνιση</button>
+    <div class="card-head"><div class="title">🖨 Ανάλυση κόστους</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="paRefresh" onclick="refreshPrintAnalysis()"
+          title="Ξαναϋπολογίζει την ανάλυση με τα τρέχοντα στοιχεία">↻ Ανανέωση</button>
+        <button class="btn" id="paToggle" onclick="toggleTicketSection('paBody','paToggle');renderPrintAnalysis()">▶ Εμφάνιση</button>
+      </div>
     </div>
     <div class="card-body" id="paBody" style="display:none;"></div>
   </div>
@@ -2138,10 +2178,10 @@ function toggleMobileSidebar(forceClose){
       </div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="title">🖨 Κόστη Εκτύπωσης</div>
+      <div class="card-head"><div class="title">🖨 Κόστη Ανάλυσης Προσφοράς</div>
         <button class="btn" onclick="toggleTicketSection('printCostsBody','printCostsToggle')" id="printCostsToggle">▶ Εμφάνιση</button></div>
       <div class="card-body" id="printCostsBody" style="display:none;">
-        <div class="empty-note" style="margin-bottom:10px;">Χρησιμοποιούνται στην <b>Ανάλυση εκτύπωσης</b> (📊 δίπλα στο κόστος κάθε γραμμής).</div>
+        <div class="empty-note" style="margin-bottom:10px;">Τροφοδοτούν την κάρτα <b>Ανάλυση κόστους</b> στο τέλος της προσφοράς. Δεν επηρεάζουν την τιμή.</div>
         <div class="grid3">
           <div class="field"><label>Τιμή τσίγκου (€)</label>
             <input id="setPlateCost" type="number" step="0.01" placeholder="4.45" oninput="savePrintCosts()"></div>
@@ -2154,6 +2194,29 @@ function toggleMobileSidebar(forceClose){
           <div class="field"><label>Μελάνι στο 100% (γρ./m²)</label>
             <input id="setGramsSqm" type="number" step="0.1" placeholder="1.1" oninput="savePrintCosts()"
               title="Τυπική τιμή για offset — άλλαξέ την αν μετράς διαφορετικά"></div>
+          <div class="field"><label>Κόλλα (€/κιλό)</label>
+            <input id="setGluePrice" type="number" step="0.1" placeholder="6" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Στρώση κόλλας (mm)</label>
+            <input id="setGlueLayer" type="number" step="0.1" placeholder="0.6" oninput="savePrintCosts()"
+              title="Πάχος στρώσης στη ράχη — ρώτα τον προμηθευτή σου"></div>
+          <div class="field"><label>Πυκνότητα κόλλας (g/cm³)</label>
+            <input id="setGlueDensity" type="number" step="0.05" placeholder="1.1" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Κόλλα ανά αντίτυπο (γρ.)</label>
+            <input id="setGluePerCopy" type="number" step="0.1" placeholder="αυτόματο" oninput="savePrintCosts()"
+              title="Άφησέ το κενό για αυτόματο υπολογισμό από τη ράχη του βιβλίου"></div>
+          <div class="field"><label>Ρολό φοιλ — μήκος (μ.)</label>
+            <input id="setFoilRollLen" type="number" step="1" placeholder="122" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Ρολό φοιλ — πλάτος (mm)</label>
+            <input id="setFoilWidth" type="number" step="1" placeholder="645" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Τιμή ρολού (€)</label>
+            <input id="setFoilRollPrice" type="number" step="1" placeholder="125" oninput="savePrintCosts()"
+              title="Από αυτά τα τρία βγαίνει το €/m², που είναι ο πραγματικός τρόπος που κοστίζει το φοιλ"></div>
+          <div class="field"><label>Βήμα φοιλ (cm)</label>
+            <input id="setFoilGap" type="number" step="0.1" placeholder="0.5" oninput="savePrintCosts()"
+              title="Κενό ανάμεσα σε δύο αποτυπώματα"></div>
+          <div class="field"><label>Make ready επεξεργασιών (λεπτά)</label>
+            <input id="setProcMakeReady" type="number" step="1" placeholder="10" oninput="savePrintCosts()"
+              title="Στήσιμο ανά εργασία post-press"></div>
         </div>
       </div>
     </div>
@@ -2724,7 +2787,9 @@ async function refreshMachinesManagerList(){
       return `
         <div class="machine-card">
           <div class="machine-card-head">
-            <b>${esc(m)}</b>
+            <input class="machine-name" value="${esc(m)}"
+              onchange="renameMachine('${mEsc}', this.value)"
+              title="Άλλαξε το όνομα — ενημερώνονται και οι εργασίες που το χρησιμοποιούν">
             <span onclick="deleteMachineFromSettings('${mEsc}')" title="Διαγραφή μηχανής" style="cursor:pointer;color:#c0392b;font-weight:700;">×</span>
           </div>
           <div class="fieldgrid c2" style="margin-top:8px;">
@@ -2783,6 +2848,46 @@ async function addMachineFromSettings(){
   }catch(e){
     console.error('Add machine error:', e);
     statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+// The name is the key everywhere — task assignments, rates, timing reports — so
+// renaming has to carry all of them across, or the machine's history is orphaned.
+async function renameMachine(oldName, newName){
+  const name = String(newName||'').trim();
+  if(!name || name === oldName){ refreshMachinesManagerList(); return; }
+  try{
+    const record = await jbGetRecord();
+    if((record.machines||[]).includes(name)){
+      statusMsg(`Υπάρχει ήδη μηχανή «${name}».`);
+      refreshMachinesManagerList();
+      return;
+    }
+    record.machines = (record.machines||[]).map(m => m === oldName ? name : m);
+
+    if(record.machineDetails && record.machineDetails[oldName]){
+      record.machineDetails[name] = record.machineDetails[oldName];
+      delete record.machineDetails[oldName];
+    }
+    if(record.machineRates && record.machineRates[oldName] !== undefined){
+      record.machineRates[name] = record.machineRates[oldName];
+      delete record.machineRates[oldName];
+    }
+    // Every task pointing at the old name follows it.
+    let moved = 0;
+    Object.entries(record.taskMachineMap || {}).forEach(([task, m])=>{
+      if(m === oldName){ record.taskMachineMap[task] = name; moved++; }
+    });
+
+    await jbPutRecord(record);
+    window.__procMachines = record.machineDetails || {};
+    window.__taskMachineMap = record.taskMachineMap || {};
+    statusMsg(`«${oldName}» → «${name}» ✓${moved ? ` — ${moved} ${moved===1?'εργασία ακολούθησε':'εργασίες ακολούθησαν'}` : ''}`);
+    refreshMachinesManagerList();
+  }catch(e){
+    console.error('Rename machine error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+    refreshMachinesManagerList();
   }
 }
 
@@ -3039,7 +3144,8 @@ function rowIsOn(r){ return r.on !== false; }
 // the run, ink scales with sheets, and labour scales with hours. A single €/side
 // figure hides all three, which is why short and long runs both come out wrong.
 const PRINT_DEFAULTS = { plateCost: 4.45, inkPerKg: 20, makeReadyMin: 15,
-                         coverage: 80, gramsPerSqm: 1.1 };
+                         coverage: 80, gramsPerSqm: 1.1, procMakeReadyMin: 10,
+                         foilRollLen: 122, foilRollWidth: 645, foilRollPrice: 125, foilGap: 0.5 };
 
 let printCostsSaveTimer = null;
 function savePrintCosts(){
@@ -3048,7 +3154,20 @@ function savePrintCosts(){
     inkPerKg:    num(document.getElementById('setInkPerKg').value)    || PRINT_DEFAULTS.inkPerKg,
     makeReadyMin:num(document.getElementById('setMakeReady').value)   || PRINT_DEFAULTS.makeReadyMin,
     coverage:    num(document.getElementById('setCoverage').value)    || PRINT_DEFAULTS.coverage,
-    gramsPerSqm: num(document.getElementById('setGramsSqm').value)    || PRINT_DEFAULTS.gramsPerSqm
+    gramsPerSqm: num(document.getElementById('setGramsSqm').value)    || PRINT_DEFAULTS.gramsPerSqm,
+    procMakeReadyMin: num(document.getElementById('setProcMakeReady').value) || PRINT_DEFAULTS.procMakeReadyMin,
+    foilRollLen:   num(document.getElementById('setFoilRollLen').value)   || PRINT_DEFAULTS.foilRollLen,
+    foilRollWidth: num(document.getElementById('setFoilWidth').value)     || PRINT_DEFAULTS.foilRollWidth,
+    foilRollPrice: num(document.getElementById('setFoilRollPrice').value) || PRINT_DEFAULTS.foilRollPrice,
+    foilGap:       num(document.getElementById('setFoilGap').value)   || PRINT_DEFAULTS.foilGap,
+    // Blank means "work it out from the spine" — a zero would mean no glue.
+    gluePerCopy: document.getElementById('setGluePerCopy').value,
+    glue: {
+      pricePerKg: num(document.getElementById('setGluePrice').value)   || GLUE_DEFAULTS.pricePerKg,
+      layerMm:    num(document.getElementById('setGlueLayer').value)   || GLUE_DEFAULTS.layerMm,
+      density:    num(document.getElementById('setGlueDensity').value) || GLUE_DEFAULTS.density,
+      paperFactor: GLUE_DEFAULTS.paperFactor
+    }
   };
   window.__printCosts = vals;
   // Written once typing settles, not on every keystroke.
@@ -3068,6 +3187,16 @@ function fillPrintCostFields(){
   set('setMakeReady', v.makeReadyMin);
   set('setCoverage', v.coverage);
   set('setGramsSqm', v.gramsPerSqm);
+  const g = glueSettings();
+  set('setGluePrice', g.pricePerKg);
+  set('setGlueLayer', g.layerMm);
+  set('setGlueDensity', g.density);
+  set('setProcMakeReady', v.procMakeReadyMin);
+  set('setFoilRollLen', v.foilRollLen);
+  set('setFoilWidth', v.foilRollWidth);
+  set('setFoilRollPrice', v.foilRollPrice);
+  set('setFoilGap', v.foilGap);
+  set('setGluePerCopy', v.gluePerCopy || '');
 }
 
 function printSettings(){
@@ -3116,6 +3245,19 @@ function passesPerSheetForRow(r, kind){
 // One table for the whole job. Printing costs are not really per-row — the same
 // press, the same crew, one after another — and the question being asked is what
 // the printing of this job costs, not of this line.
+// The analysis reads the offer as it stands, so it needs telling when the offer
+// changes. Opening and closing the card worked, but only by accident.
+async function refreshPrintAnalysis(){
+  const body = document.getElementById('paBody');
+  if(body && body.style.display === 'none'){
+    // Nothing to refresh while hidden — open it instead, which draws it anyway.
+    toggleTicketSection('paBody','paToggle');
+  }
+  recalcAllNow();
+  await renderPrintAnalysis();
+  statusMsg('Η ανάλυση ανανεώθηκε ✓');
+}
+
 async function renderPrintAnalysis(){
   const el = document.getElementById('paBody');
   if(!el || el.style.display === 'none') return;
@@ -3124,6 +3266,9 @@ async function renderPrintAnalysis(){
     window.__printCosts = record.printCosts || {};
     const mName = (record.taskMachineMap||{})['ΕΚΤΥΠΩΣΗ'] || '';
     window.__printMachine = Object.assign({ name:mName }, (record.machineDetails||{})[mName] || {});
+    // Every machine and every task→machine link, for the processing table.
+    window.__procMachines = record.machineDetails || {};
+    window.__taskMachineMap = record.taskMachineMap || {};
   }catch(e){ /* offline — defaults */ }
 
   const cfg = printSettings();
@@ -3147,6 +3292,67 @@ async function renderPrintAnalysis(){
   const totMachine = sum('machineCost');
   const totAll = totPlates + totInk + totLabour + totMachine;
   const totQuoted = sum('quoted');
+
+  // ── Επεξεργασίες ──
+  // Every machine defined in Settings, so the link can be made right here rather
+  // than on a screen the user may never open.
+  const machineNames = Object.keys(window.__procMachines || {});
+  const tasks = [];
+  procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
+    if(t.name && procTaskIsActive(t)) tasks.push(taskBreakdown(t, cat, baseQty));
+  }));
+  const tSum = k => tasks.reduce((s,x)=>s + x[k], 0);
+  // Machine hours across the whole job — the number that says whether the shop
+  // can actually fit this in.
+  // Paper as the offer itself prices it — the biggest line on most jobs, and
+  // leaving it out made the split look as if printing were mostly labour.
+  const paperCost = computeTotals(baseQty).materials;
+  const procHours = tSum('hours');
+  const printHours = rows.reduce((s,x)=>s + x.b.hours, 0);
+  const grandHours = printHours + procHours;
+  const tLabour = tSum('labour'), tMachine = tSum('machineCost'), tMaterial = tSum('material');
+  const tAll = tLabour + tMachine + tMaterial, tQuoted = tSum('quoted');
+
+  const procHtml = !tasks.length ? '' : `
+    <div class="sectitle" style="margin:22px 0 8px;">Επεξεργασίες</div>
+    <table class="pa-table pa-proc">
+      <thead><tr>
+        <th>Εργασία</th><th>Μηχάνημα</th><th>Ποσότητα</th><th>Ώρες</th>
+        <th>Υλικό</th><th>Εργασία</th><th>Μηχανή</th><th>Σύνολο</th>
+      </tr></thead>
+      <tbody>
+        ${tasks.map(x=>`
+        <tr>
+          <td class="pa-name">${esc(x.name)}</td>
+          <td><select class="pa-machine" onchange="setTaskMachine('${esc(x.name)}', this.value)">
+            <option value="">— μηχάνημα —</option>
+            ${(machineNames.includes(x.machineName) || !x.machineName ? machineNames
+               : machineNames.concat([x.machineName]))
+              .map(n=>`<option value="${esc(n)}" ${n===x.machineName?'selected':''}>${esc(n)}${
+                machineNames.includes(n) ? '' : ' (δεν έχει οριστεί)'}</option>`).join('')}
+          </select></td>
+          <td>${x.qty.toLocaleString('el-GR')}</td>
+          <td>${x.hours > 0 ? formatDuration(x.hours*3600) : '<span class="jp-none">—</span>'}
+            <div class="pa-note">${x.hours>0 ? `MR ${formatDuration(x.mrHours*3600)} + ${formatDuration(x.runHours*3600)}` : ''}</div>
+            ${x.machineName && !x.speed ? '<div class="pa-note" style="color:#b3243c;">χωρίς ταχύτητα</div>' : ''}</td>
+          <td>${x.material > 0 ? fmt(x.material) : '<span class="jp-none">—</span>'}
+            ${x.hasMaterial ? `<div class="pa-note">${esc(x.materialDetail)}</div>` : ''}</td>
+          <td>${fmt(x.labour)}<div class="pa-note">${x.hours>0 ? `${x.operators} × ${fmt(x.hourly)}/ώρα` : ''}</div></td>
+          <td>${fmt(x.machineCost)}<div class="pa-note">${x.hours>0 ? `${fmt(x.machineRate)}/ώρα` : ''}</div></td>
+          <td class="pa-row-total">${fmt(x.total)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="4">Σύνολο επεξεργασιών</td>
+        <td>${fmt(tMaterial)}</td><td>${fmt(tLabour)}</td><td>${fmt(tMachine)}</td>
+        <td class="pa-row-total">${fmt(tAll)}</td>
+      </tr></tfoot>
+    </table>
+    <div class="pa-compare">
+      <span>Στην προσφορά (€/ώρα εργασίας): <b>${fmt(tQuoted)}</b></span>
+      <span class="${tQuoted - tAll < 0 ? 'jp-neg' : 'jp-pos'}">Διαφορά ${fmt(tQuoted - tAll)}</span>
+    </div>
+`;
 
   const warn = !num(m.speed)
     ? '<div class="empty-note" style="color:#b3243c;margin-bottom:10px;">Δεν έχει οριστεί ταχύτητα για τη μηχανή εκτύπωσης — το κόστος εργασίας βγαίνει 0. Ρυθμίσεις → Διαχείριση Μηχανών.</div>' : '';
@@ -3185,6 +3391,55 @@ async function renderPrintAnalysis(){
       <span>Στην προσφορά (€/όψη): <b>${fmt(totQuoted)}</b></span>
       <span class="${totQuoted - totAll < 0 ? 'jp-neg' : 'jp-pos'}">Διαφορά ${fmt(totQuoted - totAll)}</span>
     </div>
+    ${procHtml}
+    <div class="sectitle" style="margin:24px 0 8px;">Συγκεντρωτικά</div>
+    <div class="pa-grand-wrap">
+    <table class="pa-table pa-grand">
+      <tbody>
+        <tr><td>Χαρτί</td>
+            <td class="pa-note-cell">όπως κοστολογείται στην προσφορά</td>
+            <td class="pa-row-total">${fmt(paperCost)}</td></tr>
+        <tr><td>Υλικά</td>
+            <td class="pa-note-cell">τσίγκοι ${fmt(totPlates)} · μελάνια ${fmt(totInk)}${
+              tasks.filter(x=>x.material>0).map(x=>` · ${esc(x.materialLabel)} ${fmt(x.material)}`).join('')}</td>
+            <td class="pa-row-total">${fmt(totPlates + totInk + tMaterial)}</td></tr>
+        <tr><td>Εργασία</td>
+            <td class="pa-note-cell">εκτύπωση ${fmt(totLabour)} · επεξεργασίες ${fmt(tLabour)}</td>
+            <td class="pa-row-total">${fmt(totLabour + tLabour)}</td></tr>
+        <tr><td>Μηχανές</td>
+            <td class="pa-note-cell">${formatDuration(grandHours*3600)} συνολικά — εκτύπωση ${
+              formatDuration(printHours*3600)} · επεξεργασίες ${formatDuration(procHours*3600)}</td>
+            <td class="pa-row-total">${fmt(totMachine + tMachine)}</td></tr>
+      </tbody>
+      <tfoot><tr>
+        <td colspan="2">Συνολικό κόστος παραγωγής</td>
+        <td class="pa-row-total">${fmt(paperCost + totAll + tAll)}</td>
+      </tr></tfoot>
+    </table>
+    <div class="pa-chart">
+      ${donutSvg([
+        { name:'Χαρτί',    value: paperCost,                      colour:'#6b4f9e' },
+        { name:'Υλικά',    value: totPlates + totInk + tMaterial, colour:'#2f6fed' },
+        { name:'Εργασία',  value: totLabour + tLabour,            colour:'#0e8a45' },
+        { name:'Μηχανές',  value: totMachine + tMachine,          colour:'#c9a227' }
+      ], 150)}
+      <div class="pa-legend">
+        ${[['Χαρτί', paperCost, '#6b4f9e'],
+           ['Υλικά', totPlates + totInk + tMaterial, '#2f6fed'],
+           ['Εργασία', totLabour + tLabour, '#0e8a45'],
+           ['Μηχανές', totMachine + tMachine, '#c9a227']]
+          .map(([n,v,col])=>`<div class="pa-leg"><span class="pa-dot" style="background:${col};"></span>
+            <span class="pa-leg-name">${n}</span>
+            <span class="pa-leg-pct">${(paperCost+totAll+tAll) > 0 ? Math.round(v/(paperCost+totAll+tAll)*100) : 0}%</span></div>`).join('')}
+      </div>
+    </div>
+    </div>
+    <div class="pa-compare">
+      <span>Στην προσφορά: <b>${fmt(paperCost + totQuoted + tQuoted)}</b></span>
+      <span class="${(paperCost + totQuoted + tQuoted) - (paperCost + totAll + tAll) < 0 ? 'jp-neg' : 'jp-pos'}">Διαφορά ${
+        fmt((totQuoted + tQuoted) - (totAll + tAll))}</span>
+    </div>
+
     <div class="empty-note" style="margin-top:8px;">
       Τσίγκοι ${fmt(cfg.plateCost)} · Μελάνι ${fmt(cfg.inkPerKg)}/κιλό · Make ready ${cfg.makeReadyMin}΄ ανά όψη${
         m.name ? ` · ${esc(m.name)}: ${fmt(num(m.machineRate))}/ώρα μηχανή, ${fmt(num(m.laborRate))}/ώρα ανά άτομο` : ''}.
@@ -3200,6 +3455,179 @@ function onCoverageInput(kind, id, value){
   markOfferDirty();
   clearTimeout(window.__paTimer);
   window.__paTimer = setTimeout(renderPrintAnalysis, 400);
+}
+
+// ===== Ανάλυση επεξεργασιών =====
+// Same idea as the printing breakdown: what the work really costs, beside what
+// the offer charges for it. Reported only — the price stays where it is.
+const GLUE_DEFAULTS = { pricePerKg: 6, layerMm: 0.6, density: 1.1, paperFactor: 1.3 };
+
+function glueSettings(){
+  return Object.assign({}, GLUE_DEFAULTS, (window.__printCosts || {}).glue || {});
+}
+
+// Glue follows the spine, and the spine is already known: sheet thickness comes
+// from the paper's weight, the page count gives how many leaves are stacked, and
+// the closed format gives the height being glued.
+function glueGramsPerCopy(){
+  const g = glueSettings();
+  const body = bookRows.find(r => rowIsOn(r) && r.paperName && num(r.pages) > 0) || bookRows[0];
+  if(!body) return { grams: 0, spineMm: 0, heightCm: 0 };
+
+  const paper = paperByName[body.paperName];
+  const gsm = paper ? num(paper.g) : 0;
+  const pages = num(body.pages);
+  if(!(gsm > 0) || !(pages > 0)) return { grams: 0, spineMm: 0, heightCm: 0 };
+
+  // µm per sheet ≈ gsm × bulk factor; two pages to a leaf.
+  const sheetMm = gsm * g.paperFactor / 1000;
+  const spineMm = (pages / 2) * sheetMm;
+
+  const dim = parseDimFromText(document.getElementById('fSchemaClosed').value);
+  const heightCm = dim ? Math.max(dim.w, dim.h) : 21;   // the glued edge
+
+  const areaCm2 = (spineMm / 10) * heightCm;
+  const grams = areaCm2 * (g.layerMm / 10) * g.density;
+  return { grams, spineMm, heightCm, gsm, pages };
+}
+
+// Which raw material a task consumes. Only glue for now; the shape takes more.
+// The shop's own machine for each operation, so a fresh install already knows
+// which press does what. Only used where the user has not set something else.
+const DEFAULT_TASK_MACHINES = {
+  'ΘΕΡΜΟΤΥΠΙΑ':             'ΘΕΡΜΟΤΥΠΙΑ Hot Foil',
+  'ΚΟΥΒΕΡΤΟΥΡΑ':            'ΧΕΙΡΟΝΑΚΤΙΚΗ',
+  'ΚΑΛΟΥΠΙ':                'ΚΑΛΟΥΠΙ - OHZ',
+  'ΔΙΠΛΩΜΑ':                'ΔΙΠΛΩΜΑ - Stahl',
+  'ΣΥΝΘΕΣΗ':                'GOLF - ΣΥΝΘΕΣΗ',
+  'ΚΛΩΣΤΟΡΑΦΗ':             'ΚΛΩΣΤΟΡΑΦΗ - Aster sewing machine',
+  'ΚΟΛΛΗΜΑ':                'GOLF - ΚΟΛΛΗΜΑ / QUICKBINDER ΚΟΛΛΗΜΑ',
+  'ΚΟΠΗ':                   'ΤΡΙΤΟΜΙΑ - Wohlenberg 3 Knife trimmer',
+  'ΠΙΚΜΑΝΣΗ ΑΥΤΙΑ':         'ΠΙΚΜΑΝΣΗ - Morgana',
+  'FRONT CUT':              'ΤΡΙΤΟΜΙΑ - Wohlenberg 3 Knife trimmer',
+  'ΚΑΤΑΣΚΕΥΗ ΚΑΛΥΜΜΑΤΟΣ':   'ΣΚΛΗΡΟ ΚΑΛΥΜΜΑ - Koten',
+  'ΠΕΡΑΣΜΑ ΕΞΩΦΥΛΛΟΥ':      'ΠΕΡΑΣΤΙΚΗ ΣΚΛΗΡΟ ΚΑΛ. - Koten',
+  'ΚΕΦΑΛΑΡΙ':               'ΧΕΙΡΟΝΑΚΤΙΚΗ',
+  'ΣΕΛΙΔΟΔΕΙΚΤΗΣ':          'ΧΕΙΡΟΝΑΚΤΙΚΗ',
+  'ΚΟΛΛΗΜΑ / ΞΑΚΡΙΣΜΑ':     'ΧΕΙΡΟΝΑΚΤΙΚΗ'
+};
+
+// A stored assignment always wins; the defaults only fill the gaps.
+function machineForTask(taskName){
+  const name = String(taskName||'').toUpperCase().trim();
+  const map = window.__taskMachineMap || {};
+  if(map[name] !== undefined && map[name] !== '') return map[name];
+  return DEFAULT_TASK_MACHINES[name] || '';
+}
+
+function taskMaterial(taskName){
+  const name = String(taskName||'').toUpperCase().trim();
+  if(/ΚΟΛΛΗΜΑ|ΒΙΒΛΙΟΔΕΣΙΑ|ΚΟΛΛΑ/.test(name)) return 'glue';
+  if(/ΘΕΡΜΟΤΥΠΙΑ|FOIL|ΧΡΥΣΟΤΥΠΙΑ/.test(name)) return 'foil';
+  if(/ΚΑΛΟΥΠΙ|ΚΟΠΤΙΚ/.test(name)) return 'die';
+  return null;
+}
+
+// A cutting die is quoted by the supplier as a single price, so it is typed in
+// rather than derived. It is tooling: made once, whatever the run length.
+function dieCalc(t){
+  const cost = num(t.dieCost);
+  if(!(cost > 0)) return null;
+  return { cost, detail: 'κόστος κοπτικού — μία φορά, ανεξάρτητα από την ποσότητα' };
+}
+
+// Foil advances by one step for every impression, whatever the size of the die.
+// A small logo on a wide roll therefore wastes most of the web unless several
+// dies sit side by side — which is why the roll width matters as much as the
+// die does.
+function foilCalc(t, qty){
+  const cfg = printSettings();
+  const dim = parseDimFromText(t.clicheSize || '');
+  if(!dim || !(qty > 0)) return null;
+
+  // Foil is sold as a roll of a given length and width, so what it really costs
+  // is an area. A narrow die on a wide roll wastes the rest of the web unless
+  // the roll is slit — which is why the width to order matters as much as the
+  // length.
+  const stockLenM = num(cfg.foilRollLen) || 122;      // m
+  const stockWidMm = num(cfg.foilRollWidth) || 645;   // mm
+  const rollPrice = num(cfg.foilRollPrice) || 125;    // € for that roll
+  const gap = num(cfg.foilGap) || 0.5;                // cm between impressions
+
+  const stockAreaM2 = stockLenM * (stockWidMm / 1000);
+  const pricePerM2 = stockAreaM2 > 0 ? rollPrice / stockAreaM2 : 0;
+
+  // One lane, on a roll slit to the die's width — the usual way to order.
+  const needWidthMm = Math.ceil((dim.w + gap) * 10);
+  const stepCm = dim.h + gap;
+  const metres = (qty * stepCm) / 100;
+  const cost = metres * (needWidthMm / 1000) * pricePerM2;
+
+  // If the full-width roll is used instead, several dies sit side by side.
+  const lanes = Math.max(1, Math.floor(stockWidMm / needWidthMm));
+  const fullRollMetres = metres / lanes;
+
+  return { w: dim.w, h: dim.h, stepCm, metres, cost, lanes, fullRollMetres,
+           needWidthMm, stockLenM, stockWidMm, rollPrice, pricePerM2,
+           rolls: stockLenM > 0 ? metres / stockLenM : 0,
+           detail: `${dim.w}×${dim.h}cm · ζήτα ρολό ${needWidthMm}mm × ${
+             Math.ceil(metres)} μ. · ${fmt(pricePerM2)}/m²`
+             + ` — ή ${lanes} ${lanes===1?'σειρά':'σειρές'} από ρολό ${stockWidMm}mm (${
+             fullRollMetres.toLocaleString('el-GR',{maximumFractionDigits:1})} μ.)` };
+}
+
+function taskBreakdown(t, cat, baseQty){
+  const machines = window.__procMachines || {};
+  const machineName = machineForTask(t.name);
+  const m = machines[machineName] || {};
+
+  const qty = num(t.qty) || baseQty;
+  const speed = num(m.speed) || 0;
+  const operators = Math.max(1, num(m.operators) || 1);
+  const hourly = num(m.laborRate) || 0;
+  const machineRate = num(m.machineRate) || 0;
+
+  // Setup and run kept apart, as on the press: a short run is mostly setup, and
+  // averaging the two hides that.
+  const cfg = printSettings();
+  const mrHours = (num(cfg.procMakeReadyMin) || 0) / 60;
+  const runHours = speed > 0 ? qty / speed : 0;
+  const hours = mrHours + runHours;
+  const labour = hours * operators * hourly;
+  const machineCost = hours * machineRate;
+
+  // Material consumed by this operation.
+  let material = 0, materialLabel = '', materialDetail = '';
+  if(taskMaterial(t.name) === 'foil'){
+    const f = foilCalc(t, qty);
+    if(f){ material = f.cost; materialLabel = 'φοιλ'; materialDetail = f.detail; }
+    else materialDetail = 'γράψε το ανάπτυγμα κλισέ στη γραμμή';
+  }
+  if(taskMaterial(t.name) === 'die'){
+    const d2 = dieCalc(t);
+    if(d2){ material = d2.cost; materialLabel = 'κοπτικό'; materialDetail = d2.detail; }
+    else materialDetail = 'γράψε το κόστος κοπτικού στη γραμμή';
+  }
+  if(taskMaterial(t.name) === 'glue'){
+    const g = glueSettings();
+    const auto = glueGramsPerCopy();
+    // A figure typed in Settings wins over the calculation; blank means compute.
+    const manual = printSettings().gluePerCopy;
+    const grams = (manual != null && String(manual).trim() !== '')
+      ? num(manual) : auto.grams;
+    const kg = grams * qty / 1000;
+    material = kg * g.pricePerKg;
+    materialLabel = 'κόλλα';
+    materialDetail = `${grams.toLocaleString('el-GR',{maximumFractionDigits:2})} γρ./αντίτυπο`
+      + (auto.spineMm ? ` (ράχη ${auto.spineMm.toFixed(1)}mm × ${auto.heightCm}cm)` : '')
+      + ` × ${qty.toLocaleString('el-GR')} = ${kg.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά`;
+  }
+
+  const quoted = procTaskCalc(t, baseQty).total;
+  return { name: t.name, cat: cat.name, machineName, qty, speed, mrHours, runHours, hours, operators, hourly,
+           machineRate, labour, machineCost, material, materialLabel, materialDetail,
+           total: labour + machineCost + material, quoted,
+           hasMaterial: material > 0 || !!materialDetail };
 }
 
 function printBreakdown(r, kind, baseQty){
@@ -4639,8 +5067,14 @@ function procTaskCalc(t, overrideQty){
   const speed = num(t.speed);
   const hours = speed>0 ? qty/speed : 0;
   const cost = hours * num(t.rate);
-  const total = cost + num(t.extra);
-  return { hours, cost, total };
+  // Foil is a real cost of the job, not just a note in the analysis, so it goes
+  // into the task total the same way a manual extra does.
+  const kind = taskMaterial(t.name);
+  const foil = kind === 'foil' ? foilCalc(t, qty) : null;
+  const die  = kind === 'die'  ? dieCalc(t) : null;
+  const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0);
+  const total = cost + num(t.extra) + foilCost;
+  return { hours, cost, total, foil: foil || die, foilCost };
 }
 
 // Tasks point at an item by its name, so the comparison has to be forgiving
@@ -4748,6 +5182,18 @@ function renderProc(){
           <td><input type="number" step="0.01" value="${t.rate}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).rate=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td><div class="auto c-cost">0,00 €</div></td>
           <td><input type="number" step="0.01" value="${t.extra}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).extra=this.value;recalcProcTask(${cat.id},${t.id})"></td>
+          <td class="proc-foil">${taskMaterial(t.name) === 'die' ? `
+            <label class="proc-foil-lbl">Κοπτικό</label>
+            <input type="number" step="0.01" value="${esc(t.dieCost||'')}" placeholder="κόστος €"
+              title="Τιμή κοπτικού από τον προμηθευτή — περνά σαν υλικό στην ανάλυση"
+              oninput="onDieCostInput(${cat.id},${t.id},this.value)">
+            <div class="pa-note c-foil"></div>`
+          : taskMaterial(t.name) === 'foil' ? `
+            <label class="proc-foil-lbl">Κλισέ</label>
+            <input value="${esc(t.clicheSize||'')}" placeholder="π.χ. 8x2"
+              title="Ανάπτυγμα κλισέ σε cm — υπολογίζει τα μέτρα φοιλ"
+              oninput="onClicheInput(${cat.id},${t.id},this.value)">
+            <div class="pa-note c-foil"></div>` : ''}</td>
           <td><div class="auto c-total">0,00 €</div></td>
           <td><button class="rowdel" onclick="removeProcTask(${cat.id},${t.id})">×</button></td>
         </tr>
@@ -4779,8 +5225,9 @@ function renderProc(){
             <th style="width:11%">Ταχύτητα (μον/ώρα)</th>
             <th style="width:11%">€ / ώρα</th>
             <th style="width:12%">Κόστος</th>
-            <th style="width:9%">Έξτρα</th>
-            <th style="width:12%">Σύνολο</th>
+            <th style="width:8%">Έξτρα</th>
+            <th style="width:11%"></th>
+            <th style="width:11%">Σύνολο</th>
             <th style="width:3%"></th>
           </tr>
         </thead>
@@ -5115,6 +5562,22 @@ async function downloadOfferPdf(){
   }
 }
 
+function onDieCostInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.dieCost = value;
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+}
+
+function onClicheInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.clicheSize = value;
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+}
+
 function recalcProcTask(catId, taskId){
   const cat = procCategories.find(c=>c.id===catId);
   const t = cat && cat.tasks.find(x=>x.id===taskId);
@@ -5124,6 +5587,18 @@ function recalcProcTask(catId, taskId){
   const { cost, total } = procTaskCalc(t);
   row.querySelector('.c-cost').textContent = fmt(cost);
   row.querySelector('.c-total').textContent = fmt(total);
+  // The foil worked out beneath its own field, so the figure can be checked.
+  const foilNote = row.querySelector('.c-foil');
+  if(foilNote){
+    const r = procTaskCalc(t, num(document.getElementById('hdrQty').value));
+    // Foil reports metres; a die is just a price. Both land in the same note.
+    foilNote.textContent = (r.foil && r.foilCost > 0)
+      ? (r.foil.metres != null
+          ? `${r.foil.metres.toLocaleString('el-GR',{maximumFractionDigits:1})} μ. · ${fmt(r.foilCost)}`
+          : fmt(r.foilCost))
+      : '';
+    foilNote.title = r.foil ? r.foil.detail : '';
+  }
   recalcProcTotal();
   // Refresh every item row, not just the one this task points at now: a task
   // that was moved to another item — or unassigned entirely — has to stop
@@ -5293,6 +5768,28 @@ function setApprovedQty(qty, optionKey){
 // stays inside the single file and needs nothing at load time.
 const COST_SPLIT_COLOURS = { materials:'#2f6fed', printing:'#0e8a45', proc:'#c9a227' };
 
+// A donut as markup rather than a canvas: it scales, prints, and needs no
+// library. Shared by the offer's own split and the analysis summary.
+function donutSvg(parts, size){
+  const total = parts.reduce((s,p)=>s+p.value, 0);
+  if(!(total > 0)) return '';
+  const R = size*0.35, C = size/2, STROKE = size*0.19;
+  const circ = 2 * Math.PI * R;
+  let offset = 0;
+  const arcs = parts.filter(p=>p.value > 0).map(p=>{
+    const frac = p.value / total;
+    const seg = `<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${p.colour}"
+      stroke-width="${STROKE}" stroke-dasharray="${(frac*circ).toFixed(2)} ${circ.toFixed(2)}"
+      stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${C} ${C})"
+      ><title>${esc(p.name)}: ${fmt(p.value)} (${Math.round(frac*100)}%)</title></circle>`;
+    offset += frac * circ;
+    return seg;
+  }).join('');
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+    <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="var(--line)" stroke-width="${STROKE}"></circle>
+    ${arcs}</svg>`;
+}
+
 function renderCostSplit(t){
   const card = document.getElementById('costSplitCard');
   if(!card) return;
@@ -5305,24 +5802,11 @@ function renderCostSplit(t){
   if(!(total > 0)){ card.style.display = 'none'; return; }
   card.style.display = '';
 
-  const R = 42, C = 60, STROKE = 22;
-  const circumference = 2 * Math.PI * R;
-  let offset = 0;
-  const arcs = parts.filter(p=>p.value > 0).map(p=>{
-    const frac = p.value / total;
-    const dash = `${(frac * circumference).toFixed(2)} ${circumference.toFixed(2)}`;
-    // -90° so the first slice starts at the top, which is what people expect.
-    const seg = `<circle cx="${C}" cy="${C}" r="${R}" fill="none"
-      stroke="${COST_SPLIT_COLOURS[p.key]}" stroke-width="${STROKE}"
-      stroke-dasharray="${dash}" stroke-dashoffset="${(-offset).toFixed(2)}"
-      transform="rotate(-90 ${C} ${C})"><title>${esc(p.name)}: ${fmt(p.value)}</title></circle>`;
-    offset += frac * circumference;
-    return seg;
-  }).join('');
-
-  document.getElementById('costSplitPie').innerHTML =
-    `<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="var(--line)" stroke-width="${STROKE}"></circle>`
-    + arcs;
+  // Same drawing routine as the analysis summary — one donut, two callers.
+  const svg = donutSvg(parts.map(p=>({ name:p.name, value:p.value,
+    colour: COST_SPLIT_COLOURS[p.key] })), 120);
+  document.getElementById('costSplitPie').outerHTML =
+    svg.replace('<svg ', '<svg id="costSplitPie" ');
 
   document.getElementById('costSplitLegend').innerHTML =
     parts.map(p=>`<div class="cs-row">
@@ -13082,7 +13566,7 @@ function collectProdTimeGroups(record, rangeDays, category){
         g.prodMax = g.prodMax===null ? prod : Math.max(g.prodMax, prod);
         if(est>0){ g.estTotal += est; g.estCount++; }
         // Whatever this task's machine actually counts is the honest measure.
-        const machine = taskMachineMap[key] || '';
+        const machine = taskMachineMap[key] || DEFAULT_TASK_MACHINES[key] || '';
         const unit = (machineDetails[machine] && machineDetails[machine].speedUnit) || 'Φύλλα';
         g.unit = unit;
         const volume = r.rowSheets ? r.rowSheets : (unit==='Τεμάχια' ? qty : sheets);
@@ -13168,9 +13652,13 @@ async function setTaskMachine(taskName, machine){
   try{
     const record = await jbGetRecord();
     if(!record.taskMachineMap) record.taskMachineMap = {};
-    record.taskMachineMap[taskName] = machine;
-    await jbPutRecord(record);
-    refreshProdTimeList();
+    record.taskMachineMap[String(taskName).toUpperCase().trim()] = machine;
+    await jbMergePath(SLICE_MAIN, ['taskMachineMap'], record.taskMachineMap);
+    window.__taskMachineMap = record.taskMachineMap;
+    statusMsg(machine ? `${taskName} → ${machine} ✓` : `${taskName}: χωρίς μηχανή`);
+    // Whichever screen asked for the change, both reflect it.
+    if(window.__currentView === 'prodtime') refreshProdTimeList();
+    else renderPrintAnalysis();
   }catch(e){
     console.error('Set task machine error:', e);
     statusMsg('Σφάλμα: ' + e.message);
@@ -13192,7 +13680,10 @@ function jobLabourCost(ticket, record){
   const add = (name, secs) => {
     if(!(secs > 0)) return;
     seconds += secs;
-    const machine = map[String(name||'').toUpperCase().trim()] || '';
+    // The record passed in is authoritative here, not the cached global.
+    const key = String(name||'').toUpperCase().trim();
+    const machine = (map[key] !== undefined && map[key] !== '')
+      ? map[key] : (DEFAULT_TASK_MACHINES[key] || '');
     const rate = num(rates[machine]) || DEFAULT_SHOP_HOURLY;
     cost += (secs/3600) * rate;
   };
@@ -13326,7 +13817,7 @@ async function refreshProdTimeList(){
       const unitLabel = g.unit || 'Φύλλα';
       const reliability = rateReliability(g.rateSamples);
 
-      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || '';
+      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
       const rate = assignedMachine ? num(machineRates[assignedMachine]) : 0;
       const avgCost = rate>0 ? (totalAvg/3600)*rate : null;
       // Setup is part of the job, so planning and costing per 1.000 include it:
@@ -13437,7 +13928,7 @@ async function exportProdTimeCsv(){
       const mrPct = totalAvg>0 ? Math.round(mrAvg/totalAvg*100) : 0;
       const prodPct = totalAvg>0 ? 100-mrPct : 0;
       const throughput = g.prodTotal>0 ? (g.qtyTotal / (g.prodTotal/3600)) : 0;
-      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || '';
+      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
       const rate = assignedMachine ? num(machineRates[assignedMachine]) : 0;
       const cost = rate>0 ? (totalAvg/3600)*rate : 0;
       const estAvg = g.estCount ? g.estTotal/g.estCount : 0;
