@@ -289,6 +289,9 @@
     padding:3px 9px;border-radius:20px;cursor:pointer;white-space:nowrap;
     border:1px solid transparent;transition:filter 0.12s;}
   .ost:hover{filter:brightness(0.96);}
+  /* Read-only in the list: the stage is owned by the offer itself. */
+  .ost-static{cursor:default;}
+  .ost-static:hover{filter:none;}
   .ost-draft{background:#f0eeea;color:#6b665c;border-color:#e2ded6;}
   .ost-sent{background:#eaf1fe;color:#1f4f9e;border-color:#cfe0fb;}
   .ost-approved{background:#e6f4ec;color:#0e6b3a;border-color:#c9e6d6;}
@@ -1179,7 +1182,7 @@ function toggleMobileSidebar(forceClose){
             <label>Κατάσταση</label>
             <select id="offerStageFilter" onchange="offerListPage=0;renderOfferTable()">
               <option value="">— Όλες —</option>
-              <option value="draft">📝 Υπολογισμός</option>
+              <option value="draft">📝 Προς υπολογισμό</option>
               <option value="sent">📤 Στάλθηκε / Αναμονή απάντησης</option>
               <option value="approved">✓ Εγκρίθηκε</option>
             </select>
@@ -1209,6 +1212,8 @@ function toggleMobileSidebar(forceClose){
         <div id="ofTemplateMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;z-index:4000;min-width:260px;max-height:340px;overflow:auto;"></div>
       </span>
       <button class="btn" id="convertOneBtn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
+      <button class="btn" id="stageBtn" onclick="toggleOfferSentInForm()"
+        title="Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη">📝 Προς υπολογισμό</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
     </div>
@@ -6940,6 +6945,7 @@ function applyOfferData(d){
   document.getElementById('fVat').value = d.vat||'';
   document.getElementById('fValidityDays').value = d.validityDays||15;
   window.__currentOfferSentAt = d.sentAt || '';
+  updateStageButton();
   // Off unless the offer was saved with it on. It used to default to on, so an
   // offer saved before this change has no flag — and must not switch itself on.
   document.getElementById('fShowProcInOffer').checked = d.showProcInOffer === true;
@@ -7905,20 +7911,6 @@ async function loadOffer(id){
   }
 }
 
-async function toggleOfferApproved(id){
-  try{
-    const record = await jbGetRecord();
-    const offer = record.offers[id];
-    if(!offer) return;
-    const newState = await setOfferApproved(id, !offer.approved);
-    if(currentOfferId===id && newState!=null) updateApproveButton(newState);
-    refreshOfferList();
-  }catch(e){
-    console.error('Toggle approved error:', e);
-    statusMsg('Σφάλμα: ' + e.message);
-  }
-}
-
 async function deleteOffer(id){
   if(!confirm('Διαγραφή αυτής της προσφοράς;')) return;
   try{
@@ -7934,6 +7926,7 @@ async function deleteOffer(id){
 
 function newOffer(){
   window.__currentOfferSentAt = '';   // a fresh offer has not been sent
+  setTimeout(updateStageButton, 0);
   editingExtraQtyId = null;
   window.__mainOfferBackup = null;
   window.__linkOfferToTicket = null;   // a blank offer is not a conversion
@@ -8037,50 +8030,20 @@ function offerStatusBadge(o){
 
   if(stage === 'approved'){
     const partial = o.approvedCount && o.itemCount && o.approvedCount < o.itemCount;
-    return `<span class="ost ost-approved" onclick="cycleOfferStage('${o.id}')"
-      title="${partial ? 'Εγκρίθηκαν ' + o.approvedCount + ' από ' + o.itemCount + ' είδη' : 'Εγκρίθηκε — κλικ για αλλαγή'}">✓ ${
+    return `<span class="ost ost-approved ost-static"
+      title="${partial ? 'Εγκρίθηκαν ' + o.approvedCount + ' από ' + o.itemCount + ' είδη' : 'Εγκρίθηκε'}">✓ ${
       partial ? `Μερικώς ${o.approvedCount}/${o.itemCount}` : 'Εγκρίθηκε'}</span>`;
   }
 
   if(stage === 'sent'){
     const days = daysSince(d.sentAt);
     const when = days === null ? '' : (days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`);
-    return `<span class="ost ost-sent" onclick="cycleOfferStage('${o.id}')"
-      title="Στάλθηκε ${esc(when)}. Κλικ για επόμενο στάδιο.">📤 Στάλθηκε / Αναμονή απάντησης</span>`;
+    return `<span class="ost ost-sent ost-static"
+      title="Στάλθηκε ${esc(when)}. Η κατάσταση αλλάζει μέσα από την προσφορά.">📤 Στάλθηκε / Αναμονή απάντησης</span>`;
   }
 
-  return `<span class="ost ost-draft" onclick="cycleOfferStage('${o.id}')"
-    title="Δεν έχει σταλεί ακόμα — κλικ για «Στάλθηκε»">📝 Υπολογισμός</span>`;
-}
-
-// Draft → sent → approved, and round again. Approval keeps its own prompt, so
-// the click hands over to it rather than duplicating the quantity question.
-async function cycleOfferStage(id){
-  try{
-    const record = await jbGetRecord();
-    const o = record.offers[id];
-    if(!o) return;
-    const stage = offerStage(o);
-
-    if(stage === 'draft'){
-      o.data = o.data || {};
-      o.data.sentAt = new Date().toISOString();
-      await jbMergePath(SLICE_OFFERS, ['offers', id], o);
-      if(currentOfferId === id) window.__currentOfferSentAt = o.data.sentAt;
-      statusMsg('Σημειώθηκε ως σταλμένη — αναμονή απάντησης.');
-      refreshOfferList();
-      return;
-    }
-    if(stage === 'sent'){
-      await toggleOfferApproved(id);      // asks which quantity, as before
-      return;
-    }
-    // Approved → back to waiting, without losing the date it was sent.
-    await toggleOfferApproved(id);
-  }catch(e){
-    console.error('Offer stage error:', e);
-    statusMsg('Σφάλμα: ' + e.message);
-  }
+  return `<span class="ost ost-draft ost-static"
+    title="Δεν έχει σταλεί ακόμα. Η κατάσταση αλλάζει μέσα από την προσφορά.">📝 Προς υπολογισμό</span>`;
 }
 
 function offerListQty(o){
@@ -10408,6 +10371,44 @@ async function setOfferApproved(id, approved){
     console.error('Set offer approved error:', e);
     statusMsg('Σφάλμα: ' + e.message);
     return null;
+  }
+}
+
+// The stage is set from inside the offer, where the person who sent it is
+// working — not from the list, where a stray click would rewrite history.
+function updateStageButton(){
+  const btn = document.getElementById('stageBtn');
+  if(!btn) return;
+  const sent = !!window.__currentOfferSentAt;
+  const days = sent ? daysSince(window.__currentOfferSentAt) : null;
+  btn.textContent = sent ? '📤 Στάλθηκε' : '📝 Προς υπολογισμό';
+  btn.classList.toggle('solid', sent);
+  btn.title = sent
+    ? `Στάλθηκε ${days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`}`
+      + ' — κλικ για επαναφορά σε Προς υπολογισμό'
+    : 'Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη';
+}
+
+async function toggleOfferSentInForm(){
+  if(!currentOfferId){
+    statusMsg('Αποθήκευσε πρώτα την προσφορά.');
+    return;
+  }
+  const sending = !window.__currentOfferSentAt;
+  try{
+    const record = await jbGetRecord();
+    const o = record.offers[currentOfferId];
+    if(!o) return;
+    o.data = o.data || {};
+    o.data.sentAt = sending ? new Date().toISOString() : '';
+    await jbMergePath(SLICE_OFFERS, ['offers', currentOfferId], o);
+    window.__currentOfferSentAt = o.data.sentAt;
+    updateStageButton();
+    statusMsg(sending ? 'Σημειώθηκε ως σταλμένη — αναμονή απάντησης ✓'
+                      : 'Επέστρεψε σε Προς υπολογισμό.');
+  }catch(e){
+    console.error('Offer stage error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
   }
 }
 
