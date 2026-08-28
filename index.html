@@ -208,11 +208,18 @@
   /* A compact comparison of every quantity — read-only, because each one is
      priced on its own tab now. */
   .qty-compare{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
-  .qc-row{display:grid;grid-template-columns:1.6fr 1fr 1fr 0.9fr 1fr;gap:10px;
+  .qc-row{display:grid;grid-template-columns:0.6fr 1.6fr 1fr 1fr 0.9fr 1fr;gap:10px;
     padding:8px 12px;font-size:13px;align-items:baseline;cursor:pointer;
     border-top:1px solid var(--line);font-variant-numeric:tabular-nums;}
   .qc-row:first-child{border-top:none;}
   .qc-row:hover{background:var(--page);}
+  .qc-name{color:var(--muted);font-weight:400;font-size:0.92em;}
+  .qc-marks{display:flex;align-items:center;gap:8px;}
+  .qc-star{font-size:14px;line-height:1;color:#c4c0b6;cursor:pointer;transition:color 0.12s;}
+  .qc-star:hover{color:#c9a227;}
+  .qc-star-on{color:#c9a227;cursor:default;}
+  .qc-pdf{width:15px;height:15px;margin:0;cursor:pointer;accent-color:#2f6fed;}
+  .qc-always{color:#b8b4ab;font-size:11px;}
   .qc-head{background:var(--page);font-size:10.5px;text-transform:uppercase;
     letter-spacing:0.04em;color:var(--muted);font-weight:700;cursor:default;}
   .qc-head:hover{background:var(--page);}
@@ -284,6 +291,16 @@
   .jp-pos{color:#0e8a45;font-weight:700;}
   .jp-neg{color:#b3243c;font-weight:700;}
   .jp-none{color:var(--muted);}
+  .update-banner{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;
+    padding:11px 16px 11px 20px;border-radius:26px;box-shadow:0 8px 26px rgba(0,0,0,0.26);
+    z-index:9500;font-size:13px;font-weight:600;max-width:92vw;}
+  .update-banner .btn{padding:6px 14px;font-size:12px;}
+  .update-banner .ub-close{cursor:pointer;color:#b9b9b5;font-size:17px;line-height:1;padding:0 2px;}
+  .update-banner .ub-close:hover{color:#fff;}
+  .run-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+    padding:0 5px;margin-left:auto;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;
+    border-radius:9px;flex:none;}
   /* Offer stage: a chain, coloured by how far along it is. */
   .ost{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
     padding:3px 9px;border-radius:20px;cursor:pointer;white-space:nowrap;
@@ -1917,10 +1934,18 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewProductionTime" style="display:none;">
+    <div class="card" id="runningCard" style="display:none;">
+      <div class="card-head"><div class="title">⏱ Χρονόμετρα σε λειτουργία</div>
+        <button class="btn" onclick="refreshRunningTimers()">↻ Ανανέωση</button>
+      </div>
+      <div class="card-body" id="runningList"></div>
+    </div>
     <div class="card">
       <div class="card-head">
         <div class="title">Production Time — Μέσοι Χρόνοι ανά Επεξεργασία</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" id="ptToggle" onclick="toggleProdTimeStats()">▶ Εμφάνιση</button>
+          <span id="ptFilters" style="display:none;gap:8px;flex-wrap:wrap;">
           <button class="btn ord-filter-btn solid" data-ptcat="normal" onclick="setProdTimeCategory('normal')">Κανονικές δουλειές</button>
           <button class="btn ord-filter-btn" data-ptcat="school" onclick="setProdTimeCategory('school')">Σχολικά (ΙΤΥΕ)</button>
           <button class="btn ord-filter-btn" data-ptcat="all" onclick="setProdTimeCategory('all')">Όλα μαζί</button>
@@ -1928,11 +1953,13 @@ function toggleMobileSidebar(forceClose){
           <button class="btn ord-filter-btn solid" data-ptrange="all" onclick="setProdTimeRange('all')">Όλα</button>
           <button class="btn ord-filter-btn" data-ptrange="30" onclick="setProdTimeRange('30')">Τελευταίες 30 μέρες</button>
           <button class="btn" onclick="exportProdTimeCsv()">Εξαγωγή CSV</button>
+          </span>
         </div>
       </div>
-      <div class="card-body" style="color:var(--muted);font-size:12px;">Στοιχεία από τα χρονόμετρα Make Ready / Production σε όλα τα αποθηκευμένα Job Tickets, ομαδοποιημένα ανά όνομα εργασίας.</div>
-      <div class="card-body" id="prodTimeList"></div>
+      <div class="card-body" id="prodTimeIntro" style="color:var(--muted);font-size:12px;display:none;">Στοιχεία από τα χρονόμετρα Make Ready / Production σε όλα τα αποθηκευμένα Job Tickets, ομαδοποιημένα ανά όνομα εργασίας.</div>
+      <div class="card-body" id="prodTimeList" style="display:none;"></div>
     </div>
+
   </div>
 
   <div id="viewStock" style="display:none;">
@@ -3413,6 +3440,10 @@ async function renderPrintAnalysis(){
   const printHours = printed.reduce((s,x)=>s + x.b.hours, 0);
   const grandHours = printHours + procHours;
   const tLabour = tSum('labour'), tMachine = tSum('machineCost'), tMaterial = tSum('material');
+  // Bought-in services are separated from our own consumables: they behave
+  // differently and are worth seeing on their own line.
+  const tExternal = tasks.filter(x=>x.external).reduce((s,x)=>s + x.material, 0);
+  const tOwnMaterial = tMaterial - tExternal;
   const tAll = tLabour + tMachine + tMaterial, tQuoted = tSum('quoted');
 
   const procHtml = !tasks.length ? '' : `
@@ -3519,8 +3550,11 @@ async function renderPrintAnalysis(){
             <td class="pa-row-total">${fmt(paperCost)}</td></tr>
         <tr><td>Υλικά</td>
             <td class="pa-note-cell">τσίγκοι ${fmt(totPlates)} · μελάνια ${fmt(totInk)}${
-              tasks.filter(x=>x.material>0).map(x=>` · ${esc(x.materialLabel)} ${fmt(x.material)}`).join('')}</td>
-            <td class="pa-row-total">${fmt(totPlates + totInk + tMaterial)}</td></tr>
+              tasks.filter(x=>x.material>0 && !x.external).map(x=>` · ${esc(x.materialLabel)} ${fmt(x.material)}`).join('')}</td>
+            <td class="pa-row-total">${fmt(totPlates + totInk + tOwnMaterial)}</td></tr>
+        ${tExternal > 0 ? `<tr><td>Εξωτερικοί συνεργάτες</td>
+            <td class="pa-note-cell">${tasks.filter(x=>x.external).map(x=>esc(x.name)).join(' · ')}</td>
+            <td class="pa-row-total">${fmt(tExternal)}</td></tr>` : ''}
         <tr><td>Εργασία</td>
             <td class="pa-note-cell">εκτύπωση ${fmt(totLabour)} · επεξεργασίες ${fmt(tLabour)}</td>
             <td class="pa-row-total">${fmt(totLabour + tLabour)}</td></tr>
@@ -3537,13 +3571,15 @@ async function renderPrintAnalysis(){
     <div class="pa-chart">
       ${donutSvg([
         { name:'Χαρτί',    value: paperCost,                      colour:'#6b4f9e' },
-        { name:'Υλικά',    value: totPlates + totInk + tMaterial, colour:'#2f6fed' },
+        { name:'Υλικά',    value: totPlates + totInk + tOwnMaterial, colour:'#2f6fed' },
+        { name:'Εξωτερικά',value: tExternal,                        colour:'#b3243c' },
         { name:'Εργασία',  value: totLabour + tLabour,            colour:'#0e8a45' },
         { name:'Μηχανές',  value: totMachine + tMachine,          colour:'#c9a227' }
       ], 150)}
       <div class="pa-legend">
         ${[['Χαρτί', paperCost, '#6b4f9e'],
-           ['Υλικά', totPlates + totInk + tMaterial, '#2f6fed'],
+           ['Υλικά', totPlates + totInk + tOwnMaterial, '#2f6fed'],
+           ...(tExternal > 0 ? [['Εξωτερικά', tExternal, '#b3243c']] : []),
            ['Εργασία', totLabour + tLabour, '#0e8a45'],
            ['Μηχανές', totMachine + tMachine, '#c9a227']]
           .map(([n,v,col])=>`<div class="pa-leg"><span class="pa-dot" style="background:${col};"></span>
@@ -5265,7 +5301,7 @@ function toggleProcCategoryHidden(catId){
   const cat = procCategories.find(c=>c.id===catId);
   if(!cat) return;
   cat.collapsed = !cat.collapsed;
-  renderProc();
+  renderProc();          // rows for a newly opened category are built now
 }
 function addProcTask(catId){
   const cat = procCategories.find(c=>c.id===catId);
@@ -5405,7 +5441,11 @@ function renderProc(){
     const catDiv = document.createElement('div');
     catDiv.style.marginBottom = '18px';
     let rowsHtml = '';
-    cat.tasks.forEach(t=>{
+    // A collapsed category is hidden anyway, so its rows are built the first
+    // time it is opened rather than on every redraw. With five of six normally
+    // shut, that was most of the work being thrown away.
+    const buildRows = !cat.collapsed;
+    if(buildRows) cat.tasks.forEach(t=>{
       const itemOptions = flatRows.filter(r=>r.material).map(r=>`<option value="${esc(r.material)}" ${t.itemMaterial===r.material?'selected':''}>${esc(r.material)}</option>`).join('');
       rowsHtml += `
         <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}${t.external ? ' proc-ext' : ''}"
@@ -5610,7 +5650,9 @@ function buildOfferPrintHtml(){
     ? window.__mainOfferBackup.snap : snapshotOffer();
   const mainSpec = specOf(mainSpecSnap);
 
-  const altBlocks = extraQuantities
+  // Only the options ticked in the comparison table reach the customer; the rest
+  // stay in the offer for our own use.
+  const altBlocks = extraQuantities.filter(e => e.inPdf !== false)
     .filter(e => num(e.qty) > 0 && e.snap && specOf(e.snap) !== mainSpec)
     .sort((a,b)=>num(a.qty) - num(b.qty))
     .map(e => {
@@ -5678,7 +5720,7 @@ function buildOfferPrintHtml(){
 
   // Quantities that differ only in run length stay in the compact price table;
   // listing them twice would just repeat the same figure.
-  const priceOnlyExtras = extraQuantities
+  const priceOnlyExtras = extraQuantities.filter(e => e.inPdf !== false)
     .filter(e => num(e.qty) > 0 && (!e.snap || specOf(e.snap) === mainSpec))
     .sort((a,b)=>num(a.qty) - num(b.qty));   // same order as the tabs and the comparison
 
@@ -5830,6 +5872,7 @@ function toggleExternal(catId, taskId){
   renderProc();
   updateGrand();
   markOfferDirty();
+  queueAnalysisRefresh();
   statusMsg(t.external ? `${t.name}: εξωτερικός συνεργάτης` : `${t.name}: δική μας μηχανή`);
 }
 
@@ -5839,6 +5882,16 @@ function onExtPriceInput(catId, taskId, value){
   t.extPrice = String(value).replace(',', '.');
   recalcProcTask(catId, taskId);
   markOfferDirty();
+  queueAnalysisRefresh();
+}
+
+// The analysis card reads the offer, so it has to be told when a task changes.
+// Debounced: a price is typed a digit at a time.
+function queueAnalysisRefresh(){
+  const body = document.getElementById('paBody');
+  if(!body || body.style.display === 'none') return;
+  clearTimeout(window.__paTimer);
+  window.__paTimer = setTimeout(renderPrintAnalysis, 400);
 }
 
 function onLamItemInput(catId, taskId, value){
@@ -5847,6 +5900,7 @@ function onLamItemInput(catId, taskId, value){
   t.lamItem = value;
   recalcProcTask(catId, taskId);
   markOfferDirty();
+  queueAnalysisRefresh();
 }
 
 function onLamTypeInput(catId, taskId, value){
@@ -5855,6 +5909,7 @@ function onLamTypeInput(catId, taskId, value){
   t.lamType = value;
   recalcProcTask(catId, taskId);
   markOfferDirty();
+  queueAnalysisRefresh();
 }
 
 function onDieCostInput(catId, taskId, value){
@@ -5863,6 +5918,7 @@ function onDieCostInput(catId, taskId, value){
   t.dieCost = String(value).replace(',', '.');   // 85,50 must not become 85
   recalcProcTask(catId, taskId);
   markOfferDirty();
+  queueAnalysisRefresh();
 }
 
 function onClicheInput(catId, taskId, value){
@@ -5873,11 +5929,14 @@ function onClicheInput(catId, taskId, value){
   markOfferDirty();
 }
 
-function recalcProcTask(catId, taskId){
+function recalcProcTask(catId, taskId, rowEl){
   const cat = procCategories.find(c=>c.id===catId);
   const t = cat && cat.tasks.find(x=>x.id===taskId);
   if(!t) return;
-  const row = document.querySelector(`tr[data-task-id="${taskId}"]`);
+  // Searching the whole document for the row cost about 4 ms, which over twenty
+  // rows was the entire delay. The caller usually has the row already.
+  const row = rowEl || (document.getElementById('procList') || document)
+    .querySelector(`tr[data-task-id="${taskId}"]`);
   if(!row) return;
   const { cost, total } = procTaskCalc(t);
   row.querySelector('.c-cost').textContent = fmt(cost);
@@ -5885,7 +5944,7 @@ function recalcProcTask(catId, taskId){
   // The foil worked out beneath its own field, so the figure can be checked.
   const foilNote = row.querySelector('.c-foil');
   if(foilNote){
-    const r = procTaskCalc(t, num(document.getElementById('hdrQty').value));
+    const r = procTaskCalc(t);
     // Foil reports metres; a die is just a price. Both land in the same note.
     foilNote.textContent = (r.foil && r.foilCost > 0)
       ? (r.foil.metres != null
@@ -5898,8 +5957,14 @@ function recalcProcTask(catId, taskId){
   // Refresh every item row, not just the one this task points at now: a task
   // that was moved to another item — or unassigned entirely — has to stop
   // counting against the row it used to belong to.
-  flatRows.forEach(r => recalcFlatRow(r.id));
+  //
+  // Skipped when a caller is refreshing every task in turn: doing it per task
+  // meant twenty tasks × four item rows, which was the whole delay.
+  if(!procBulkRefresh) flatRows.forEach(r => recalcFlatRow(r.id));
 }
+
+// Set while a sweep over all tasks is in progress.
+let procBulkRefresh = false;
 
 function recalcProcTotal(){
   let total = 0;
@@ -6336,6 +6401,54 @@ function loadTabSnapshot(snap, qty){
   recalcAll();
 }
 
+// Swaps an alternative with the main quantity, so the offer can be sent showing
+// that option as the offer itself. Nothing is lost — the old main becomes an
+// alternative and can be swapped back.
+async function makeTabMain(id){
+  const e = extraQuantities.find(x=>x.id===id);
+  if(!e){ statusMsg('Δεν βρέθηκε η επιλογή.'); return; }
+  if(!num(e.qty)){ statusMsg('Βάλε πρώτα ποσότητα σε αυτή την καρτέλα.'); return; }
+
+  const name = String(e.label||'').trim() || `${num(e.qty).toLocaleString('el-GR')} τεμ.`;
+  if(!confirm(`Να γίνει κύρια η επιλογή «${name}»;\n\n`
+    + 'Η τωρινή κύρια γίνεται εναλλακτική. Μπορείς να το αναιρέσεις όποτε θέλεις.')) return;
+
+  // Whatever tab is open, work from the stored main.
+  const openTab = editingExtraQtyId;
+  if(openTab !== null) switchQtyTab(null);
+
+  const oldMainSnap = snapshotOfferRaw();
+  const oldMainQty = document.getElementById('hdrQty').value;
+  const oldMainTotal = document.getElementById('fManualTotal').value;
+  const oldMainLabel = document.getElementById('fMainLabel').value;
+
+  // The chosen alternative takes the main slot.
+  loadTabSnapshot(JSON.parse(e.snapRaw || JSON.stringify(e.snap)), e.qty);
+  document.getElementById('fManualTotal').value = e.manualTotal || '';
+  document.getElementById('fMainLabel').value = e.label || '';
+
+  // ...and the old main takes its place in the list.
+  e.qty = oldMainQty;
+  e.manualTotal = oldMainTotal;
+  e.label = oldMainLabel;
+  e.snapRaw = oldMainSnap;
+  e.snap = JSON.parse(oldMainSnap);
+  e.snapEdited = false;
+
+  // An approval pointing at either of the two swapped with them.
+  const opt = document.getElementById('fApprovedOption');
+  const idx = extraQuantities.indexOf(e);
+  if(opt.value === 'main') opt.value = 'alt' + idx;
+  else if(opt.value === 'alt' + idx) opt.value = 'main';
+
+  applyHeaderQty();
+  recalcAllNow();
+  renderQtyTabs();
+  renderExtraTotals();
+  markOfferDirty();
+  statusMsg(`«${name}» είναι πλέον η κύρια επιλογή ✓`);
+}
+
 function switchQtyTab(id){
   if(id === editingExtraQtyId) return;
   if(id !== null){
@@ -6532,6 +6645,7 @@ function renderExtraTotals(){
 
   container.innerHTML = `<div class="qty-compare">
     <div class="qc-row qc-head">
+      <span title="★ κύρια επιλογή · ☑ φαίνεται στο PDF">ΚΥΡΙΑ · PDF</span>
       <span>Ποσότητα</span><span>Κόστος</span><span>Τελική τιμή</span><span>€ / τεμ.</span><span>Κέρδος</span>
     </div>
     ${rows.map(r=>{
@@ -6540,7 +6654,21 @@ function renderExtraTotals(){
       const chosen = isApproved && approvedQty === r.qty;
       return `<div class="qc-row${active ? ' qc-active' : ''}${chosen ? ' qc-chosen' : ''}"
           onclick="switchQtyTab(${r.main ? 'null' : r.id})" title="Άνοιγμα αυτής της ποσότητας">
-        <span><b>${r.qty.toLocaleString('el-GR')}</b> τεμ.${r.main ? ' <span class="qc-tag">κύρια</span>' : ''}${chosen ? ' <span class="qc-tag qc-ok">✓ εγκεκριμένη</span>' : ''}</span>
+        <span class="qc-marks" onclick="event.stopPropagation()">${r.main
+          ? '<span class="qc-star qc-star-on" title="Αυτή είναι η κύρια επιλογή">★</span>'
+          : `<span class="qc-star" title="Να γίνει αυτή η κύρια — στο PDF θα φαίνεται σαν κανονική προσφορά"
+              onclick="makeTabMain(${r.id})">☆</span>`}${r.main
+          ? '<span class="qc-always" title="Η κύρια τυπώνεται πάντα">●</span>'
+          : `<input type="checkbox" class="qc-pdf" ${extraQuantities.find(e=>e.id===r.id) && extraQuantities.find(e=>e.id===r.id).inPdf !== false ? 'checked' : ''}
+              onchange="onAltInPdf(${r.id}, this.checked)" title="Να φαίνεται στο PDF">`}</span>
+        <span><b>${r.qty.toLocaleString('el-GR')}</b> τεμ.${
+          // The name is what tells two options of the same quantity apart, so it
+          // belongs beside the figure here as much as on the tab.
+          (() => { const nm = r.main
+              ? String((document.getElementById('fMainLabel')||{}).value||'').trim()
+              : String((extraQuantities.find(e=>e.id===r.id)||{}).label||'').trim();
+            return nm ? ` <span class="qc-name">${esc(nm)}</span>` : ''; })()
+          }${r.main ? ' <span class="qc-tag">κύρια</span>' : ''}${chosen ? ' <span class="qc-tag qc-ok">✓ εγκεκριμένη</span>' : ''}</span>
         <span>${fmt(r.cost)}</span>
         <span>${r.price > 0 ? fmt(r.price) : '<span class="qc-empty">—</span>'}</span>
         <span>${r.price > 0 ? (r.price/r.qty).toLocaleString('el-GR',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' €' : '<span class="qc-empty">—</span>'}</span>
@@ -6590,7 +6718,41 @@ function recalcAllNow(){
   clearTimeout(recalcTimer);
   recalcTimer = null;
   renderFlat(); renderBiblio(); renderFabric(); renderShip();
-  refreshAutoFoldTasks(); renderProc(); updateGrand();
+  refreshAutoFoldTasks();
+  // Rebuilding the whole processing table cost ~90 ms and threw away the rows it
+  // had just made. Nothing about a paper change alters which tasks exist, so the
+  // figures are refreshed in place and the table is rebuilt only when the set of
+  // rows really changes.
+  refreshProcFigures();
+  updateGrand();
+}
+
+// Updates the computed cells of the rows already on screen. Falls back to a full
+// rebuild the first time, or whenever the rows do not match the model.
+function refreshProcFigures(){
+  const list = document.getElementById('procList');
+  if(!list) return;
+  const baseQty = num(document.getElementById('hdrQty').value);
+  let matched = 0, expected = 0;
+  procBulkRefresh = true;
+  procCategories.filter(procCategoryApplies).forEach(cat=>{
+    if(cat.collapsed) return;
+    cat.tasks.forEach(t=>{
+      expected++;
+      const row = list.querySelector(`tr[data-task-id="${t.id}"]`);
+      if(!row) return;
+      matched++;
+      // The auto-folding tasks have their quantity written for them.
+      const qtyEl = row.querySelector('input[type=number]');
+      if(qtyEl && document.activeElement !== qtyEl && String(qtyEl.value) !== String(t.qty||''))
+        qtyEl.value = t.qty || '';
+      recalcProcTask(cat.id, t.id, row);
+    });
+  });
+  procBulkRefresh = false;
+  // Once, at the end, instead of once per task.
+  flatRows.forEach(r => recalcFlatRow(r.id));
+  if(!expected || matched < expected) renderProc();
 }
 
 // The button: forces everything through at once, so there is a way to be
@@ -7260,6 +7422,7 @@ function applyOfferData(d){
       manualTotal: e.manualTotal || '',
       markup: e.markup || '',
       label: e.label || '',        // the name that tells same-quantity options apart
+      inPdf: e.inPdf !== false,    // whether the customer sees this option
       snapEdited: !!e.snapEdited,
       snap: e.snap ? JSON.parse(JSON.stringify(e.snap)) : null,
       snapRaw: e.snap ? JSON.stringify(e.snap) : undefined
@@ -7330,6 +7493,53 @@ function pushViewHistory(view){
 // The manifest is built at runtime as a blob rather than shipped as a data: URI.
 // Some Android builds refuse to install from a data: manifest, and the icon is
 // reused from the one already inlined for the home-screen shortcut.
+// ===== Νέα έκδοση =====
+// A tab left open all week never fetches the file again, so it keeps running an
+// old build against a database the new one has moved on. The server's own
+// ETag/Last-Modified tells us the file changed, without downloading it.
+let appFingerprint = null;
+
+async function fetchAppFingerprint(){
+  try{
+    const res = await fetch(location.href.split('#')[0], { method:'HEAD', cache:'no-store' });
+    if(!res.ok) return null;
+    return res.headers.get('etag') || res.headers.get('last-modified') || null;
+  }catch(e){ return null; }
+}
+
+async function checkForNewVersion(){
+  if(document.hidden) return;
+  const fp = await fetchAppFingerprint();
+  if(!fp) return;                       // no headers, or offline — nothing to compare
+  if(!appFingerprint){ appFingerprint = fp; return; }
+  if(fp !== appFingerprint) showUpdateBanner();
+}
+
+function showUpdateBanner(){
+  if(document.getElementById('updateBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'updateBanner';
+  b.className = 'update-banner';
+  b.innerHTML = `<span>Υπάρχει νεότερη έκδοση της εφαρμογής.</span>
+    <button class="btn solid" onclick="reloadForUpdate()">Ανανέωση τώρα</button>
+    <span class="ub-close" onclick="this.parentElement.remove()" title="Αργότερα">×</span>`;
+  document.body.appendChild(b);
+}
+
+// Unsaved work must not be lost to an update — the reload waits for an answer.
+function reloadForUpdate(){
+  const dirty = (typeof offerDirty !== 'undefined' && offerDirty)
+             || (typeof ticketDirty !== 'undefined' && ticketDirty);
+  if(dirty && !confirm('Υπάρχουν αλλαγές που δεν έχουν αποθηκευτεί.\n\nΝα γίνει ανανέωση χωρίς αυτές;')) return;
+  location.reload();
+}
+
+function startVersionWatch(){
+  checkForNewVersion();
+  setInterval(checkForNewVersion, 5*60*1000);   // every five minutes is plenty
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkForNewVersion(); });
+}
+
 function installManifest(){
   const link = document.getElementById('appManifest');
   if(!link) return;
@@ -7406,7 +7616,6 @@ function switchView(view){
   if(view==='ticketlist') refreshTicketList();
   if(view==='orders') refreshOrdersList();
   if(view==='forecast') refreshForecastList();
-  if((view==='production' || view==='invoicing') && !liveTimer) startLiveUpdates();
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
   if(view==='production' || view==='invoicing'){
@@ -7416,7 +7625,8 @@ function switchView(view){
   }
   if(view==='production') setTimeout(fitBoardToViewport, 90);
   if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
-  if(view==='productiontime') refreshProdTimeList();
+  if(view==='productiontime'){ refreshRunningTimers();
+    if(document.getElementById('prodTimeList').style.display !== 'none') refreshProdTimeList(); }
   if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
   if(view==='reports') refreshReports();
   if(view==='clients') refreshClientsList();
@@ -7508,76 +7718,6 @@ async function getAuthToken(){
 // We must never write back a slice we couldn't read, otherwise a restricted
 // user's save would push an empty object over everyone else's data.
 let readableSlices = { offers:false, forecast:false };
-
-// ===== Ζωντανή ενημέρωση πίνακα =====
-// Every write stamps updated_at, so a tiny query for that column alone tells us
-// whether anyone changed anything — a few bytes, against re-downloading the
-// whole record. The board refetches only when the stamp actually moves.
-//
-// Deliberately silent: the board simply shows the truth, and a notice every few
-// seconds in a busy shop is noise rather than information.
-let liveTimer = null;
-let liveStamp = '';
-let liveBusy = false;
-
-async function fetchUpdateStamp(){
-  const key = getJbKey(), url = getJbBin();
-  if(!key || !url) return '';
-  const token = await getAuthToken();
-  const res = await fetch(`${url}/rest/v1/app_data?select=updated_at`, {
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }, cache: 'no-store'
-  });
-  if(!res.ok) return '';
-  const rows = await res.json();
-  return (rows || []).map(r=>r.updated_at || '').sort().pop() || '';
-}
-
-// Our own writes move the stamp too. Recording it after each save stops the
-// board redrawing itself for a change it already shows.
-async function noteOwnWrite(){
-  try{ liveStamp = await fetchUpdateStamp(); }catch(e){}
-}
-
-function liveShouldPause(){
-  // Never redraw mid-gesture: a board that rebuilds under a dragged card drops
-  // the card. Nor behind an open menu or a hidden tab.
-  if(document.hidden) return true;
-  if(document.querySelector('.kanban-col-dragging, .kanban-card.dragging, .dragover')) return true;
-  // A field being edited on the board (inline rename, note) must not be wiped.
-  const ae = document.activeElement;
-  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest('#productionBoard, #invoicingBoard')) return true;
-  const menu = document.getElementById('cardContextMenu');
-  if(menu && menu.style.display && menu.style.display !== 'none') return true;
-  const overlay = document.querySelector('.impo-overlay.show, .modal-overlay.show');
-  if(overlay) return true;
-  return false;
-}
-
-async function livePoll(){
-  if(liveBusy) return;
-  const view = window.__currentView;
-  if(view !== 'production' && view !== 'invoicing') return;
-  if(liveShouldPause()) return;
-  liveBusy = true;
-  try{
-    const stamp = await fetchUpdateStamp();
-    if(stamp && liveStamp && stamp !== liveStamp){
-      liveStamp = stamp;
-      if(view === 'production') await refreshProductionBoard();
-      else await refreshInvoicingBoard();
-    } else if(stamp && !liveStamp){
-      liveStamp = stamp;
-    }
-  }catch(e){ /* offline or blocked — try again next tick */ }
-  finally{ liveBusy = false; }
-}
-
-function startLiveUpdates(){
-  clearInterval(liveTimer);
-  liveTimer = setInterval(livePoll, 6000);
-  // A tab returning to the foreground has probably missed something.
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) livePoll(); });
-}
 
 async function jbGetRecord(){
   const key = getJbKey(), url = getJbBin();
@@ -7960,6 +8100,16 @@ function toggleEnglishPdfBtn(){
   const cb = document.getElementById('fEnglishPdf');
   cb.checked = !cb.checked;
   syncOfferToggleButtons();
+}
+
+// Which alternatives reach the customer. Ticking is per option, because an
+// offer often holds one version for the customer and two we are only testing.
+function onAltInPdf(id, on){
+  const e = extraQuantities.find(x=>x.id===id);
+  if(!e) return;
+  e.inPdf = !!on;
+  markOfferDirty();
+  statusMsg(on ? 'Θα φαίνεται στο PDF.' : 'Δεν θα φαίνεται στο PDF.');
 }
 
 function toggleProcInOfferBtn(){
@@ -8970,6 +9120,7 @@ function togglePaperTimer(rowId, type){
   }
   renderTkPaper();
   markTicketDirty();
+  setTimeout(pollRunningBadge, 400);   // the count is right without waiting
 }
 
 // A timer left running overnight, or started on the wrong row, otherwise stays
@@ -9080,6 +9231,7 @@ function moveTkProcRow(id, dir){
   [tkProcRows[i], tkProcRows[j]] = [tkProcRows[j], tkProcRows[i]];
   renderTkProc();
   markTicketDirty();
+  setTimeout(pollRunningBadge, 400);
 }
 
 function renderTkProc(){
@@ -11662,6 +11814,8 @@ function showAppAfterLogin(){
   loadPapers(); loadClients(); loadSuppliers(); loadMaterials(); loadBoxSizes(); loadCompanyInfo();
   checkUserPermissions();
   startReceivedOrderWatch();   // paper arrivals reach you wherever you are
+  startRunningWatch();         // and so does a timer left running
+  startVersionWatch();         // and a new build on the server
   installManifest();
   bindHistoryNavigation();
   // Opening a link with #production lands on that tab rather than the home page.
@@ -11755,7 +11909,6 @@ async function reorderInvoicingStage(srcStage, targetStage){
     const targetIdx = stages.indexOf(targetStage);
     stages.splice(targetIdx === -1 ? stages.length : targetIdx, 0, srcStage);
     await jbMergePath(SLICE_MAIN, ['invoicingStages'], stages);
-    noteOwnWrite();
     refreshInvoicingBoard();
   }catch(e){
     console.error('Reorder invoicing stage error:', e);
@@ -11773,7 +11926,6 @@ async function reorderProductionStage(srcStage, targetStage){
     const targetIdx = stages.indexOf(targetStage);
     stages.splice(targetIdx===-1 ? stages.length : targetIdx, 0, srcStage);
     await jbPutRecord(record);
-    noteOwnWrite();
     refreshProductionBoard();
   }catch(e){
     console.error('Reorder stage error:', e);
@@ -12856,9 +13008,6 @@ async function refreshProductionBoard(){
     // preserve, and the whole point is to keep the scrollbar where it was.
     applyBoardZoom('production');
     clearStaleLinkHighlight();
-    // Baseline for the live poller, taken the moment the board is drawn — set
-    // lazily on the first poll instead, it silently swallowed the first change.
-    if(!liveStamp) noteOwnWrite();
     const searchTerm = (document.getElementById('boardSearch')||{}).value;
     if(searchTerm) filterProductionBoard(searchTerm);
     bindBoardFit();
@@ -13303,7 +13452,6 @@ async function refreshInvoicingBoard(){
     });
     applyBoardZoom('invoicing');
     clearStaleLinkHighlight();
-    if(!liveStamp) noteOwnWrite();
     bindBoardFit();
     setTimeout(()=>fitBoardToViewport('invoicing'), 60);
   }catch(e){
@@ -14035,6 +14183,142 @@ function toggleProcStats(){
   const showing = wrap.style.display !== 'none';
   wrap.style.display = showing ? 'none' : '';
   if(caret) caret.textContent = showing ? '▶' : '▼';
+}
+
+// ===== Χρονόμετρα που τρέχουν =====
+// A timer left on overnight silently ruins the costing of a job, and nothing on
+// screen says so unless that very ticket is open. This gathers them from every
+// saved ticket so a forgotten one can be found and stopped.
+const FORGOTTEN_HOURS = 8;
+
+function collectRunningTimers(record){
+  const out = [];
+  Object.entries(record.tickets || {}).forEach(([id, t])=>{
+    if(t.archived) return;
+    const d = t.data || {};
+    const add = (label, part, row, type) => {
+      if(!row[type + 'Running']) return;
+      const started = num(row[type + 'StartedAt']);
+      const secs = num(row[type + 'Seconds']) + (started ? (Date.now() - started)/1000 : 0);
+      out.push({ ticketId: id, job: d.info || t.label || 'Χωρίς τίτλο',
+                 line: label, phase: part, seconds: secs, startedAt: started,
+                 stage: t.stage || '', rowId: row.id, type });
+    };
+    (d.paperRows || []).forEach(r=>{
+      const nm = r.tipos || r.xarti || 'γραμμή';
+      add(nm, 'Make Ready', r, 'mr');
+      add(nm, 'Εκτύπωση', r, 'prod');
+    });
+    (d.procRows || []).forEach(r=>{
+      const nm = r.label || 'επεξεργασία';
+      add(nm, 'Make Ready', r, 'mr');
+      add(nm, 'Production', r, 'prod');
+    });
+  });
+  return out.sort((a,b)=>b.seconds - a.seconds);
+}
+
+// The statistics are reference material, not something to watch — they open on
+// request, so the screen leads with the timers that are running now.
+function toggleProdTimeStats(){
+  const list = document.getElementById('prodTimeList');
+  const intro = document.getElementById('prodTimeIntro');
+  const filters = document.getElementById('ptFilters');
+  const btn = document.getElementById('ptToggle');
+  const showing = list.style.display !== 'none';
+  list.style.display = showing ? 'none' : '';
+  intro.style.display = showing ? 'none' : '';
+  filters.style.display = showing ? 'none' : 'flex';
+  btn.textContent = showing ? '▶ Εμφάνιση' : '▼ Απόκρυψη';
+  btn.classList.toggle('solid', !showing);
+  if(!showing) refreshProdTimeList();
+}
+
+async function refreshRunningTimers(){
+  const card = document.getElementById('runningCard');
+  const el = document.getElementById('runningList');
+  if(!card || !el) return;
+  let running = [];
+  try{ running = collectRunningTimers(await jbGetRecord()); }
+  catch(e){ card.style.display = 'none'; return; }
+
+  updateRunningBadge(running.length);
+  if(!running.length){ card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const forgotten = running.filter(r => r.seconds > FORGOTTEN_HOURS*3600);
+  el.innerHTML = `
+    ${forgotten.length ? `<div class="empty-note" style="color:#b3243c;margin-bottom:10px;">
+      ${forgotten.length} ${forgotten.length===1?'χρονόμετρο τρέχει':'χρονόμετρα τρέχουν'} πάνω από ${FORGOTTEN_HOURS} ώρες —
+      μάλλον ξεχάστηκαν ανοιχτά.</div>` : ''}
+    <div class="jp-list">
+      <div class="jp-row jp-row-head" style="grid-template-columns:2.2fr 1.4fr 1fr 1fr 0.8fr;">
+        <span>Δουλειά</span><span>Γραμμή</span><span>Φάση</span><span>Χρόνος</span><span></span>
+      </div>
+      ${running.map(r=>`
+      <div class="jp-row${r.seconds > FORGOTTEN_HOURS*3600 ? ' jp-row-loss' : ''}"
+           style="grid-template-columns:2.2fr 1.4fr 1fr 1fr 0.8fr;">
+        <span class="jp-name" onclick="loadTicket('${r.ticketId}', true)" style="cursor:pointer;"
+          title="Άνοιγμα ticket">${esc(r.job)}</span>
+        <span>${esc(r.line)}</span>
+        <span class="jp-none">${esc(r.phase)}</span>
+        <span class="${r.seconds > FORGOTTEN_HOURS*3600 ? 'jp-neg' : ''}">${formatDuration(r.seconds)}</span>
+        <span><button class="btn" style="padding:3px 9px;font-size:11px;"
+          onclick="stopRunningTimer('${r.ticketId}',${r.rowId},'${r.type}')">Σταμάτα</button></span>
+      </div>`).join('')}
+    </div>`;
+}
+
+// Stops a timer without leaving this screen, so a forgotten one can be dealt
+// with the moment it is spotted.
+async function stopRunningTimer(ticketId, rowId, type){
+  try{
+    const record = await jbGetRecord();
+    const t = record.tickets[ticketId];
+    if(!t) return;
+    const d = t.data || {};
+    const row = [...(d.paperRows||[]), ...(d.procRows||[])].find(r=>r.id === rowId);
+    if(!row) return;
+    const started = num(row[type + 'StartedAt']);
+    row[type + 'Seconds'] = num(row[type + 'Seconds']) + (started ? (Date.now()-started)/1000 : 0);
+    row[type + 'Running'] = false;
+    row[type + 'StartedAt'] = null;
+    await jbMergePath(SLICE_MAIN, ['tickets', ticketId], t);
+    statusMsg('Το χρονόμετρο σταμάτησε ✓');
+    refreshRunningTimers();
+    if(currentTicketId === ticketId) loadTicket(ticketId, false);
+  }catch(e){
+    console.error('Stop timer error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+// A count in the sidebar, visible from every screen — the card only helps if you
+// happen to open Production Time.
+function updateRunningBadge(n){
+  const link = document.getElementById('navProdTime');
+  if(!link) return;
+  let b = link.querySelector('.run-badge');
+  if(!n){ if(b) b.remove(); return; }
+  if(!b){ b = document.createElement('span'); b.className = 'run-badge'; link.appendChild(b); }
+  b.textContent = n;
+  b.title = `${n} ${n===1?'χρονόμετρο τρέχει':'χρονόμετρα τρέχουν'}`;
+}
+
+// The badge is kept current from wherever the user is, because a forgotten
+// timer is exactly the thing nobody goes looking for.
+async function pollRunningBadge(){
+  if(document.hidden) return;
+  try{ updateRunningBadge(collectRunningTimers(await jbGetRecord()).length); }
+  catch(e){ /* offline — try again next time */ }
+}
+
+function startRunningWatch(){
+  pollRunningBadge();
+  // Once a minute: the count changes when someone starts or stops a job, not
+  // second by second, and this must not become another source of chatter.
+  setInterval(pollRunningBadge, 60000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollRunningBadge(); });
 }
 
 async function refreshProdTimeList(){
