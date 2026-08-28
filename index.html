@@ -323,6 +323,8 @@
   .pa-table tfoot td:first-child{text-align:left;}
   .pa-name{font-weight:600;}
   .pa-cov{width:52px;text-align:right;font-size:12px;padding:2px 5px;}
+  .pa-inktype{width:100%;font-size:10.5px;padding:2px 4px;margin-top:3px;}
+  .pa-spot{width:100%;font-size:10.5px;padding:2px 5px;margin-top:3px;text-align:right;}
   .pa-row-total{font-weight:800;}
   .pa-table tfoot td{border-top:2px solid var(--ink);border-bottom:none;font-weight:800;padding-top:9px;}
   /* The workings sit directly beneath their own figure, inside the same cell —
@@ -356,7 +358,13 @@
      have anything here, so a column title would name a field most rows lack. */
   .proc-foil-lbl{display:block;font-size:9px;font-weight:700;text-transform:uppercase;
     letter-spacing:0.04em;color:var(--muted);margin-bottom:2px;}
-  .proc-foil input{width:100%;font-size:12px;}
+  .proc-foil input, .proc-foil select{width:100%;font-size:11.5px;}
+  /* An outsourced row is tinted, so it reads as "not ours" at a glance without
+     a label on every line that is not. */
+  #procList tr.proc-ext{background:#f3f7ff;}
+  .ext-tag{display:inline-block;font-size:9.5px;font-weight:700;background:#eaf1fe;color:#1f4f9e;
+    padding:4px 8px;border-radius:11px;line-height:1.3;text-align:center;}
+  .ext-price{text-align:right;}
   .proc-foil .c-foil{font-size:9.5px;margin-top:2px;}
   .pa-machine{font-size:11.5px;padding:3px 5px;max-width:100%;width:100%;}
   .pa-glue{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;
@@ -2190,8 +2198,15 @@ function toggleMobileSidebar(forceClose){
         <div class="grid3">
           <div class="field"><label>Τιμή τσίγκου (€)</label>
             <input id="setPlateCost" type="number" step="0.01" placeholder="4.45" oninput="savePrintCosts()"></div>
-          <div class="field"><label>Τιμή μελανιού (€/κιλό)</label>
-            <input id="setInkPerKg" type="number" step="0.1" placeholder="20" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Μελάνι process (€/κιλό)</label>
+            <input id="setInkStd" type="number" step="0.5" placeholder="6" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Μελάνι process UV (€/κιλό)</label>
+            <input id="setInkUv" type="number" step="0.5" placeholder="20" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Pantone (€/κιλό)</label>
+            <input id="setSpotStd" type="number" step="0.5" placeholder="18" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Pantone UV (€/κιλό)</label>
+            <input id="setSpotUv" type="number" step="0.5" placeholder="35" oninput="savePrintCosts()"
+              title="Τυπική τιμή — αλλάζει ανά γραμμή στην Ανάλυση όταν το χρώμα είναι ακριβότερο"></div>
           <div class="field"><label>Make ready ανά όψη (λεπτά)</label>
             <input id="setMakeReady" type="number" step="1" placeholder="15" oninput="savePrintCosts()"></div>
           <div class="field"><label>Προεπιλεγμένη κάλυψη (%)</label>
@@ -2209,6 +2224,10 @@ function toggleMobileSidebar(forceClose){
           <div class="field"><label>Κόλλα ανά αντίτυπο (γρ.)</label>
             <input id="setGluePerCopy" type="number" step="0.1" placeholder="αυτόματο" oninput="savePrintCosts()"
               title="Άφησέ το κενό για αυτόματο υπολογισμό από τη ράχη του βιβλίου"></div>
+          <div class="field"><label>Πλαστικοποίηση ματ/gloss (€/m²)</label>
+            <input id="setLamStd" type="number" step="0.01" placeholder="0.17" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Αντισκατς / soft touch (€/m²)</label>
+            <input id="setLamSoft" type="number" step="0.01" placeholder="0.34" oninput="savePrintCosts()"></div>
           <div class="field"><label>Ρολό φοιλ — μήκος (μ.)</label>
             <input id="setFoilRollLen" type="number" step="1" placeholder="122" oninput="savePrintCosts()"></div>
           <div class="field"><label>Ρολό φοιλ — πλάτος (mm)</label>
@@ -2221,7 +2240,7 @@ function toggleMobileSidebar(forceClose){
               title="Κενό ανάμεσα σε δύο αποτυπώματα"></div>
           <div class="field"><label>Make ready επεξεργασιών (λεπτά)</label>
             <input id="setProcMakeReady" type="number" step="1" placeholder="10" oninput="savePrintCosts()"
-              title="Στήσιμο ανά εργασία post-press"></div>
+              title="Προεπιλογή, όταν η μηχανή δεν έχει δικό της make ready (ορίζεται στη Διαχείριση Μηχανών)"></div>
         </div>
       </div>
     </div>
@@ -2279,6 +2298,22 @@ function toggleMobileSidebar(forceClose){
 </div>
 
 <div id="ticketPrintView" class="offer-print"></div>
+
+<!-- Suggestions, not a closed list: whatever is typed still counts, so offers
+     written before this list existed keep their wording. -->
+<datalist id="colourOptions">
+  <option value="CMYK"></option>
+  <option value="CMYK+1 Pantone"></option>
+  <option value="CMYK+2 Pantone"></option>
+  <option value="CMYK+3 Pantone"></option>
+  <option value="1 Pantone"></option>
+  <option value="2 Pantone"></option>
+  <option value="3 Pantone"></option>
+  <option value="4 Pantone"></option>
+  <option value="Μαύρο"></option>
+  <option value="2 χρώματα"></option>
+  <option value="3 χρώματα"></option>
+</datalist>
 
 <datalist id="paperOptions"></datalist>
 <datalist id="flatMaterialOptions">
@@ -2808,6 +2843,10 @@ async function refreshMachinesManagerList(){
             </div>
           </div>
           <div class="field" style="margin-top:8px;"><label>Ταχύτητα (ανά ώρα)</label><input type="number" min="0" step="1" value="${d.speed||''}" placeholder="π.χ. 1000" onchange="updateMachineDetail('${mEsc}','speed',this.value)"></div>
+          <div class="field" style="margin-top:8px;"><label>Make ready (λεπτά)</label>
+            <input type="number" min="0" step="1" value="${d.makeReadyMin||''}" placeholder="π.χ. 15"
+              title="Στήσιμο πριν από κάθε δουλειά σε αυτή τη μηχανή"
+              onchange="updateMachineDetail('${mEsc}','makeReadyMin',this.value)"></div>
           <div class="empty-note" style="margin-top:8px;">Υπολογιζόμενο κόστος/ώρα: <b style="color:var(--ink);">${hourlyCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>${(d.operators||d.laborRate||d.machineRate) ? ` (${operators} × ${laborRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€ + ${machineRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€)` : ' — συμπλήρωσε τα στοιχεία πάνω'}</div>
         </div>
       `;
@@ -2823,7 +2862,10 @@ async function updateMachineDetail(name, field, value){
     const record = await jbGetRecord();
     if(!record.machineDetails) record.machineDetails = {};
     if(!record.machineDetails[name]) record.machineDetails[name] = {};
-    record.machineDetails[name][field] = field==='speedUnit' ? value : num(value);
+    // An empty make ready must stay empty, not become zero — blank means "use the
+    // shop default", while 0 would mean "this machine needs no setup at all".
+    record.machineDetails[name][field] = field === 'speedUnit' ? value
+      : (field === 'makeReadyMin' && String(value).trim() === '' ? '' : num(value));
     // Keep the simple machineRates[name] (used by existing Production Time cost
     // calc) in sync, auto-computed from operators/labor/machine cost.
     const d = record.machineDetails[name];
@@ -3148,19 +3190,26 @@ function rowIsOn(r){ return r.on !== false; }
 // Three costs that behave differently: plates are paid once per plate whatever
 // the run, ink scales with sheets, and labour scales with hours. A single €/side
 // figure hides all three, which is why short and long runs both come out wrong.
-const PRINT_DEFAULTS = { plateCost: 4.45, inkPerKg: 20, makeReadyMin: 15,
+const PRINT_DEFAULTS = { plateCost: 4.45, makeReadyMin: 15,
+                         inkStdPerKg: 6, inkUvPerKg: 20, spotStdPerKg: 18, spotUvPerKg: 35,
                          coverage: 80, gramsPerSqm: 1.1, procMakeReadyMin: 10,
-                         foilRollLen: 122, foilRollWidth: 645, foilRollPrice: 125, foilGap: 0.5 };
+                         foilRollLen: 122, foilRollWidth: 645, foilRollPrice: 125, foilGap: 0.5,
+                         lamStdPerM2: 0.17, lamSoftPerM2: 0.34 };
 
 let printCostsSaveTimer = null;
 function savePrintCosts(){
   const vals = {
     plateCost:   num(document.getElementById('setPlateCost').value)   || PRINT_DEFAULTS.plateCost,
-    inkPerKg:    num(document.getElementById('setInkPerKg').value)    || PRINT_DEFAULTS.inkPerKg,
+    inkStdPerKg:  num(document.getElementById('setInkStd').value)  || PRINT_DEFAULTS.inkStdPerKg,
+    inkUvPerKg:   num(document.getElementById('setInkUv').value)   || PRINT_DEFAULTS.inkUvPerKg,
+    spotStdPerKg: num(document.getElementById('setSpotStd').value) || PRINT_DEFAULTS.spotStdPerKg,
+    spotUvPerKg:  num(document.getElementById('setSpotUv').value)  || PRINT_DEFAULTS.spotUvPerKg,
     makeReadyMin:num(document.getElementById('setMakeReady').value)   || PRINT_DEFAULTS.makeReadyMin,
     coverage:    num(document.getElementById('setCoverage').value)    || PRINT_DEFAULTS.coverage,
     gramsPerSqm: num(document.getElementById('setGramsSqm').value)    || PRINT_DEFAULTS.gramsPerSqm,
     procMakeReadyMin: num(document.getElementById('setProcMakeReady').value) || PRINT_DEFAULTS.procMakeReadyMin,
+    lamStdPerM2:   num(document.getElementById('setLamStd').value)        || PRINT_DEFAULTS.lamStdPerM2,
+    lamSoftPerM2:  num(document.getElementById('setLamSoft').value)       || PRINT_DEFAULTS.lamSoftPerM2,
     foilRollLen:   num(document.getElementById('setFoilRollLen').value)   || PRINT_DEFAULTS.foilRollLen,
     foilRollWidth: num(document.getElementById('setFoilWidth').value)     || PRINT_DEFAULTS.foilRollWidth,
     foilRollPrice: num(document.getElementById('setFoilRollPrice').value) || PRINT_DEFAULTS.foilRollPrice,
@@ -3188,7 +3237,10 @@ function fillPrintCostFields(){
   const v = printSettings();
   const set = (id, val) => { const el = document.getElementById(id); if(el && document.activeElement !== el) el.value = val; };
   set('setPlateCost', v.plateCost);
-  set('setInkPerKg', v.inkPerKg);
+  set('setInkStd', v.inkStdPerKg);
+  set('setInkUv', v.inkUvPerKg);
+  set('setSpotStd', v.spotStdPerKg);
+  set('setSpotUv', v.spotUvPerKg);
   set('setMakeReady', v.makeReadyMin);
   set('setCoverage', v.coverage);
   set('setGramsSqm', v.gramsPerSqm);
@@ -3197,6 +3249,8 @@ function fillPrintCostFields(){
   set('setGlueLayer', g.layerMm);
   set('setGlueDensity', g.density);
   set('setProcMakeReady', v.procMakeReadyMin);
+  set('setLamStd', v.lamStdPerM2);
+  set('setLamSoft', v.lamSoftPerM2);
   set('setFoilRollLen', v.foilRollLen);
   set('setFoilWidth', v.foilRollWidth);
   set('setFoilRollPrice', v.foilRollPrice);
@@ -3208,16 +3262,50 @@ function printSettings(){
   return Object.assign({}, PRINT_DEFAULTS, window.__printCosts || {});
 }
 
-// CMYK needs four plates a side; black or a single Pantone needs one. "CMYK+2"
-// means four process plus two spot.
+// What the Χρώμα column actually says, split into process and spot. The two are
+// priced very differently, so a job of four Pantones must not be read as CMYK.
+//
+// Understands: CMYK · CMYK+2 · 4 Pantone · 2P · PMS 3 · Μαύρο · 1/1 · 4/4
+function colourBreakdown(colour){
+  const raw = String(colour||'').toUpperCase();
+  const s = raw.replace(/\s/g,'');
+  if(!s) return { process: 1, spot: 0 };
+
+  const hasProcess = /CMYK|4X4|ΤΕΤΡΑΧΡΩΜ/.test(s);
+
+  // "4 PANTONE", "PANTONE X4", "2P", "PMS 3" — a count attached to the spot word.
+  let spot = 0;
+  const spotWord = /PANTONE|PMS|ΠΑΝΤΟΝΕ/.test(s);
+  if(spotWord){
+    const before = s.match(/(\d+)\s*[XΧ*]?\s*(?:PANTONE|PMS|ΠΑΝΤΟΝΕ)/);
+    const after  = s.match(/(?:PANTONE|PMS|ΠΑΝΤΟΝΕ)\s*[XΧ*]?\s*(\d+)/);
+    // A plus always means "in addition to the process set".
+    const plus   = s.match(/\+\s*(\d+)/);
+    spot = num((plus && plus[1]) || (before && before[1]) || (after && after[1])) || 1;
+  } else {
+    const plus = s.match(/\+\s*(\d+)/);
+    if(plus) spot = num(plus[1]) || 1;
+  }
+
+  let process = 0;
+  if(hasProcess) process = 4;
+  else if(!spotWord){
+    // No spot word: a bare number, or a 4/4-style pair, describes process inks.
+    const pair = s.match(/^(\d+)\/(\d+)$/);
+    if(pair) process = Math.max(num(pair[1]), num(pair[2]));
+    else {
+      const n = s.match(/(\d+)/);
+      process = n ? Math.min(num(n[1]) || 1, 12) : 1;
+    }
+  }
+
+  if(!process && !spot) process = 1;
+  return { process: Math.max(0, process), spot: Math.max(0, spot) };
+}
+
 function platesPerSide(colour){
-  const s = String(colour||'').toUpperCase().replace(/\s/g,'');
-  if(!s) return 1;
-  let n = /CMYK|4X|4\/|^4$/.test(s) ? 4 : 0;
-  const spot = s.match(/(?:\+|PANTONE|PMS)\s*(\d*)/);
-  if(spot) n += num(spot[1]) || 1;
-  if(!n) n = /(\d+)/.test(s) ? Math.min(num(RegExp.$1) || 1, 8) : 1;
-  return Math.max(1, n);
+  const b = colourBreakdown(colour);
+  return Math.max(1, b.process + b.spot);
 }
 
 // Two different counts, and conflating them is what made a book come out
@@ -3284,15 +3372,24 @@ async function renderPrintAnalysis(){
   const rows = [
     ...(multi ? [] : bookRows.filter(r => rowIsOn(r) && (r.material || r.paperName)).map(r=>({r, kind:'book'}))),
     ...flatRows.filter(r => rowIsOn(r) && (r.material || r.paperName)).map(r=>({r, kind:'flat'}))
-  ].map(x => Object.assign({}, x, { b: printBreakdown(x.r, x.kind, baseQty) }))
-   .filter(x => x.b.sides > 0);
+  ].map(x => Object.assign({}, x, { b: printBreakdown(x.r, x.kind, baseQty) }));
 
-  if(!rows.length){
+  // Not every sheet is printed: endpapers, tissue, a plain liner. Such a row has
+  // no colour, no sides and no price per side — charging it plates, ink and press
+  // time is simply wrong, so it is listed apart instead.
+  // Sides default to 1 on every new row, so they say nothing about whether the
+  // sheet is printed. Colour and price per side are what the user actually
+  // fills in when there is printing to do.
+  const isPrinted = x => !!String(x.r.color||'').trim() || num(x.r.pricePerSide) > 0;
+  const unprinted = rows.filter(x => !isPrinted(x) && x.b.sheets > 0);
+  const printed = rows.filter(x => isPrinted(x) && x.b.sides > 0);
+
+  if(!printed.length && !unprinted.length){
     el.innerHTML = '<div class="empty-note">Συμπλήρωσε χαρτιά και όψεις για να υπολογιστεί το κόστος εκτύπωσης.</div>';
     return;
   }
 
-  const sum = k => rows.reduce((s,x)=>s + x.b[k], 0);
+  const sum = k => printed.reduce((s,x)=>s + x.b[k], 0);
   const totPlates = sum('plates'), totInk = sum('ink'), totLabour = sum('labour');
   const totMachine = sum('machineCost');
   const totAll = totPlates + totInk + totLabour + totMachine;
@@ -3313,7 +3410,7 @@ async function renderPrintAnalysis(){
   // leaving it out made the split look as if printing were mostly labour.
   const paperCost = computeTotals(baseQty).materials;
   const procHours = tSum('hours');
-  const printHours = rows.reduce((s,x)=>s + x.b.hours, 0);
+  const printHours = printed.reduce((s,x)=>s + x.b.hours, 0);
   const grandHours = printHours + procHours;
   const tLabour = tSum('labour'), tMachine = tSum('machineCost'), tMaterial = tSum('material');
   const tAll = tLabour + tMachine + tMaterial, tQuoted = tSum('quoted');
@@ -3329,16 +3426,17 @@ async function renderPrintAnalysis(){
         ${tasks.map(x=>`
         <tr>
           <td class="pa-name">${esc(x.name)}</td>
-          <td><select class="pa-machine" onchange="setTaskMachine('${esc(x.name)}', this.value)">
+          <td>${x.external ? '<span class="ext-tag">Εξωτερικός συνεργάτης</span>' : `<select class="pa-machine" onchange="setTaskMachine('${esc(x.name)}', this.value)">
             <option value="">— μηχάνημα —</option>
             ${(machineNames.includes(x.machineName) || !x.machineName ? machineNames
                : machineNames.concat([x.machineName]))
               .map(n=>`<option value="${esc(n)}" ${n===x.machineName?'selected':''}>${esc(n)}${
                 machineNames.includes(n) ? '' : ' (δεν έχει οριστεί)'}</option>`).join('')}
-          </select></td>
+          </select>`}</td>
           <td>${x.qty.toLocaleString('el-GR')}</td>
           <td>${x.hours > 0 ? formatDuration(x.hours*3600) : '<span class="jp-none">—</span>'}
             <div class="pa-note">${x.hours>0 ? `MR ${formatDuration(x.mrHours*3600)} + ${formatDuration(x.runHours*3600)}` : ''}</div>
+            ${x.hours>0 && !x.mrFromMachine ? '<div class="pa-note" style="opacity:0.7;">MR προεπιλογής</div>' : ''}
             ${x.machineName && !x.speed ? '<div class="pa-note" style="color:#b3243c;">χωρίς ταχύτητα</div>' : ''}</td>
           <td>${x.material > 0 ? fmt(x.material) : '<span class="jp-none">—</span>'}
             ${x.hasMaterial ? `<div class="pa-note">${esc(x.materialDetail)}</div>` : ''}</td>
@@ -3370,16 +3468,27 @@ async function renderPrintAnalysis(){
         <th>Τσίγκοι</th><th>Μελάνι</th><th>Εργασία</th><th>Μηχανή</th><th>Σύνολο</th>
       </tr></thead>
       <tbody>
-        ${rows.map(x=>`
+        ${printed.map(x=>`
         <tr>
           <td class="pa-name">${esc(x.r.material || x.r.paperName)}</td>
           <td>${esc(x.r.color || '—')}</td>
           <td>${x.b.sides}</td>
           <td>${x.b.sheets.toLocaleString('el-GR')}</td>
           <td><input type="number" min="0" max="400" value="${esc(String(x.b.coverage))}" class="pa-cov"
-              oninput="onCoverageInput('${x.kind}',${x.r.id},this.value)"> %</td>
+              oninput="onCoverageInput('${x.kind}',${x.r.id},this.value)"> %
+            <select class="pa-inktype" onchange="onInkTypeInput('${x.kind}',${x.r.id},this.value)"
+              title="Συμβατικά ή UV — αλλάζει την τιμή κιλού">
+              <option value="" ${x.r.inkType!=='uv'?'selected':''}>Συμβατικά</option>
+              <option value="uv" ${x.r.inkType==='uv'?'selected':''}>UV</option>
+            </select>
+            ${x.b.spotInks > 0 ? `<input type="text" inputmode="decimal" class="pa-spot"
+              value="${esc(String(x.r.spotPricePerKg||''))}" placeholder="Pantone ${fmt(x.b.spotRate)}"
+              title="€/κιλό για τα Pantone αυτής της γραμμής — άφησέ το κενό για την τυπική τιμή"
+              oninput="onSpotPriceInput('${x.kind}',${x.r.id},this.value)">` : ''}</td>
           <td>${fmt(x.b.plates)}<div class="pa-note">${x.b.perSide} × ${x.b.sides}${x.b.sets>1?` × ${x.b.sets}`:''} = ${x.b.plateCount} τσίγκοι<br>× ${fmt(cfg.plateCost)}</div></td>
-          <td>${fmt(x.b.ink)}<div class="pa-note">${x.b.inkKgPerColour.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά × ${x.b.inkCount} ${x.b.inkCount===1?'μελάνι':'μελάνια'}<br>× ${fmt(cfg.inkPerKg)}/κιλό</div></td>
+          <td>${fmt(x.b.ink)}<div class="pa-note">${x.b.inkKgPerColour.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά ανά μελάνι${
+            x.b.processInks > 0 ? `<br>${x.b.processInks} process${x.b.uv?' UV':''} × ${fmt(x.b.processRate)}/κιλό` : ''}${
+            x.b.spotInks > 0 ? `<br>${x.b.spotInks} pantone × ${fmt(x.b.spotRate)}/κιλό` : ''}</div></td>
           <td>${fmt(x.b.labour)}<div class="pa-note">${formatDuration(x.b.hours*3600)} συνολικά<br>× ${x.b.operators} ${x.b.operators===1?'άτομο':'άτομα'} × ${fmt(x.b.hourly)}/ώρα</div></td>
           <td>${fmt(x.b.machineCost)}<div class="pa-note">MR ${formatDuration(x.b.mrHours*3600)} + ${formatDuration(x.b.runHours*3600)}<br>${
             (x.b.sheets*x.b.passes).toLocaleString('el-GR')} περάσματα${x.b.speed>0?` ÷ ${x.b.speed.toLocaleString('el-GR')}/ώρα`:''}<br>× ${fmt(x.b.machineRate)}/ώρα</div></td>
@@ -3397,6 +3506,10 @@ async function renderPrintAnalysis(){
       <span class="${totQuoted - totAll < 0 ? 'jp-neg' : 'jp-pos'}">Διαφορά ${fmt(totQuoted - totAll)}</span>
     </div>
     ${procHtml}
+    ${unprinted.length ? `<div class="empty-note" style="margin:10px 0 0;">
+      Χωρίς εκτύπωση, μόνο χαρτί: ${unprinted.map(x=>esc(x.r.material || x.r.paperName)).join(' · ')}
+      — δεν χρεώνονται τσίγκοι, μελάνι ή χρόνος μηχανής.</div>` : ''}
+
     <div class="sectitle" style="margin:24px 0 8px;">Συγκεντρωτικά</div>
     <div class="pa-grand-wrap">
     <table class="pa-table pa-grand">
@@ -3446,10 +3559,30 @@ async function renderPrintAnalysis(){
     </div>
 
     <div class="empty-note" style="margin-top:8px;">
-      Τσίγκοι ${fmt(cfg.plateCost)} · Μελάνι ${fmt(cfg.inkPerKg)}/κιλό · Make ready ${cfg.makeReadyMin}΄ ανά όψη${
+      Τσίγκοι ${fmt(cfg.plateCost)} · Μελάνι ${fmt(num(cfg.inkStdPerKg)||6)}/κιλό (UV ${fmt(num(cfg.inkUvPerKg)||20)}) · Make ready ${cfg.makeReadyMin}΄ ανά όψη${
         m.name ? ` · ${esc(m.name)}: ${fmt(num(m.machineRate))}/ώρα μηχανή, ${fmt(num(m.laborRate))}/ώρα ανά άτομο` : ''}.
       Αλλάζουν στις Ρυθμίσεις. Η ανάλυση δεν επηρεάζει την τιμή της προσφοράς.
     </div>`;
+}
+
+function onInkTypeInput(kind, id, value){
+  const r = (kind === 'book' ? bookRows : flatRows).find(x=>x.id===id);
+  if(!r) return;
+  r.inkType = value;
+  markOfferDirty();
+  clearTimeout(window.__paTimer);
+  window.__paTimer = setTimeout(renderPrintAnalysis, 350);
+}
+
+function onSpotPriceInput(kind, id, value){
+  const r = (kind === 'book' ? bookRows : flatRows).find(x=>x.id===id);
+  if(!r) return;
+  // A Greek keyboard types 42,5 — stored with a dot so parseFloat reads it whole
+  // instead of stopping at the comma and turning it into 42.
+  r.spotPricePerKg = String(value).replace(',', '.');
+  markOfferDirty();
+  clearTimeout(window.__paTimer);
+  window.__paTimer = setTimeout(renderPrintAnalysis, 400);
 }
 
 function onCoverageInput(kind, id, value){
@@ -3530,7 +3663,56 @@ function taskMaterial(taskName){
   if(/ΚΟΛΛΗΜΑ|ΒΙΒΛΙΟΔΕΣΙΑ|ΚΟΛΛΑ/.test(name)) return 'glue';
   if(/ΘΕΡΜΟΤΥΠΙΑ|FOIL|ΧΡΥΣΟΤΥΠΙΑ/.test(name)) return 'foil';
   if(/ΚΑΛΟΥΠΙ|ΚΟΠΤΙΚ/.test(name)) return 'die';
+  if(/ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ|ΛΑΜΙΝΑΡΙΣΜΑ/.test(name)) return 'lam';
   return null;
+}
+
+// Lamination is charged by the square metre of film, so what matters is the
+// sheet size and how many sheets — not how many finished pieces come off them.
+const LAM_TYPES = {
+  'matt1':  { label:'Ματ / Gloss — 1 όψη',            key:'std',  sides:1 },
+  'matt2':  { label:'Ματ / Gloss — 2 όψεις',          key:'std',  sides:2 },
+  'soft1':  { label:'Αντισκατς / Soft touch — 1 όψη',   key:'soft', sides:1 },
+  'soft2':  { label:'Αντισκατς / Soft touch — 2 όψεις', key:'soft', sides:2 }
+};
+
+function lamCalc(t, baseQty){
+  const type = LAM_TYPES[t.lamType || ''];
+  if(!type) return null;
+  const cfg = printSettings();
+  const rate = type.key === 'soft'
+    ? (num(cfg.lamSoftPerM2) || 0.34)
+    : (num(cfg.lamStdPerM2)  || 0.17);
+
+  // Which sheets get laminated: the item the task points at, else the cover —
+  // the flat rows — and failing that the book's own sheets.
+  // Which sheets: the row named on the task, whether that is a flat item or a
+  // part of the book. Falling back to "all the flat rows" was fine for a cover
+  // but wrong the moment a job had several laminated items.
+  const item = String(t.lamItem || t.itemMaterial || '').trim();
+  const allRows = flatRows.filter(r => rowIsOn(r) && r.paperName)
+    .concat(bookRows.filter(r => rowIsOn(r) && r.paperName));
+  let source = item ? allRows.filter(r => sameItemName(item, r.material)) : [];
+  if(!source.length) source = flatRows.filter(r => rowIsOn(r) && r.paperName);
+  const rows = source.filter(r => flatRows.includes(r));
+  let sheets = 0, areaM2 = 0;
+  source.forEach(r => {
+    const paper = paperByName[r.paperName];
+    if(!paper) return;
+    const a = (num(paper.w) * num(paper.l)) / 10000;
+    const isFlat = flatRows.includes(r);
+    const s = isFlat
+      ? (num(r.piecesPerSheet) > 0 ? ceilSafe((num(r.qty)||baseQty)/num(r.piecesPerSheet)) + num(r.xtra) : 0)
+      : (num(r.pagesPerSheet) > 0 ? ceilSafe(baseQty*num(r.pages)/num(r.pagesPerSheet)) : 0);
+    sheets += s; areaM2 += s * a;
+  });
+  const itemNames = source.map(r => r.material || r.paperName).filter(Boolean).join(', ');
+
+  const totalM2 = areaM2 * type.sides;
+  const cost = totalM2 * rate;
+  return { type: type.label, sides: type.sides, rate, sheets, areaM2, totalM2, cost, itemNames,
+           detail: `${itemNames ? itemNames + ' · ' : ''}${type.label} · ${sheets.toLocaleString('el-GR')} φύλλα = ${
+             totalM2.toLocaleString('el-GR',{maximumFractionDigits:1})} m² × ${fmt(rate)}/m²` };
 }
 
 // A cutting die is quoted by the supplier as a single price, so it is typed in
@@ -3583,7 +3765,7 @@ function foilCalc(t, qty){
 
 function taskBreakdown(t, cat, baseQty){
   const machines = window.__procMachines || {};
-  const machineName = machineForTask(t.name);
+  const machineName = t.external ? '' : machineForTask(t.name);
   const m = machines[machineName] || {};
 
   const qty = num(t.qty) || baseQty;
@@ -3594,19 +3776,39 @@ function taskBreakdown(t, cat, baseQty){
 
   // Setup and run kept apart, as on the press: a short run is mostly setup, and
   // averaging the two hides that.
+  // Setup belongs to the machine, not to a single figure for the whole shop: a
+  // guillotine is ready in minutes, a case-maker is not.
   const cfg = printSettings();
-  const mrHours = (num(cfg.procMakeReadyMin) || 0) / 60;
-  const runHours = speed > 0 ? qty / speed : 0;
+  const mrMin = (m.makeReadyMin !== undefined && m.makeReadyMin !== '')
+    ? num(m.makeReadyMin) : (num(cfg.procMakeReadyMin) || 0);
+  // Nothing of ours is occupied when the work is sent out.
+  const mrHours = t.external ? 0 : mrMin / 60;
+  const runHours = (t.external || !(speed > 0)) ? 0 : qty / speed;
   const hours = mrHours + runHours;
   const labour = hours * operators * hourly;
   const machineCost = hours * machineRate;
 
-  // Material consumed by this operation.
+  // Material consumed by this operation — or, for outsourced work, the whole
+  // charge, since that is what leaves the building as money.
   let material = 0, materialLabel = '', materialDetail = '';
+  if(t.external){
+    const r = procTaskCalc(t, baseQty);
+    material = r.extCost || 0;
+    materialLabel = 'εξωτερικός συνεργάτης';
+    materialDetail = (r.foil && r.foil.detail)
+      ? r.foil.detail
+      : `${qty.toLocaleString('el-GR')} τεμ. × ${fmt(num(t.extPrice))}/τεμ.`;
+  }
+  else
   if(taskMaterial(t.name) === 'foil'){
     const f = foilCalc(t, qty);
     if(f){ material = f.cost; materialLabel = 'φοιλ'; materialDetail = f.detail; }
     else materialDetail = 'γράψε το ανάπτυγμα κλισέ στη γραμμή';
+  }
+ if(taskMaterial(t.name) === 'lam'){
+    const l = lamCalc(t, qty);
+    if(l){ material = l.cost; materialLabel = 'φιλμ'; materialDetail = l.detail; }
+    else materialDetail = 'διάλεξε είδος πλαστικοποίησης στη γραμμή';
   }
   if(taskMaterial(t.name) === 'die'){
     const d2 = dieCalc(t);
@@ -3629,7 +3831,9 @@ function taskBreakdown(t, cat, baseQty){
   }
 
   const quoted = procTaskCalc(t, baseQty).total;
-  return { name: t.name, cat: cat.name, machineName, qty, speed, mrHours, runHours, hours, operators, hourly,
+  return { name: t.name, cat: cat.name, machineName, external: !!t.external,
+           qty, speed, mrHours, runHours, hours, operators, hourly,
+           mrFromMachine: (m.makeReadyMin !== undefined && m.makeReadyMin !== ''),
            machineRate, labour, machineCost, material, materialLabel, materialDetail,
            total: labour + machineCost + material, quoted,
            hasMaterial: material > 0 || !!materialDetail };
@@ -3661,12 +3865,25 @@ function printBreakdown(r, kind, baseQty){
   // Ink is bought by the can, one per colour: a CMYK run consumes four inks, and
   // the coverage figure describes each of them. Treating it as a single ink
   // undercounted a four-colour job fourfold.
+  //
+  // Process and spot are priced apart because they are: a UV process set is a
+  // few times a conventional one, and a Pantone can be several times either.
   const areaM2 = (paper && paper.w && paper.l) ? (paper.w * paper.l) / 10000 : 0;
   const coverage = (r.coverage != null && r.coverage !== '') ? num(r.coverage) : cfg.coverage;
+  const uv = r.inkType === 'uv';
+  const colours = colourBreakdown(r.color);
+  const processInks = colours.process;
+  const spotInks = colours.spot;
+
+  const processRate = uv ? (num(cfg.inkUvPerKg) || 20) : (num(cfg.inkStdPerKg) || 6);
+  const spotRate = (r.spotPricePerKg != null && r.spotPricePerKg !== '')
+    ? num(r.spotPricePerKg)
+    : (uv ? (num(cfg.spotUvPerKg) || 35) : (num(cfg.spotStdPerKg) || 18));
+
   const inkCount = perSide;                       // colours = plates on one side
   const inkKgPerColour = areaM2 * cfg.gramsPerSqm * (coverage/100) * sheets * passes / 1000;
   const inkKg = inkKgPerColour * inkCount;
-  const ink = inkKg * cfg.inkPerKg;
+  const ink = inkKgPerColour * (processInks * processRate + spotInks * spotRate);
 
   // Labour: make ready once per pass, then the run at the press's own speed.
   const machine = (window.__printMachine || {});
@@ -3682,6 +3899,7 @@ function printBreakdown(r, kind, baseQty){
 
   return { sheets, sides, passes, perSide, sets, plateCount, plates,
            areaM2, coverage, inkCount, inkKgPerColour, inkKg, ink,
+           uv, processInks, spotInks, processRate, spotRate,
            mrHours, runHours, hours, operators, hourly, speed, labour,
            machineRate, machineCost,
            total: plates + ink + labour + machineCost,
@@ -3773,7 +3991,8 @@ function renderFlat(){
       <td><input type="number" step="0.001" class="c-priceKg" value="${r.priceKg}" oninput="flatRows.find(x=>x.id===${r.id}).priceKg=this.value;recalcFlatRow(${r.id})"></td>
       <td><input type="number" step="0.001" class="c-priceSheet" value="${r.priceSheet}" oninput="flatRows.find(x=>x.id===${r.id}).priceSheet=this.value;recalcFlatRow(${r.id})"></td>
       <td><div class="auto c-papercost">0,00 €</div></td>
-      <td class="fixed"><input value="${r.color}" oninput="flatRows.find(x=>x.id===${r.id}).color=this.value"></td>
+      <td class="fixed"><input list="colourOptions" value="${r.color}" placeholder="π.χ. CMYK"
+        oninput="flatRows.find(x=>x.id===${r.id}).color=this.value"></td>
       <td><input type="number" value="${r.sides}" oninput="flatRows.find(x=>x.id===${r.id}).sides=this.value"></td>
       <td><input type="number" value="${r.plateSets}" oninput="flatRows.find(x=>x.id===${r.id}).plateSets=this.value;recalcFlatRow(${r.id})"></td>
       <td><input type="number" step="0.01" value="${r.pricePerSide}" oninput="flatRows.find(x=>x.id===${r.id}).pricePerSide=this.value;recalcFlatRow(${r.id})"></td>
@@ -3928,7 +4147,8 @@ function renderBiblio(){
       <td><input type="number" step="0.001" class="c-priceKg" value="${r.priceKg}" oninput="bookRows.find(x=>x.id===${r.id}).priceKg=this.value;recalcBookRow(${r.id})"></td>
       <td><input type="number" step="0.001" class="c-priceSheet" value="${r.priceSheet}" oninput="bookRows.find(x=>x.id===${r.id}).priceSheet=this.value;recalcBookRow(${r.id})"></td>
       <td><div class="auto c-papercost">0,00 €</div></td>
-      <td class="fixed"><input value="${r.color}" oninput="bookRows.find(x=>x.id===${r.id}).color=this.value"></td>
+      <td class="fixed"><input list="colourOptions" value="${r.color}" placeholder="π.χ. CMYK"
+        oninput="bookRows.find(x=>x.id===${r.id}).color=this.value"></td>
       <td><div class="auto c-sides">0</div></td>
       <td><input type="number" step="0.01" value="${r.pricePerSide}" oninput="bookRows.find(x=>x.id===${r.id}).pricePerSide=this.value;recalcBookRow(${r.id})"></td>
       <td><div class="auto c-printcost">0,00 €</div></td>
@@ -5069,6 +5289,16 @@ function procTaskCalc(t, overrideQty){
   // be used, not a charge.
   if(!t.on) return { hours: 0, cost: 0, total: 0 };
   const qty = num(t.qty) || (overrideQty!=null ? overrideQty : num(document.getElementById('hdrQty').value));
+
+  // Sent out: there is no machine of ours and no hours of ours, only the price
+  // the supplier quotes — per piece, or by the square metre for lamination.
+  if(t.external){
+    const lam = taskMaterial(t.name) === 'lam' ? lamCalc(t, qty) : null;
+    const extCost = lam ? lam.cost : qty * num(t.extPrice);
+    return { hours: 0, cost: 0, total: extCost + num(t.extra),
+             external: true, extCost, foil: lam, foilCost: extCost };
+  }
+
   const speed = num(t.speed);
   const hours = speed>0 ? qty/speed : 0;
   const cost = hours * num(t.rate);
@@ -5077,9 +5307,10 @@ function procTaskCalc(t, overrideQty){
   const kind = taskMaterial(t.name);
   const foil = kind === 'foil' ? foilCalc(t, qty) : null;
   const die  = kind === 'die'  ? dieCalc(t) : null;
-  const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0);
+  const lam  = kind === 'lam'  ? lamCalc(t, qty) : null;
+  const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0) + (lam ? lam.cost : 0);
   const total = cost + num(t.extra) + foilCost;
-  return { hours, cost, total, foil: foil || die, foilCost };
+  return { hours, cost, total, foil: foil || die || lam, foilCost };
 }
 
 // Tasks point at an item by its name, so the comparison has to be forgiving
@@ -5177,21 +5408,44 @@ function renderProc(){
     cat.tasks.forEach(t=>{
       const itemOptions = flatRows.filter(r=>r.material).map(r=>`<option value="${esc(r.material)}" ${t.itemMaterial===r.material?'selected':''}>${esc(r.material)}</option>`).join('');
       rowsHtml += `
-        <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}">
+        <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}${t.external ? ' proc-ext' : ''}"
+          oncontextmenu="event.preventDefault();toggleExternal(${cat.id},${t.id})"
+          title="Δεξί κλικ: ανάθεση σε εξωτερικό συνεργάτη">
           <td style="text-align:center;"><input type="checkbox" class="proc-use" ${t.on ? 'checked' : ''}
             onchange="toggleProcTaskOn(${cat.id},${t.id},this.checked)" title="Χρησιμοποιείται σε αυτή τη δουλειά"></td>
           <td><input value="${t.name}" oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)"></td>
           <td class="mi-col"><select onchange="onProcTaskItemInput(${cat.id},${t.id},this.value)" style="font-size:11px;"><option value="">— όλα —</option>${itemOptions}</select></td>
           <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="onProcTaskQtyInput(${cat.id},${t.id},this.value)" title="${t.foldAuto ? 'Αυτόματο από τα φύλλα βιβλίου — άλλαξέ το ελεύθερα. Σβήσε το για να ξαναγίνει αυτόματο.' : (isFoldOrSewTaskName(t.name) ? 'Χειροκίνητη τιμή — σβήσε το πεδίο για να ξαναγίνει αυτόματο.' : '')}" style="${t.foldAuto ? 'border-color:#7ea6dd;' : ''}"></td>
-          <td><input type="number" value="${t.speed}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).speed=this.value;recalcProcTask(${cat.id},${t.id})"></td>
-          <td><input type="number" step="0.01" value="${t.rate}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).rate=this.value;recalcProcTask(${cat.id},${t.id})"></td>
+          <td>${t.external
+            ? `<input type="text" inputmode="decimal" value="${esc(String(t.extPrice||''))}" placeholder="€/τεμ"
+                 title="Τιμή ανά τεμάχιο από τον συνεργάτη" class="ext-price"
+                 oninput="onExtPriceInput(${cat.id},${t.id},this.value)">`
+            : `<input type="number" value="${t.speed}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).speed=this.value;recalcProcTask(${cat.id},${t.id})">`}</td>
+          <td>${t.external
+            ? `<span class="ext-tag" title="Δεξί κλικ στη γραμμή για επιστροφή σε δική μας μηχανή">Εξωτερικός συνεργάτης</span>`
+            : `<input type="number" step="0.01" value="${t.rate}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).rate=this.value;recalcProcTask(${cat.id},${t.id})">
+`}</td>
           <td><div class="auto c-cost">0,00 €</div></td>
           <td><input type="number" step="0.01" value="${t.extra}" oninput="procCategories.find(c=>c.id===${cat.id}).tasks.find(x=>x.id===${t.id}).extra=this.value;recalcProcTask(${cat.id},${t.id})"></td>
           <td class="proc-foil">${taskMaterial(t.name) === 'die' ? `
             <label class="proc-foil-lbl">Κοπτικό</label>
-            <input type="number" step="0.01" value="${esc(t.dieCost||'')}" placeholder="κόστος €"
+            <input type="text" inputmode="decimal" value="${esc(t.dieCost||'')}" placeholder="κόστος €"
               title="Τιμή κοπτικού από τον προμηθευτή — περνά σαν υλικό στην ανάλυση"
               oninput="onDieCostInput(${cat.id},${t.id},this.value)">
+            <div class="pa-note c-foil"></div>`
+          : taskMaterial(t.name) === 'lam' ? `
+            <label class="proc-foil-lbl">Πλαστικοποίηση</label>
+            <select onchange="onLamItemInput(${cat.id},${t.id},this.value)" style="margin-bottom:3px;">
+              <option value="">— σε ποιο χαρτί; —</option>
+              ${flatRows.concat(bookRows).filter(r=>r.material||r.paperName)
+                .map(r=>{ const nm = r.material || r.paperName;
+                  return `<option value="${esc(nm)}" ${String(t.lamItem||'')===nm?'selected':''}>${esc(nm)}</option>`; }).join('')}
+            </select>
+            <select onchange="onLamTypeInput(${cat.id},${t.id},this.value)">
+              <option value="">— είδος —</option>
+              ${Object.entries(LAM_TYPES).map(([k,v])=>
+                `<option value="${k}" ${t.lamType===k?'selected':''}>${esc(v.label)}</option>`).join('')}
+            </select>
             <div class="pa-note c-foil"></div>`
           : taskMaterial(t.name) === 'foil' ? `
             <label class="proc-foil-lbl">Κλισέ</label>
@@ -5567,10 +5821,46 @@ async function downloadOfferPdf(){
   }
 }
 
+// Work sent out has no speed and no hourly rate of ours, so those two fields
+// become the supplier's price instead of sitting there meaningless.
+function toggleExternal(catId, taskId){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.external = !t.external;
+  renderProc();
+  updateGrand();
+  markOfferDirty();
+  statusMsg(t.external ? `${t.name}: εξωτερικός συνεργάτης` : `${t.name}: δική μας μηχανή`);
+}
+
+function onExtPriceInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.extPrice = String(value).replace(',', '.');
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+}
+
+function onLamItemInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.lamItem = value;
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+}
+
+function onLamTypeInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.lamType = value;
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+}
+
 function onDieCostInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   if(!t) return;
-  t.dieCost = value;
+  t.dieCost = String(value).replace(',', '.');   // 85,50 must not become 85
   recalcProcTask(catId, taskId);
   markOfferDirty();
 }
