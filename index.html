@@ -608,6 +608,11 @@
   .offer-table tbody td{padding:13px 8px;font-size:14px;}
   .offer-table tbody tr:hover{background:var(--page);}
   .stock-table tbody td{padding:14px 8px;font-size:14.5px;border-bottom:1px solid var(--line);}
+  .stock-caret{color:var(--muted);text-decoration:none;margin-right:4px;font-size:11px;}
+  .stock-name{font-weight:600;font-size:13px;width:230px;max-width:100%;
+    border:1px solid transparent;background:transparent;padding:3px 6px;border-radius:5px;}
+  .stock-name:hover:not(:disabled){border-color:var(--line);background:#fff;}
+  .stock-name:focus{border-color:#2f6fed;background:#fff;}
   .stock-price{width:82px;text-align:right;font-size:12.5px;padding:4px 6px;
     border:1px solid transparent;background:transparent;border-radius:5px;}
   .stock-price:hover:not(:disabled){border-color:var(--line);background:#fff;}
@@ -15966,7 +15971,12 @@ async function refreshStockList(){
       const p = paperByName[paper] || null;   // may be stock-only, with no paper record
       let rows = `
         <tr>
-          <td><a href="javascript:void(0)" onclick="toggleStockPaperExpand('${escPaper}')" class="stock-paper-name">${isExpanded?'▾':'▸'} ${esc(paper)}</a></td>
+          <td style="white-space:nowrap;">
+            <a href="javascript:void(0)" onclick="toggleStockPaperExpand('${escPaper}')"
+               class="stock-caret" title="Ιστορικό κινήσεων">${isExpanded?'▾':'▸'}</a>
+            <input class="stock-name" value="${esc(paper)}"
+              onchange="renamePaper('${escPaper}', this.value)"
+              onclick="event.stopPropagation()" title="Άλλαξε το όνομα"></td>
           <td style="text-align:center;color:var(--muted);font-size:12px;">${
             p && num(p.w) ? `${num(p.w)}×${num(p.l)}${num(p.g) ? ' · ' + num(p.g) + 'gr' : ''}` : '—'}</td>
           <td style="text-align:right;" onclick="event.stopPropagation()">
@@ -15980,6 +15990,8 @@ async function refreshStockList(){
           <td style="text-align:right;font-weight:700;${d.qty<=0?'color:var(--muted);':''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}</td>
           <td style="text-align:right;">
             <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="quickStockAdjust('${escPaper}', '${d.unit}')">Γρήγορη κίνηση</button>
+            <button class="rowdel" style="margin-left:6px;" title="Διαγραφή υλικού"
+              onclick="deletePaper('${escPaper}')">×</button>
           </td>
         </tr>
       `;
@@ -16032,6 +16044,80 @@ async function refreshStockList(){
 function toggleStockPaperExpand(paper){
   expandedStockPaper = expandedStockPaper===paper ? null : paper;
   refreshStockList();
+}
+
+// Renaming means writing the new row and removing the old one — the name is the
+// key. Everything that refers to it by name follows in the same pass.
+async function renamePaper(oldName, newName){
+  const name = String(newName||'').trim();
+  const p = paperByName[oldName];
+  if(!name || name === oldName){ refreshStockList(); return; }
+  if(paperByName[name]){ statusMsg(`Υπάρχει ήδη υλικό «${name}».`); refreshStockList(); return; }
+  try{
+    // Only if it has a material record; a stock-only line just moves its key.
+    if(p){
+      await upsertPaper(Object.assign({}, p, { name }));
+      await deletePaperRow(oldName);
+      delete paperByName[oldName];
+    }
+
+    // Stock, its history and any open offer all point at the old name.
+    const record = await jbGetRecord();
+    if(record.stock && record.stock[oldName]){
+      record.stock[name] = record.stock[oldName];
+      delete record.stock[oldName];
+    }
+    let moved = 0;
+    (record.stockLog||[]).forEach(l=>{ if(l.paper === oldName){ l.paper = name; moved++; } });
+    await jbPutRecord(record);
+
+    [...flatRows, ...bookRows, ...fabricRows].forEach(r=>{
+      if(r.paperName === oldName) r.paperName = name;
+    });
+    refreshPaperOptions();
+    if(typeof recalcAll === 'function') recalcAll();
+    statusMsg(`«${oldName}» → «${name}» ✓${moved ? ` — ${moved} κινήσεις ακολούθησαν` : ''}`);
+    refreshStockList();
+  }catch(e){
+    console.error('Rename paper error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+    refreshStockList();
+  }
+}
+
+async function deletePaperRow(name){
+  const key = getJbKey(), url = getJbBin();
+  const token = await getAuthToken();
+  const res = await fetch(`${url}/rest/v1/papers?name=eq.${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+// Deleting removes the paper and its stock line. Offers already written keep the
+// name they were costed with — they are a record of what was quoted.
+async function deletePaper(name){
+  const used = [...flatRows, ...bookRows, ...fabricRows].some(r => r.paperName === name);
+  if(!confirm(`Διαγραφή του υλικού «${name}»;\n\n`
+    + (used ? 'Χρησιμοποιείται στην ανοιχτή προσφορά.\n' : '')
+    + 'Θα αφαιρεθεί και από την αποθήκη. Οι παλιές προσφορές δεν αλλάζουν.')) return;
+  try{
+    if(paperByName[name]){
+      await deletePaperRow(name);
+      delete paperByName[name];
+    }
+    if(customPapers[name]){ delete customPapers[name]; saveCustomPapers(customPapers); }
+    const record = await jbGetRecord();
+    if(record.stock) delete record.stock[name];
+    await jbPutRecord(record);
+    refreshPaperOptions();
+    statusMsg(`Το «${name}» διαγράφηκε ✓`);
+    refreshStockList();
+  }catch(e){
+    console.error('Delete paper error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 // Prices live with the paper, not with the stock line, so a change here is felt
@@ -16104,7 +16190,7 @@ function previewStockBulkImport(){
   if(entries.length===0){ statusEl.textContent = 'Δεν βρέθηκαν έγκυρες γραμμές.'; document.getElementById('stockBulkImportConfirmBtn').style.display = 'none'; return; }
   stockBulkParsed = entries;
   statusEl.innerHTML = `Βρέθηκαν <b>${entries.length}</b> εγγραφές:<br><span style="font-size:11px;">${entries.map(e=>esc(e.name)+': '+e.qty+' '+esc(e.unit)
-    + (e.price != null ? ' · ' + fmt(e.price) + (paperByName[e.name] ? '' : ' ⚠ χωρίς χαρτί') : '')).join('<br>')}</span>`;
+    + (e.price != null ? ' · ' + fmt(e.price) : '') + (paperByName[e.name] ? '' : ' · νέο υλικό')).join('<br>')}</span>`;
   document.getElementById('stockBulkImportConfirmBtn').style.display = 'inline-block';
 }
 
@@ -16123,20 +16209,33 @@ async function confirmStockBulkImport(){
 
     // Prices belong to the paper, not the stock line, so they are written there —
     // otherwise the figure would sit in the warehouse and never reach an offer.
-    let priced = 0;
+    // A stock line with no material behind it cannot be priced, renamed or
+    // deleted — so anything new here gets its record created too, ready for its
+    // dimensions to be filled in later.
+    let priced = 0, created = 0;
     for(const e of stockBulkParsed){
-      if(e.price == null) continue;
-      const p = paperByName[e.name];
-      if(!p){ continue; }
-      const next = Object.assign({}, p);
-      // Sheets are priced per sheet, anything else by its own unit.
-      if(/φύλλ/i.test(e.unit)) next.priceSheet = e.price; else next.priceKg = e.price;
-      try{ await upsertPaper(next); priced++; }catch(err){ console.error('bulk price', e.name, err); }
+      const existing = paperByName[e.name];
+      if(!existing && e.price == null && !/φύλλ/i.test(e.unit)) {
+        // A non-paper unit with no price: still worth a record, so it can be edited.
+      }
+      const next = Object.assign({ name: e.name, w:null, l:null, g:null,
+                                   priceKg:null, priceSheet:null }, existing || {});
+      let touched = !existing;
+      if(e.price != null){
+        // Sheets are priced per sheet, anything else by its own unit.
+        if(/φύλλ/i.test(e.unit)) next.priceSheet = e.price; else next.priceKg = e.price;
+        touched = true;
+      }
+      if(!touched) continue;
+      try{
+        await upsertPaper(next);
+        if(!existing) created++;
+        if(e.price != null) priced++;
+      }catch(err){ console.error('bulk material', e.name, err); }
     }
-    const missing = stockBulkParsed.filter(e => e.price != null && !paperByName[e.name]).length;
     statusEl.textContent = `Ορίστηκε απόθεμα για ${stockBulkParsed.length} εγγραφές ✓`
-      + (priced ? ` · ${priced} τιμές ενημερώθηκαν` : '')
-      + (missing ? ` · ${missing} χωρίς χαρτί στη βάση` : '');
+      + (created ? ` · ${created} νέα υλικά` : '')
+      + (priced ? ` · ${priced} τιμές` : '');
     stockBulkParsed = [];
     document.getElementById('stockBulkImportConfirmBtn').style.display = 'none';
     document.getElementById('stockBulkText').value = '';
