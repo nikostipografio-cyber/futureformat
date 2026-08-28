@@ -302,6 +302,11 @@
     padding:0 5px;margin-left:auto;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;
     border-radius:9px;flex:none;}
   /* Offer stage: a chain, coloured by how far along it is. */
+  .ol-pick{width:15px;height:15px;cursor:pointer;accent-color:#2f6fed;margin:0;}
+  .op-combined-sec{page-break-after:always;}
+  .op-combined-sec:last-of-type{page-break-after:auto;}
+  .op-combined-total{display:flex;justify-content:space-between;align-items:baseline;
+    border-top:2px solid #111;margin-top:22px;padding-top:12px;font-size:16px;font-weight:800;}
   .ost{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
     padding:3px 9px;border-radius:20px;cursor:pointer;white-space:nowrap;
     border:1px solid transparent;transition:filter 0.12s;}
@@ -383,6 +388,18 @@
     padding:4px 8px;border-radius:11px;line-height:1.3;text-align:center;}
   .ext-price{text-align:right;}
   .proc-foil .c-foil{font-size:9.5px;margin-top:2px;}
+  .bs-tune{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 14px;
+    padding:10px 12px;background:var(--page);border:1px solid var(--line);border-radius:9px;font-size:12px;}
+  .bs-tune label{display:flex;align-items:center;gap:6px;color:var(--muted);}
+  .bs-tune input{width:62px;text-align:right;font-size:12px;padding:3px 6px;}
+  .bs-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .bs-card{border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+  .bs-card.bs-chosen{border-color:#2f6fed;background:#f7faff;}
+  .bs-head{font-weight:700;font-size:13px;margin-bottom:8px;}
+  .bs-nums{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:10px;}
+  .bs-nums b{display:block;font-size:14px;font-variant-numeric:tabular-nums;}
+  .bs-nums span{font-size:9px;text-transform:uppercase;letter-spacing:0.03em;color:var(--muted);}
+  @media (max-width:700px){ .bs-grid{grid-template-columns:1fr;} }
   .pa-machine{font-size:11.5px;padding:3px 5px;max-width:100%;width:100%;}
   .pa-glue{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;
     background:var(--page);border:1px solid var(--line);border-radius:9px;flex-wrap:wrap;}
@@ -591,6 +608,11 @@
   .offer-table tbody td{padding:13px 8px;font-size:14px;}
   .offer-table tbody tr:hover{background:var(--page);}
   .stock-table tbody td{padding:14px 8px;font-size:14.5px;border-bottom:1px solid var(--line);}
+  .stock-price{width:82px;text-align:right;font-size:12.5px;padding:4px 6px;
+    border:1px solid transparent;background:transparent;border-radius:5px;}
+  .stock-price:hover:not(:disabled){border-color:var(--line);background:#fff;}
+  .stock-price:focus{border-color:#2f6fed;background:#fff;}
+  .stock-price:disabled{color:var(--muted);}
   .stock-paper-name{color:var(--ink);font-weight:600;text-decoration:none;cursor:pointer;}
   .stock-paper-name:hover{color:var(--blue);}
   tbody input, tbody select{width:100%;font-size:12px;padding:4px 5px;}
@@ -1213,6 +1235,17 @@ function toggleMobileSidebar(forceClose){
             </select>
           </div>
         </div>
+        <div id="combinedBar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;
+             background:#eaf1fe;border:1px solid #cfe0fb;border-radius:9px;padding:10px 14px;margin-bottom:10px;">
+          <b style="font-size:13px;color:#1f4f9e;"><span id="combinedCount">0</span> προσφορές επιλεγμένες</b>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;white-space:nowrap;">
+            <input type="checkbox" id="combinedShowTotal" checked style="width:15px;height:15px;margin:0;flex:none;">
+            <span>Γενικό σύνολο στο τέλος</span>
+          </label>
+          <span style="flex:1;"></span>
+          <button class="btn solid" onclick="buildCombinedPdf()">Κοινό PDF</button>
+          <button class="btn" onclick="clearCombinedPick()">Καθαρισμός</button>
+        </div>
         <div id="offerListTableWrap"></div>
         <div id="offerListPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;"></div>
       </div>
@@ -1514,8 +1547,12 @@ function toggleMobileSidebar(forceClose){
   <!-- Not book-only: a multi-item offer is quoted at alternative run lengths just
        as often, and hiding the card made saved alternatives look deleted. -->
   <div class="card">
-    <div class="card-head"><div class="title">Έξτρα Ποσότητες (εναλλακτικές τιμές στο PDF)</div><button class="btn" onclick="addExtraQuantity()">+ Ποσότητα</button></div>
-    <div class="card-body">
+    <div class="card-head"><div class="title">Έξτρα Ποσότητες (εναλλακτικές τιμές στο PDF)</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="extraQtyToggle" onclick="toggleExtraQtyCard()">▶ Εμφάνιση</button>
+        <button class="btn" onclick="addExtraQuantity()">+ Ποσότητα</button>
+      </div></div>
+    <div class="card-body" id="extraQtyBody" style="display:none;">
       <div id="qtyTabsBar"></div>
       <div id="altNameRow" style="display:none;align-items:center;gap:9px;margin-bottom:10px;flex-wrap:wrap;">
         <label style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Όνομα επιλογής</label>
@@ -1972,8 +2009,8 @@ function toggleMobileSidebar(forceClose){
         </div>
       </div>
       <div id="stockBulkImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
-        <div class="empty-note" style="margin-bottom:8px;">Μία γραμμή ανά χαρτί/υλικό. Μορφή: <b>Όνομα [Tab] Ποσότητα [Tab] Μονάδα (προαιρετικό, default φύλλα)</b> — μπορείς να επικολλήσεις κατευθείαν από Excel/Sheets. Ορίζει το απόθεμα σε αυτή την τιμή (δεν προσθέτει πάνω στο υπάρχον).</div>
-        <textarea id="stockBulkText" rows="6" style="width:100%;font-family:monospace;font-size:11.5px;" placeholder="π.χ.&#10;Velvet 350gr 70x100&#9;250&#9;φύλλα&#10;Κόλλα Βιβλιοδεσίας&#9;12&#9;kg"></textarea>
+        <div class="empty-note" style="margin-bottom:8px;">Μία γραμμή ανά χαρτί/υλικό. Μορφή: <b>Όνομα [Tab] Ποσότητα [Tab] Μονάδα [Tab] Τιμή</b> — μονάδα και τιμή προαιρετικές, και με όποια σειρά (default φύλλα) — μπορείς να επικολλήσεις κατευθείαν από Excel/Sheets. Ορίζει το απόθεμα σε αυτή την τιμή (δεν προσθέτει πάνω στο υπάρχον).</div>
+        <textarea id="stockBulkText" rows="6" style="width:100%;font-family:monospace;font-size:11.5px;" placeholder="π.χ.&#10;Velvet 350gr 70x100&#9;250&#9;φύλλα&#9;2,45&#10;ΧΑΡΤΟΝΙ 2mm 75x105&#9;300&#9;1,80&#10;Κόλλα Βιβλιοδεσίας&#9;12&#9;kg"></textarea>
         <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
           <button class="btn" onclick="previewStockBulkImport()">Προεπισκόπηση</button>
           <button class="btn solid" id="stockBulkImportConfirmBtn" style="display:none;" onclick="confirmStockBulkImport()">Ορισμός Όλων</button>
@@ -2255,6 +2292,12 @@ function toggleMobileSidebar(forceClose){
             <input id="setLamStd" type="number" step="0.01" placeholder="0.17" oninput="savePrintCosts()"></div>
           <div class="field"><label>Αντισκατς / soft touch (€/m²)</label>
             <input id="setLamSoft" type="number" step="0.01" placeholder="0.34" oninput="savePrintCosts()"></div>
+          <div class="field"><label>Προεξοχή καλύμματος (cm)</label>
+            <input id="setBoardOver" type="number" step="0.1" placeholder="0.3" oninput="savePrintCosts()"
+              title="Προεπιλογή — αλλάζει ανά δουλειά στην προσομοίωση χαρτονιού"></div>
+          <div class="field"><label>Κενό αρμού ράχης (cm)</label>
+            <input id="setBoardHinge" type="number" step="0.1" placeholder="1.6" oninput="savePrintCosts()"
+              title="Προεπιλογή — αλλάζει ανά δουλειά στην προσομοίωση χαρτονιού"></div>
           <div class="field"><label>Ρολό φοιλ — μήκος (μ.)</label>
             <input id="setFoilRollLen" type="number" step="1" placeholder="122" oninput="savePrintCosts()"></div>
           <div class="field"><label>Ρολό φοιλ — πλάτος (mm)</label>
@@ -2352,6 +2395,17 @@ function toggleMobileSidebar(forceClose){
   <option value="Ένθετο"></option>
   <option value="Κάλυμμα"></option>
 </datalist>
+
+<div class="impo-overlay" id="boardOverlay">
+  <div class="impo-card" style="max-width:820px;">
+    <div class="impo-title">Χαρτόνι βιβλιοδεσίας</div>
+    <div class="impo-sub" id="boardSub"></div>
+    <div id="boardBody" style="margin-top:16px;"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:18px;">
+      <button class="btn solid" onclick="document.getElementById('boardOverlay').classList.remove('show')">Κλείσιμο</button>
+    </div>
+  </div>
+</div>
 
 <div class="impo-overlay" id="impoOverlay">
   <div class="impo-card">
@@ -3221,7 +3275,8 @@ const PRINT_DEFAULTS = { plateCost: 4.45, makeReadyMin: 15,
                          inkStdPerKg: 6, inkUvPerKg: 20, spotStdPerKg: 18, spotUvPerKg: 35,
                          coverage: 80, gramsPerSqm: 1.1, procMakeReadyMin: 10,
                          foilRollLen: 122, foilRollWidth: 645, foilRollPrice: 125, foilGap: 0.5,
-                         lamStdPerM2: 0.17, lamSoftPerM2: 0.34 };
+                         lamStdPerM2: 0.17, lamSoftPerM2: 0.34,
+                         boardOverhang: 0.3, boardHinge: 1.6 };
 
 let printCostsSaveTimer = null;
 function savePrintCosts(){
@@ -3237,6 +3292,8 @@ function savePrintCosts(){
     procMakeReadyMin: num(document.getElementById('setProcMakeReady').value) || PRINT_DEFAULTS.procMakeReadyMin,
     lamStdPerM2:   num(document.getElementById('setLamStd').value)        || PRINT_DEFAULTS.lamStdPerM2,
     lamSoftPerM2:  num(document.getElementById('setLamSoft').value)       || PRINT_DEFAULTS.lamSoftPerM2,
+    boardOverhang: num(document.getElementById('setBoardOver').value)    || PRINT_DEFAULTS.boardOverhang,
+    boardHinge:    num(document.getElementById('setBoardHinge').value)   || PRINT_DEFAULTS.boardHinge,
     foilRollLen:   num(document.getElementById('setFoilRollLen').value)   || PRINT_DEFAULTS.foilRollLen,
     foilRollWidth: num(document.getElementById('setFoilWidth').value)     || PRINT_DEFAULTS.foilRollWidth,
     foilRollPrice: num(document.getElementById('setFoilRollPrice').value) || PRINT_DEFAULTS.foilRollPrice,
@@ -3278,6 +3335,8 @@ function fillPrintCostFields(){
   set('setProcMakeReady', v.procMakeReadyMin);
   set('setLamStd', v.lamStdPerM2);
   set('setLamSoft', v.lamSoftPerM2);
+  set('setBoardOver', v.boardOverhang);
+  set('setBoardHinge', v.boardHinge);
   set('setFoilRollLen', v.foilRollLen);
   set('setFoilWidth', v.foilRollWidth);
   set('setFoilRollPrice', v.foilRollPrice);
@@ -3700,7 +3759,104 @@ function taskMaterial(taskName){
   if(/ΘΕΡΜΟΤΥΠΙΑ|FOIL|ΧΡΥΣΟΤΥΠΙΑ/.test(name)) return 'foil';
   if(/ΚΑΛΟΥΠΙ|ΚΟΠΤΙΚ/.test(name)) return 'die';
   if(/ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ|ΛΑΜΙΝΑΡΙΣΜΑ/.test(name)) return 'lam';
+  if(/ΚΑΤΑΣΚΕΥΗ ΚΑΛΥΜΜΑΤΟΣ|ΧΑΡΤΟΝ/.test(name)) return 'board';
   return null;
+}
+
+// Binder's board for hard covers. Each book takes two boards — front and back —
+// cut a little larger than the closed format so the case overhangs the block,
+// plus a strip for the spine.
+// A board looks like any other paper to the database — a name, a size, a weight
+// and a price — so it is chosen there rather than from a fixed pair of sizes.
+function boardSheetPrice(p){
+  if(num(p.priceSheet) > 0) return num(p.priceSheet);
+  // Priced by the kilo: weight of one sheet × €/kg.
+  const kg = (num(p.w) * num(p.l) / 10000) * num(p.g) / 1000;
+  return kg * num(p.priceKg);
+}
+
+function boardOptions(t){
+  const named = String(t.boardPaper||'').trim();
+  const list = Object.values(paperByName).filter(p => num(p.w) > 0 && num(p.l) > 0
+    && (named ? p.name === named : /ΧΑΡΤΟΝ|BOARD|ΨΑΘΑ|GREYBOARD/i.test(p.name)));
+  return list.map(p => ({ key:p.name, label:p.name, w:num(p.w), l:num(p.l),
+                          price: boardSheetPrice(p) }));
+}
+
+// How many pieces of w×h fit on a sheet, trying both orientations.
+function piecesOnSheet(sheetW, sheetL, w, h){
+  const a = Math.floor(sheetW/w) * Math.floor(sheetL/h);
+  const b = Math.floor(sheetW/h) * Math.floor(sheetL/w);
+  return Math.max(a, b, 0);
+}
+
+// The grid of covers on a sheet, and which way round it is cut.
+function coverLayout(s, bw, bh){
+  const up = { cols: Math.floor(s.w/bw), rows: Math.floor(s.l/bh), rot:false };
+  const across = { cols: Math.floor(s.w/bh), rows: Math.floor(s.l/bw), rot:true };
+  up.per = up.cols * up.rows; across.per = across.cols * across.rows;
+  const best = across.per > up.per ? across : up;
+  best.pieceW = best.rot ? bh : bw;
+  best.pieceH = best.rot ? bw : bh;
+  best.usedW = best.cols * best.pieceW;
+  best.usedH = best.rows * best.pieceH;
+  return best;
+}
+
+// Spines cut from what is left after the covers: the strip down one side and the
+// band along the bottom. Both are whole board, not scrap.
+function spinesInWaste(s, lay, spineW, spineH){
+  const sideW = s.w - lay.usedW, bottomH = s.l - lay.usedH;
+  const inSide = sideW > 0 ? piecesOnSheet(sideW, s.l, spineW, spineH) : 0;
+  const inBottom = bottomH > 0 ? piecesOnSheet(lay.usedW, bottomH, spineW, spineH) : 0;
+  return inSide + inBottom;
+}
+
+function boardCalc(t, qty){
+  const cfg = printSettings();
+  const dim = parseDimFromText(document.getElementById('fSchemaClosed').value);
+  if(!dim || !(qty > 0)) return null;
+
+  // Set per job, because a thin paperback-sized case and a heavy album are not
+  // trimmed the same way. Falls back to the shop's usual figures.
+  const over = num(t.boardOverhang != null ? t.boardOverhang : cfg.boardOverhang) || 0.3;
+  const hinge = num(t.boardHinge != null ? t.boardHinge : cfg.boardHinge) || 1.6;
+  const boardW = dim.w + over;                          // fore-edge only
+  const boardH = dim.h + over*2;                        // head and tail
+  const spineMm = glueGramsPerCopy().spineMm || 0;
+  const spineW = (spineMm/10) + hinge;                  // spine + two hinge gaps
+
+  // A named board from the paper database wins: it carries its own size, weight
+  // and price, and a 3mm board is not the same cost as a 1mm one.
+  // A board chosen by hand overrides the search for the cheapest.
+  const all = boardOptions(t);
+  const options = t.boardSize ? all.filter(o => o.key === t.boardSize) : all;
+  let best = null;
+  options.forEach(s=>{
+    const lay = coverLayout(s, boardW, boardH);
+    if(!lay.per) return;
+    const coverSheets = ceilSafe((qty*2) / lay.per);
+
+    // The strips left over once the covers are cut are board all the same, and a
+    // spine is narrow — so they are taken from the offcut before any sheet is
+    // bought for them.
+    const perSpineWaste = spinesInWaste(s, lay, spineW, boardH);
+    const fromWaste = Math.min(qty, coverSheets * perSpineWaste);
+    const perSpine = piecesOnSheet(s.w, s.l, spineW, boardH);
+    const spineSheets = (qty - fromWaste) > 0 && perSpine
+      ? ceilSafe((qty - fromWaste) / perSpine) : 0;
+
+    const cost = (coverSheets + spineSheets) * s.price;
+    if(!best || cost < best.cost)
+      best = { size:s.key, label:s.label, perCover:lay.per, perSpine, perSpineWaste, fromWaste,
+               coverSheets, spineSheets, sheets: coverSheets + spineSheets,
+               price:s.price, cost, boardW, boardH, spineW, lay };
+  });
+  if(!best) return null;
+  best.detail = `${best.label} · καπάκι ${best.boardW.toFixed(1)}×${best.boardH.toFixed(1)}cm`
+    + ` — ${best.perCover} ανά φύλλο · ${best.sheets} φύλλα × ${fmt(best.price)}`
+    + (best.fromWaste > 0 ? ` · ${best.fromWaste.toLocaleString('el-GR')} ράχες από τη φύρα` : '');
+  return best;
 }
 
 // Lamination is charged by the square metre of film, so what matters is the
@@ -3845,6 +4001,11 @@ function taskBreakdown(t, cat, baseQty){
     const l = lamCalc(t, qty);
     if(l){ material = l.cost; materialLabel = 'φιλμ'; materialDetail = l.detail; }
     else materialDetail = 'διάλεξε είδος πλαστικοποίησης στη γραμμή';
+  }
+  if(taskMaterial(t.name) === 'board'){
+    const bd2 = boardCalc(t, qty);
+    if(bd2){ material = bd2.cost; materialLabel = 'χαρτόνι'; materialDetail = bd2.detail; }
+    else materialDetail = 'χρειάζεται κλειστό σχήμα στην προσφορά';
   }
   if(taskMaterial(t.name) === 'die'){
     const d2 = dieCalc(t);
@@ -5330,7 +5491,8 @@ function procTaskCalc(t, overrideQty){
   // the supplier quotes — per piece, or by the square metre for lamination.
   if(t.external){
     const lam = taskMaterial(t.name) === 'lam' ? lamCalc(t, qty) : null;
-    const extCost = lam ? lam.cost : qty * num(t.extPrice);
+    const brd = taskMaterial(t.name) === 'board' ? boardCalc(t, qty) : null;
+    const extCost = lam ? lam.cost : (brd ? brd.cost : qty * num(t.extPrice));
     return { hours: 0, cost: 0, total: extCost + num(t.extra),
              external: true, extCost, foil: lam, foilCost: extCost };
   }
@@ -5344,9 +5506,11 @@ function procTaskCalc(t, overrideQty){
   const foil = kind === 'foil' ? foilCalc(t, qty) : null;
   const die  = kind === 'die'  ? dieCalc(t) : null;
   const lam  = kind === 'lam'  ? lamCalc(t, qty) : null;
-  const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0) + (lam ? lam.cost : 0);
+  const brd  = kind === 'board' ? boardCalc(t, qty) : null;
+  const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0)
+                 + (lam ? lam.cost : 0) + (brd ? brd.cost : 0);
   const total = cost + num(t.extra) + foilCost;
-  return { hours, cost, total, foil: foil || die || lam, foilCost };
+  return { hours, cost, total, foil: foil || die || lam || brd, foilCost };
 }
 
 // Tasks point at an item by its name, so the comparison has to be forgiving
@@ -5472,6 +5636,11 @@ function renderProc(){
             <input type="text" inputmode="decimal" value="${esc(t.dieCost||'')}" placeholder="κόστος €"
               title="Τιμή κοπτικού από τον προμηθευτή — περνά σαν υλικό στην ανάλυση"
               oninput="onDieCostInput(${cat.id},${t.id},this.value)">
+            <div class="pa-note c-foil"></div>`
+          : taskMaterial(t.name) === 'board' ? `
+            <label class="proc-foil-lbl">Χαρτόνι</label>
+            <button class="btn" style="width:100%;font-size:11px;padding:4px 6px;"
+              onclick="openBoardSim(${cat.id},${t.id})" title="Δες πώς κόβεται το φύλλο">▦ Προσομοίωση</button>
             <div class="pa-note c-foil"></div>`
           : taskMaterial(t.name) === 'lam' ? `
             <label class="proc-foil-lbl">Πλαστικοποίηση</label>
@@ -5626,7 +5795,8 @@ function buildOfferPrintHtml(){
     'Τιμή τεμαχίου': 'Unit price', 'Εναλλακτική ποσότητα': 'Alternative quantity',
     'Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.': 'The above prices do not include VAT.',
     'Τρόπος πληρωμής': 'Payment method',
-    'Εναλλακτική': 'Alternative', 'Σελίδες': 'Pages', 'Σχήμα': 'Format',
+    'Εναλλακτική': 'Alternative', 'Εναλλακτικές ποσότητες': 'Alternative quantities',
+    'Σελίδες': 'Pages', 'Σχήμα': 'Format',
     'Χαρτιά': 'Materials', 'Τύπος χαρτιού': 'Paper', 'Χρώμα': 'Colour',
     'Επιβάρυνση πελάτη': 'Customer shipping', 'Αποστολή σε πελάτη': 'Shipping',
   };
@@ -5817,6 +5987,7 @@ function buildOfferPrintHtml(){
       ` : ''}
       <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${unitPrice.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
       ${extraQtyRows ? `
+      <div class="op-alt-head" style="margin-top:16px;">${t('Εναλλακτικές ποσότητες')}</div>
       <table class="op-sub">
         <thead><tr><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
         <tbody>${extraQtyRows}</tbody>
@@ -5898,6 +6069,193 @@ function onLamItemInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   if(!t) return;
   t.lamItem = value;
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+  queueAnalysisRefresh();
+}
+
+// Seeing the cut is worth more than the count: the offcut down one edge is
+// obvious on a drawing and invisible in a number.
+let boardSimTask = null;
+
+function openBoardSim(catId, taskId){
+  boardSimTask = { catId, taskId };
+  renderBoardSim();
+  document.getElementById('boardOverlay').classList.add('show');
+}
+
+function boardSheetSvg(sheet, bw, bh, spineW, spineNeed){
+  const W = 300, scale = W / sheet.w, H = sheet.l * scale;
+  const lay = coverLayout(sheet, bw, bh);
+  const rot = lay.rot, cols = lay.cols, rows = lay.rows;
+  const pw = lay.pieceW * scale, ph = lay.pieceH * scale;
+
+  // Same palette as the imposition and fabric simulators: cream sheet, green
+  // pieces, hatched offcut — so all three read as the same kind of drawing.
+  let cells = '';
+  for(let r=0; r<rows; r++) for(let col=0; col<cols; col++)
+    cells += `<rect x="${(col*pw).toFixed(1)}" y="${(r*ph).toFixed(1)}"
+      width="${(pw-1.5).toFixed(1)}" height="${(ph-1.5).toFixed(1)}"
+      fill="#8ecf9c" stroke="#3a3a3a" stroke-width="1.2"></rect>`;
+
+  const usedW = cols*pw, usedH = rows*ph;
+
+  // Spines drawn where they are actually cut from — the offcut — so the saving
+  // is visible rather than only stated.
+  let spines = '', spineCount = 0;
+  const sideCm = sheet.w - lay.usedW, bottomCm = sheet.l - lay.usedH;
+  const place = (x0, y0, availW, availH) => {
+    if(availW <= 0 || availH <= 0) return;
+    const vert = Math.floor(availW/spineW) * Math.floor(availH/bh) >=
+                 Math.floor(availW/bh) * Math.floor(availH/spineW);
+    const w2 = (vert ? spineW : bh) * scale, h2 = (vert ? bh : spineW) * scale;
+    const nc = Math.floor(availW / (vert ? spineW : bh));
+    const nr = Math.floor(availH / (vert ? bh : spineW));
+    for(let r=0; r<nr; r++) for(let col=0; col<nc; col++){
+      if(spineNeed != null && spineCount >= spineNeed) return;
+      spines += `<rect x="${(x0 + col*w2).toFixed(1)}" y="${(y0 + r*h2).toFixed(1)}"
+        width="${Math.max(1,w2-1.2).toFixed(1)}" height="${Math.max(1,h2-1.2).toFixed(1)}"
+        fill="#e8c46a" stroke="#3a3a3a" stroke-width="1"></rect>`;
+      spineCount++;
+    }
+  };
+  place(usedW, 0, sideCm, sheet.l);
+  place(0, usedH, lay.usedW, bottomCm);
+
+  const usedArea = cols*rows*pw*ph + spineCount * (spineW*scale) * (bh*scale);
+  const wastePct = Math.max(0, Math.round((1 - usedArea/(W*H)) * 100));
+  const hatchId = 'bsh' + Math.random().toString(36).slice(2,7);
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;">
+      <defs><pattern id="${hatchId}" width="6" height="6" patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#b7bcc2" stroke-width="1.5"/></pattern></defs>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#f7f5ea" stroke="#1a1a1a" stroke-width="2.5"></rect>
+      ${usedW < W-2 ? `<rect x="${usedW}" y="0" width="${W-usedW}" height="${H}" fill="url(#${hatchId})"></rect>` : ''}
+      ${usedH < H-2 ? `<rect x="0" y="${usedH}" width="${usedW}" height="${H-usedH}" fill="url(#${hatchId})"></rect>` : ''}
+      ${cells}
+      ${spines}
+    </svg>`, cols, rows, per: cols*rows, rot, wastePct, spineCount };
+}
+
+function renderBoardSim(){
+  if(!boardSimTask) return;
+  const { catId, taskId } = boardSimTask;
+  const cat = procCategories.find(c=>c.id===catId);
+  const t = cat && cat.tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  const qty = num(t.qty) || num(document.getElementById('hdrQty').value);
+  const base = boardCalc(t, qty);
+  const cfg = printSettings();
+
+  if(!base){
+    document.getElementById('boardSub').textContent = '';
+    document.getElementById('boardBody').innerHTML =
+      '<div class="empty-note">Χρειάζεται κλειστό σχήμα στην προσφορά για να υπολογιστεί το καπάκι.</div>';
+    return;
+  }
+
+  document.getElementById('boardSub').textContent =
+    `Καπάκι ${base.boardW.toFixed(1)} × ${base.boardH.toFixed(1)} cm · ράχη ${base.spineW.toFixed(1)} cm`
+    + ` · ${qty.toLocaleString('el-GR')} αντίτυπα = ${(qty*2).toLocaleString('el-GR')} καπάκια`;
+
+  const saveSize = t.boardSize; t.boardSize = '';
+  const opts = boardOptions(t);
+  t.boardSize = saveSize;
+  if(!opts.length){
+    document.getElementById('boardBody').innerHTML =
+      '<div class="empty-note">Δεν βρέθηκαν χαρτόνια στη βάση χαρτιών. Πρόσθεσε ένα με «ΧΑΡΤΟΝΙ» στο όνομα.</div>';
+    return;
+  }
+  const cards = opts.map(s=>{
+    const k = s.key;
+    const saved = t.boardSize; t.boardSize = k;
+    const calc = boardCalc(t, qty); t.boardSize = saved;
+    if(!calc) return '';
+    const draw = boardSheetSvg(s, base.boardW, base.boardH, base.spineW, calc.perSpineWaste);
+    const chosen = (t.boardSize || base.size) === k;
+    return `<div class="bs-card${chosen ? ' bs-chosen' : ''}">
+      <div class="bs-head">${esc(s.label)}${chosen ? ' <span class="qc-tag">επιλεγμένο</span>' : ''}
+        <div class="pa-note">${s.w}×${s.l} cm · ${fmt(s.price)}/φύλλο</div></div>
+      ${draw.svg}
+      <div class="bs-nums">
+        <div><b>${draw.per}</b><span>καπάκια/φύλλο</span></div>
+        <div><b>${calc.sheets}</b><span>φύλλα</span></div>
+        <div><b>${fmt(calc.cost)}</b><span>κόστος</span></div>
+        <div><b>${draw.wastePct}%</b><span>φύρα</span></div>
+      </div>
+      <div class="pa-note" style="text-align:center;">${draw.cols} × ${draw.rows}${draw.rot ? ' (γυρισμένο)' : ''}
+        · ${calc.coverSheets} φύλλα για καπάκια${
+        calc.fromWaste > 0 ? ` · <span style="color:#a9822a;">${draw.spineCount} ράχες/φύλλο από τη φύρα</span>` : ''}${
+        calc.spineSheets > 0 ? ` + ${calc.spineSheets} φύλλα για ράχες` : ''}</div>
+      <button class="btn${chosen ? ' solid' : ''}" style="width:100%;margin-top:8px;"
+        onclick="pickBoardSize('${esc(k).replace(/'/g,"\\'")}')">${chosen ? 'Επιλεγμένο' : 'Διάλεξε αυτό'}</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('boardBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Χαρτόνι</label>
+      <input list="paperOptions" id="boardPaperPick" value="${esc(t.boardPaper||'')}"
+        placeholder="όλα τα χαρτόνια" style="flex:1;min-width:220px;"
+        onchange="pickBoardPaper(this.value)">
+      <button class="btn" onclick="pickBoardPaper('')">Όλα</button>
+    </div>
+    <div class="bs-tune">
+      <label>Προεξοχή <input type="text" inputmode="decimal" value="${esc(String(t.boardOverhang ?? cfg.boardOverhang))}"
+        onchange="setBoardTune('boardOverhang', this.value)"
+        title="Πόσο μεγαλύτερο είναι το καπάκι από το σώμα, σε κάθε ελεύθερη πλευρά"> cm</label>
+      <label>Αρμός ράχης <input type="text" inputmode="decimal" value="${esc(String(t.boardHinge ?? cfg.boardHinge))}"
+        onchange="setBoardTune('boardHinge', this.value)"
+        title="Το κενό ανάμεσα στα καπάκια και τη ράχη"> cm</label>
+      <span style="flex:1;"></span>
+      ${(t.boardOverhang != null || t.boardHinge != null)
+        ? `<a href="#" onclick="event.preventDefault();setBoardTune('reset')">Προεπιλογές</a>` : ''}
+      ${t.boardSize ? `<a href="#" onclick="event.preventDefault();pickBoardSize('')">Αυτόματη επιλογή</a>` : ''}
+    </div>
+    <div class="bs-grid">${cards}</div>
+    <div class="empty-note" style="margin-top:8px;">Οι διαστάσεις και η τιμή έρχονται από τη βάση χαρτιών.</div>`;
+}
+
+// Narrows the list to one board — or reopens it to every board on file.
+function setBoardTune(field, value){
+  if(!boardSimTask) return;
+  const cat = procCategories.find(c=>c.id===boardSimTask.catId);
+  const t = cat && cat.tasks.find(x=>x.id===boardSimTask.taskId);
+  if(!t) return;
+  if(field === 'reset'){ delete t.boardOverhang; delete t.boardHinge; }
+  else {
+    const v = String(value).replace(',', '.').trim();
+    if(v === '') delete t[field]; else t[field] = num(v);
+  }
+  recalcProcTask(boardSimTask.catId, boardSimTask.taskId);
+  markOfferDirty();
+  queueAnalysisRefresh();
+  renderBoardSim();
+}
+
+function pickBoardPaper(name){
+  if(!boardSimTask) return;
+  const cat = procCategories.find(c=>c.id===boardSimTask.catId);
+  const t = cat && cat.tasks.find(x=>x.id===boardSimTask.taskId);
+  if(!t) return;
+  t.boardPaper = name;
+  t.boardSize = '';        // the previous choice may not be in the new list
+  recalcProcTask(boardSimTask.catId, boardSimTask.taskId);
+  markOfferDirty();
+  queueAnalysisRefresh();
+  renderBoardSim();
+}
+
+function pickBoardSize(k){
+  if(!boardSimTask) return;
+  onBoardSizeInput(boardSimTask.catId, boardSimTask.taskId, k);
+  renderBoardSim();
+}
+
+function onBoardSizeInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.boardSize = value;
   recalcProcTask(catId, taskId);
   markOfferDirty();
   queueAnalysisRefresh();
@@ -6278,7 +6636,21 @@ function extraQtyTotals(e){
 }
 let extraQtySeq = 1;
 
+// Most offers have one quantity, so the card stays shut until it is needed. It
+// opens by itself whenever an alternative exists, or one is being added.
+function toggleExtraQtyCard(force){
+  const body = document.getElementById('extraQtyBody');
+  const btn = document.getElementById('extraQtyToggle');
+  if(!body || !btn) return;
+  const open = force !== undefined ? force : (body.style.display === 'none');
+  body.style.display = open ? '' : 'none';
+  btn.textContent = open ? '▼ Απόκρυψη' : '▶ Εμφάνιση';
+  btn.classList.toggle('solid', open);
+  if(open){ renderQtyTabs(); renderExtraTotals(); }
+}
+
 function addExtraQuantity(){
+  toggleExtraQtyCard(true);   // adding one is pointless if it cannot be seen
   // The copy is taken now, from what's on screen; later edits to the main offer
   // don't reach it. The new tab opens immediately, so the Ποσότητα field at the
   // top is already the one to fill in — no separate box to hunt for.
@@ -7536,7 +7908,9 @@ function reloadForUpdate(){
 
 function startVersionWatch(){
   checkForNewVersion();
-  setInterval(checkForNewVersion, 5*60*1000);   // every five minutes is plenty
+  // Once an hour: the file changes a few times a month, and returning to the
+  // tab checks anyway — which covers almost every real case.
+  setInterval(checkForNewVersion, 60*60*1000);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkForNewVersion(); });
 }
 
@@ -8342,6 +8716,8 @@ async function loadOffer(id){
     // After the button, not before: the tabs read the approval from it.
     renderQtyTabs();
     renderExtraTotals();
+    // Shown only when there is something to show.
+    toggleExtraQtyCard(extraQuantities.length > 0);
     markOfferClean();
     refreshOfferTicketLink();
     statusMsg('Φορτώθηκε ✓');
@@ -8367,6 +8743,7 @@ async function deleteOffer(id){
 function newOffer(){
   window.__currentOfferSentAt = '';   // a fresh offer has not been sent
   setTimeout(updateStageButton, 0);
+  setTimeout(()=>toggleExtraQtyCard(false), 0);   // a new offer starts with one quantity
   editingExtraQtyId = null;
   window.__mainOfferBackup = null;
   window.__linkOfferToTicket = null;   // a blank offer is not a conversion
@@ -8451,6 +8828,80 @@ function setOfferSort(col){
 function offerMatchesStageFilter(o){
   const f = (document.getElementById('offerStageFilter')||{}).value || '';
   return !f || offerStage(o) === f;
+}
+
+// ===== Κοινό PDF =====
+// Alternatives are one job under different terms; this is several different
+// jobs in one document — a customer asking for three books priced together.
+let combinedPick = new Set();
+
+// Each offer is rendered by the same routine that prints it alone, so a section
+// here looks exactly like the offer the customer would have received on its own.
+async function buildCombinedPdf(){
+  const ids = [...combinedPick];
+  if(ids.length < 2){ statusMsg('Διάλεξε τουλάχιστον δύο προσφορές.'); return; }
+  try{
+    const record = await jbGetRecord();
+    const chosen = ids.map(id => Object.assign({ id }, record.offers[id])).filter(o => o.data);
+    if(chosen.length < 2){ statusMsg('Δεν βρέθηκαν οι προσφορές.'); return; }
+
+    const clients = [...new Set(chosen.map(o => (o.data.client || o.label || '').trim()))];
+    if(clients.length > 1 && !confirm(
+        `Οι προσφορές είναι για διαφορετικούς πελάτες:\n${clients.join(', ')}\n\nΝα συνεχίσω;`)) return;
+
+    // Build each section by loading the offer and reusing the normal PDF layout.
+    const saved = currentOfferId;
+    const sections = [];
+    for(const o of chosen){
+      await loadOffer(o.id, true);
+      await new Promise(r=>setTimeout(r, 60));
+      buildOfferPrintHtml();
+      const view = document.getElementById('offerPrintView');
+      // The whole page block, so header, tables and totals come across intact.
+      const body = view.querySelector('.op-page') || view;
+      sections.push({ title: (o.data.title || o.label || 'Προσφορά').trim(),
+                      total: num(o.data.manualTotal),
+                      html: body.innerHTML });
+    }
+    if(saved) await loadOffer(saved, true); else newOffer();
+
+    const showTotal = document.getElementById('combinedShowTotal').checked;
+    const grand = sections.reduce((s,x)=>s + x.total, 0);
+    const view = document.getElementById('offerPrintView');
+    view.innerHTML = sections.map((s,i)=>`
+      <div class="op-combined-sec">
+        <div class="op-alt-head" style="font-size:14px;margin-bottom:10px;">${esc(s.title)}</div>
+        ${s.html}
+      </div>`).join('')
+      + (showTotal ? `<div class="op-combined-total">
+          <span>Γενικό σύνολο (χωρίς ΦΠΑ)</span>
+          <span>${grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        </div>` : '');
+    window.print();
+    statusMsg(`Κοινό PDF με ${sections.length} προσφορές ✓`);
+  }catch(e){
+    console.error('Combined PDF error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+function toggleCombinedPick(id, on){
+  if(on) combinedPick.add(id); else combinedPick.delete(id);
+  updateCombinedBar();
+}
+
+function clearCombinedPick(){
+  combinedPick.clear();
+  renderOfferTable();
+}
+
+function updateCombinedBar(){
+  const bar = document.getElementById('combinedBar');
+  if(!bar) return;
+  const n = combinedPick.size;
+  bar.style.display = n ? 'flex' : 'none';
+  const label = document.getElementById('combinedCount');
+  if(label) label.textContent = n;
 }
 
 function offerStage(o){
@@ -8552,6 +9003,9 @@ function renderOfferTable(){
     const totalStr = o.total>0 ? o.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—';
     return `
       <tr onclick="loadOffer('${o.id}')" style="cursor:pointer;">
+        <td onclick="event.stopPropagation()" style="text-align:center;">
+          <input type="checkbox" class="ol-pick" ${combinedPick.has(o.id) ? 'checked' : ''}
+            onchange="toggleCombinedPick('${o.id}', this.checked)" title="Στο κοινό PDF"></td>
         <td>${esc(o.number||'')}</td>
         <td>${esc(dateStr)}</td>
         <td style="font-weight:600;">${esc(o.label)}</td>
@@ -8570,6 +9024,7 @@ function renderOfferTable(){
   wrap.innerHTML = `
     <table class="offer-table">
       <thead><tr>
+        <th style="width:34px;" title="Διάλεξε προσφορές για κοινό PDF">📄</th>
         ${th('number','Αριθμός')}${th('date','Ημερομηνία')}${th('client','Πελάτης')}${th('title','Περιγραφή')}
         <th style="text-align:right;cursor:pointer;" onclick="setOfferSort('qty')">Ποσότητα${arrow('qty')}</th>
         ${th('approved','Κατάσταση')}
@@ -9120,7 +9575,7 @@ function togglePaperTimer(rowId, type){
   }
   renderTkPaper();
   markTicketDirty();
-  setTimeout(pollRunningBadge, 400);   // the count is right without waiting
+  pollRunningBadge();   // the count follows the button immediately
 }
 
 // A timer left running overnight, or started on the wrong row, otherwise stays
@@ -9231,7 +9686,7 @@ function moveTkProcRow(id, dir){
   [tkProcRows[i], tkProcRows[j]] = [tkProcRows[j], tkProcRows[i]];
   renderTkProc();
   markTicketDirty();
-  setTimeout(pollRunningBadge, 400);
+  pollRunningBadge();
 }
 
 function renderTkProc(){
@@ -14195,12 +14650,16 @@ function collectRunningTimers(record){
   const out = [];
   Object.entries(record.tickets || {}).forEach(([id, t])=>{
     if(t.archived) return;
-    const d = t.data || {};
+    // The ticket on screen is read from memory: a timer just started is not in
+    // the database until the autosave lands, and the count must not lag behind
+    // the button the user pressed.
+    const live = (typeof currentTicketId !== 'undefined' && currentTicketId === id);
+    const d = live ? { paperRows: tkPaperRows, procRows: tkProcRows } : (t.data || {});
     const add = (label, part, row, type) => {
       if(!row[type + 'Running']) return;
       const started = num(row[type + 'StartedAt']);
       const secs = num(row[type + 'Seconds']) + (started ? (Date.now() - started)/1000 : 0);
-      out.push({ ticketId: id, job: d.info || t.label || 'Χωρίς τίτλο',
+      out.push({ ticketId: id, job: (t.data||{}).info || t.label || 'Χωρίς τίτλο',
                  line: label, phase: part, seconds: secs, startedAt: started,
                  stage: t.stage || '', rowId: row.id, type });
     };
@@ -14309,8 +14768,16 @@ function updateRunningBadge(n){
 // timer is exactly the thing nobody goes looking for.
 async function pollRunningBadge(){
   if(document.hidden) return;
-  try{ updateRunningBadge(collectRunningTimers(await jbGetRecord()).length); }
-  catch(e){ /* offline — try again next time */ }
+  try{
+    const record = await jbGetRecord();
+    // A ticket that has never been saved is not in the record, so its timers
+    // are counted from the form directly.
+    if(typeof currentTicketId !== 'undefined' && currentTicketId && !record.tickets[currentTicketId]){
+      record.tickets = Object.assign({}, record.tickets, {
+        [currentTicketId]: { label: document.getElementById('tkInfo').value || '', data:{} } });
+    }
+    updateRunningBadge(collectRunningTimers(record).length);
+  }catch(e){ /* offline — try again next time */ }
 }
 
 function startRunningWatch(){
@@ -15496,9 +15963,20 @@ async function refreshStockList(){
     const rowsHtml = pageEntries.map(([paper, d])=>{
       const isExpanded = expandedStockPaper===paper;
       const escPaper = esc(paper).replace(/'/g,"\\'");
+      const p = paperByName[paper] || null;   // may be stock-only, with no paper record
       let rows = `
         <tr>
           <td><a href="javascript:void(0)" onclick="toggleStockPaperExpand('${escPaper}')" class="stock-paper-name">${isExpanded?'▾':'▸'} ${esc(paper)}</a></td>
+          <td style="text-align:center;color:var(--muted);font-size:12px;">${
+            p && num(p.w) ? `${num(p.w)}×${num(p.l)}${num(p.g) ? ' · ' + num(p.g) + 'gr' : ''}` : '—'}</td>
+          <td style="text-align:right;" onclick="event.stopPropagation()">
+            <input type="text" inputmode="decimal" class="stock-price" value="${p ? esc(String(p.priceKg||'')) : ''}"
+              placeholder="—" ${p ? '' : 'disabled'}
+              onchange="savePaperPrice('${escPaper}','priceKg',this.value)"></td>
+          <td style="text-align:right;" onclick="event.stopPropagation()">
+            <input type="text" inputmode="decimal" class="stock-price" value="${p ? esc(String(p.priceSheet||'')) : ''}"
+              placeholder="—" ${p ? '' : 'disabled'}
+              onchange="savePaperPrice('${escPaper}','priceSheet',this.value)"></td>
           <td style="text-align:right;font-weight:700;${d.qty<=0?'color:var(--muted);':''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}</td>
           <td style="text-align:right;">
             <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="quickStockAdjust('${escPaper}', '${d.unit}')">Γρήγορη κίνηση</button>
@@ -15529,7 +16007,9 @@ async function refreshStockList(){
     el.innerHTML = `
       <div class="empty-note" style="margin-bottom:6px;">${entries.length} χαρτιά${search?' (φιλτραρισμένα)':' — όλη η βάση'} — κλικ σε ένα χαρτί για το ιστορικό του</div>
       <table class="stock-table">
-        <thead><tr><th>Χαρτί</th><th style="text-align:right;">Απόθεμα</th><th></th></tr></thead>
+        <thead><tr><th>Χαρτί</th><th style="text-align:center;">Διάσταση</th>
+          <th style="text-align:right;">€ / κιλό</th><th style="text-align:right;">€ / φύλλο</th>
+          <th style="text-align:right;">Απόθεμα</th><th></th></tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;">
@@ -15552,6 +16032,25 @@ async function refreshStockList(){
 function toggleStockPaperExpand(paper){
   expandedStockPaper = expandedStockPaper===paper ? null : paper;
   refreshStockList();
+}
+
+// Prices live with the paper, not with the stock line, so a change here is felt
+// by every offer that uses it.
+async function savePaperPrice(name, field, value){
+  const p = paperByName[name];
+  if(!p){ statusMsg('Το χαρτί δεν υπάρχει στη βάση χαρτιών.'); return; }
+  const v = String(value).replace(',', '.').trim();
+  const next = Object.assign({}, p);
+  next[field] = v === '' ? null : num(v);
+  try{
+    await upsertPaper(next);
+    statusMsg(`${name}: ${field === 'priceKg' ? '€/κιλό' : '€/φύλλο'} ${v === '' ? '—' : v} ✓`);
+    // Any offer on screen was costed with the old figure.
+    if(typeof recalcAll === 'function' && (flatRows.length || bookRows.length)) recalcAll();
+  }catch(e){
+    console.error('Save paper price error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 function quickStockAdjust(paper, unit, prefillQty){
@@ -15585,9 +16084,16 @@ function parseStockBulkText(){
     if(cols.length<2) return;
     const name = cols[0];
     const qty = parseGreekAmount(cols[1]);
-    const unit = cols[2] || 'φύλλα';
+    // The third column may be the unit or the price — whichever it looks like,
+    // so a two-column list and a four-column one both work.
+    let unit = 'φύλλα', price = null;
+    const looksNumeric = s => s != null && /^[\d.,]+$/.test(String(s).trim());
+    if(looksNumeric(cols[2])) price = parseGreekAmount(cols[2]);
+    else if(cols[2]) unit = cols[2];
+    if(looksNumeric(cols[3])) price = parseGreekAmount(cols[3]);
+    else if(cols[3] && price == null) unit = cols[3];
     if(!name || !(qty>=0)) return;
-    entries.push({ name, qty, unit });
+    entries.push({ name, qty, unit, price });
   });
   return entries;
 }
@@ -15597,7 +16103,8 @@ function previewStockBulkImport(){
   const entries = parseStockBulkText();
   if(entries.length===0){ statusEl.textContent = 'Δεν βρέθηκαν έγκυρες γραμμές.'; document.getElementById('stockBulkImportConfirmBtn').style.display = 'none'; return; }
   stockBulkParsed = entries;
-  statusEl.innerHTML = `Βρέθηκαν <b>${entries.length}</b> εγγραφές:<br><span style="font-size:11px;">${entries.map(e=>esc(e.name)+': '+e.qty+' '+esc(e.unit)).join(' · ')}</span>`;
+  statusEl.innerHTML = `Βρέθηκαν <b>${entries.length}</b> εγγραφές:<br><span style="font-size:11px;">${entries.map(e=>esc(e.name)+': '+e.qty+' '+esc(e.unit)
+    + (e.price != null ? ' · ' + fmt(e.price) + (paperByName[e.name] ? '' : ' ⚠ χωρίς χαρτί') : '')).join('<br>')}</span>`;
   document.getElementById('stockBulkImportConfirmBtn').style.display = 'inline-block';
 }
 
@@ -15613,7 +16120,23 @@ async function confirmStockBulkImport(){
     });
     record.stockLog = record.stockLog.slice(0, 200);
     await jbPutRecord(record);
-    statusEl.textContent = `Ορίστηκε απόθεμα για ${stockBulkParsed.length} εγγραφές ✓`;
+
+    // Prices belong to the paper, not the stock line, so they are written there —
+    // otherwise the figure would sit in the warehouse and never reach an offer.
+    let priced = 0;
+    for(const e of stockBulkParsed){
+      if(e.price == null) continue;
+      const p = paperByName[e.name];
+      if(!p){ continue; }
+      const next = Object.assign({}, p);
+      // Sheets are priced per sheet, anything else by its own unit.
+      if(/φύλλ/i.test(e.unit)) next.priceSheet = e.price; else next.priceKg = e.price;
+      try{ await upsertPaper(next); priced++; }catch(err){ console.error('bulk price', e.name, err); }
+    }
+    const missing = stockBulkParsed.filter(e => e.price != null && !paperByName[e.name]).length;
+    statusEl.textContent = `Ορίστηκε απόθεμα για ${stockBulkParsed.length} εγγραφές ✓`
+      + (priced ? ` · ${priced} τιμές ενημερώθηκαν` : '')
+      + (missing ? ` · ${missing} χωρίς χαρτί στη βάση` : '');
     stockBulkParsed = [];
     document.getElementById('stockBulkImportConfirmBtn').style.display = 'none';
     document.getElementById('stockBulkText').value = '';
