@@ -378,6 +378,14 @@
   .pa-grand tfoot td{font-size:14.5px;}
   /* The label lives in the row, not the header: only two of a dozen operations
      have anything here, so a column title would name a field most rows lack. */
+  .ctx-menu{position:fixed;z-index:9600;background:var(--card);border:1px solid var(--line);
+    border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,0.16);padding:5px;min-width:210px;}
+  .ctx-menu-item{padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;}
+  .ctx-menu-item:hover{background:var(--page);}
+  .tk-proc-name{width:100%;}
+  .proc-note{width:100%;margin-top:4px;font-size:11px;padding:3px 6px;
+    border-style:dashed;color:var(--muted);}
+  .proc-note:focus{border-style:solid;color:var(--ink);}
   .proc-foil-lbl{display:block;font-size:9px;font-weight:700;text-transform:uppercase;
     letter-spacing:0.04em;color:var(--muted);margin-bottom:2px;}
   .proc-foil input, .proc-foil select{width:100%;font-size:11.5px;}
@@ -392,6 +400,9 @@
     padding:10px 12px;background:var(--page);border:1px solid var(--line);border-radius:9px;font-size:12px;}
   .bs-tune label{display:flex;align-items:center;gap:6px;color:var(--muted);}
   .bs-tune input{width:62px;text-align:right;font-size:12px;padding:3px 6px;}
+  .bs-th{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .bs-th label{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);}
+  .bs-th .btn{padding:5px 14px;font-size:12.5px;}
   .bs-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   .bs-card{border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
   .bs-card.bs-chosen{border-color:#2f6fed;background:#f7faff;}
@@ -1607,6 +1618,8 @@ function toggleMobileSidebar(forceClose){
         <button class="btn" id="tkDuplicateBtn" onclick="duplicateCurrentTicket()" title="Αντίγραφο αυτού του ticket για ανατύπωση ή παρόμοια δουλειά">⧉ Αντιγραφή</button>
         <button class="btn" onclick="convertTicketToOffer()" title="Νέα προσφορά με βάση όσα πραγματικά έγιναν σε αυτή τη δουλειά">→ Προσφορά</button>
         <button class="btn" onclick="printTicket()">🖨 Εκτύπωση / PDF</button>
+        <button class="btn" id="pullOfferBtn" style="display:none;" onclick="pullFromOffer()"
+          title="Φέρνει ξανά χαρτιά, ποσότητα και επεξεργασίες από τη συνδεδεμένη προσφορά">↻ Από την προσφορά</button>
         <button class="btn solid" onclick="saveTicket()">Αποθήκευση Ticket</button>
       </div>
     </div>
@@ -2044,7 +2057,7 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body">
         <div class="fieldgrid c2">
           <div class="field"><label>Χαρτί</label><input id="stockPaperName" list="paperOptions" placeholder="-- Επίλεξε από τη βάση χαρτιών --"></div>
-          <div class="field"><label>Ποσότητα</label><input id="stockQty" type="number" min="0" step="1" placeholder="π.χ. 500"></div>
+          <div class="field"><label>Ποσότητα</label><input id="stockQty" type="text" inputmode="decimal" placeholder="π.χ. 500 ή 8.937"></div>
         </div>
         <div class="fieldgrid c2">
           <div class="field"><label>Μονάδα</label>
@@ -2376,6 +2389,8 @@ function toggleMobileSidebar(forceClose){
 
 <!-- Suggestions, not a closed list: whatever is typed still counts, so offers
      written before this list existed keep their wording. -->
+<datalist id="procTaskOptions"></datalist>
+
 <datalist id="colourOptions">
   <option value="CMYK"></option>
   <option value="CMYK+1 Pantone"></option>
@@ -2484,6 +2499,7 @@ function saveCustomPapers(obj){
   localStorage.setItem('custom_papers', JSON.stringify(obj));
 }
 let customPapers = loadCustomPapers();
+let papersLoaded = false;   // the warehouse waits for these before saying "empty"
 
 async function loadPapers(){
   try{
@@ -2499,7 +2515,12 @@ async function loadPapers(){
     rows.forEach(p => { paperByName[p.name] = p; });
     // Legacy browser-only papers stay available until they're saved to Supabase.
     Object.values(customPapers).forEach(p => { if(!paperByName[p.name]) paperByName[p.name] = p; });
+    papersLoaded = true;
     refreshPaperOptions();
+    // The warehouse lists the papers, so if it is on screen while they arrive it
+    // has to be drawn again — otherwise it sits empty until something else
+    // happens to refresh it.
+    if(window.__currentView === 'stock') refreshStockList();
     // An offer may already be open (papers load in the background), and its
     // calculations would have run with no paper data. Re-run them now that the
     // data is here, so nothing silently shows wrong numbers.
@@ -2544,6 +2565,13 @@ function findPaper(name){
 }
 
 async function upsertPaper(paper){
+  // The write replaces the whole row, so a caller that only knows about prices
+  // must not silently zero the stock. Whatever is not supplied is kept.
+  const prev = paperByName[paper.name];
+  if(prev){
+    if(paper.qty === undefined) paper.qty = prev.qty ?? 0;
+    if(paper.unit === undefined) paper.unit = prev.unit || 'φύλλα';
+  }
   paperByName[paper.name] = paper;
   refreshPaperOptions();
   try{
@@ -2552,7 +2580,11 @@ async function upsertPaper(paper){
     const res = await fetch(`${url}/rest/v1/papers`, {
       method: 'POST',
       headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ name: paper.name, w: paper.w ?? null, l: paper.l ?? null, g: paper.g ?? null, priceKg: paper.priceKg ?? null, priceSheet: paper.priceSheet ?? null })
+      body: JSON.stringify({ name: paper.name, w: paper.w ?? null, l: paper.l ?? null, g: paper.g ?? null,
+        priceKg: paper.priceKg ?? null, priceSheet: paper.priceSheet ?? null,
+        // Stock lives with the material now: one row, written on its own, so two
+        // people changing different materials no longer overwrite each other.
+        qty: paper.qty ?? 0, unit: paper.unit || 'φύλλα' })
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     // Saved centrally — drop the browser-only copy so it can't drift out of sync.
@@ -3775,17 +3807,65 @@ function taskMaterial(taskName){
 // and a price — so it is chosen there rather than from a fixed pair of sizes.
 function boardSheetPrice(p){
   if(num(p.priceSheet) > 0) return num(p.priceSheet);
-  // Priced by the kilo: weight of one sheet × €/kg.
+  // Priced by the kilo: weight of one sheet × €/kg. A 3mm board weighs half as
+  // much again as a 2mm one, which is where the difference in price comes from.
   const kg = (num(p.w) * num(p.l) / 10000) * num(p.g) / 1000;
   return kg * num(p.priceKg);
 }
 
+// How that figure was arrived at, so a zero is traceable rather than mysterious.
+function boardPriceNote(p){
+  if(num(p.priceSheet) > 0) return 'τιμή φύλλου';
+  if(!(num(p.priceKg) > 0)) return '⚠ λείπει τιμή';
+  if(!(num(p.g) > 0)) return '⚠ λείπει γραμμάριο';
+  const kg = (num(p.w) * num(p.l) / 10000) * num(p.g) / 1000;
+  return `${kg.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά × ${fmt(num(p.priceKg))}/κιλό`;
+}
+
 function boardOptions(t){
-  const named = String(t.boardPaper||'').trim();
+  // Every board the shop has, plus whatever has been chosen by hand even if its
+  // name does not look like a board. The choice narrows the calculation, not the
+  // list of options on screen.
+  const chosen = String(t.boardSize||'').trim();
   const list = Object.values(paperByName).filter(p => num(p.w) > 0 && num(p.l) > 0
-    && (named ? p.name === named : /ΧΑΡΤΟΝ|BOARD|ΨΑΘΑ|GREYBOARD/i.test(p.name)));
+    && (/ΧΑΡΤΟΝ|BOARD|ΨΑΘΑ|GREYBOARD/i.test(p.name) || p.name === chosen));
   return list.map(p => ({ key:p.name, label:p.name, w:num(p.w), l:num(p.l),
-                          price: boardSheetPrice(p) }));
+                          price: boardSheetPrice(p), priceNote: boardPriceNote(p),
+                          thickness: boardThickness(p.name) }));
+}
+
+// The thickness written into the name — 2mm, 2.4mm, 3 mm. It is the first thing
+// a binder decides, well before which sheet size to cut it from.
+function boardThickness(name){
+  const s = String(name||'');
+  // "2mm", "2.4 MM", "2,4mm" — however it is written.
+  const m = s.match(/(\d+(?:[.,]\d+)?)\s*mm/i);
+  if(m) return m[1].replace(',', '.') + 'mm';
+  // Written in Greek: "2 χιλ", "2,4 χιλιοστά".
+  const gr = s.match(/(\d+(?:[.,]\d+)?)\s*χιλ/i);
+  if(gr) return gr[1].replace(',', '.') + 'mm';
+  return '';
+}
+
+// The thicknesses a bindery keeps, in the order it thinks of them. Each is
+// offered whether or not something in the database carries that name — the card
+// below then says plainly if nothing matches.
+const BOARD_THICKNESSES = ['1mm', '2mm', '2.4mm', '3mm'];
+
+// Boards of a given thickness: named ones first, and failing that anything whose
+// weight is close, since a 2mm greyboard is about 1300 g/m² and a 3mm about 1950.
+function boardsOfThickness(all, th){
+  const named = all.filter(o => o.thickness === th);
+  if(named.length) return named;
+  const mm = parseFloat(th);
+  if(!(mm > 0)) return [];
+  return all.filter(o => {
+    const p = paperByName[o.key];
+    const gsm = p ? num(p.g) : 0;
+    if(!gsm) return false;
+    // Greyboard runs about 650 g/m² per millimetre.
+    return Math.abs(gsm / 650 - mm) < 0.35;
+  });
 }
 
 // How many pieces of w×h fit on a sheet, trying both orientations.
@@ -3835,7 +3915,12 @@ function boardCalc(t, qty){
   // and price, and a 3mm board is not the same cost as a 1mm one.
   // A board chosen by hand overrides the search for the cheapest.
   const all = boardOptions(t);
-  const options = t.boardSize ? all.filter(o => o.key === t.boardSize) : all;
+  // A chosen board narrows the search, but a stale choice — a board renamed, or a
+  // thickness no longer stocked — must not leave nothing to calculate with.
+  let options = t.boardSize
+    ? all.filter(o => o.key === t.boardSize)
+    : (t.boardThickness ? boardsOfThickness(all, t.boardThickness) : all);
+  if(!options.length) options = all;   // a stale choice must not stop the sums
   let best = null;
   options.forEach(s=>{
     const lay = coverLayout(s, boardW, boardH);
@@ -3999,7 +4084,13 @@ function taskBreakdown(t, cat, baseQty){
   else
   if(taskMaterial(t.name) === 'foil'){
     const f = foilCalc(t, qty);
-    if(f){ material = f.cost; materialLabel = 'φοιλ'; materialDetail = f.detail; }
+    const cl = num(t.clicheCost);
+    if(f || cl){
+      material = (f ? f.cost : 0) + cl;
+      materialLabel = f && cl ? 'φοιλ + κλισέ' : (cl ? 'κλισέ' : 'φοιλ');
+      materialDetail = [f ? f.detail : '', cl ? `κλισέ ${fmt(cl)} — μία φορά` : '']
+        .filter(Boolean).join(' · ');
+    }
     else materialDetail = 'γράψε το ανάπτυγμα κλισέ στη γραμμή';
   }
  if(taskMaterial(t.name) === 'lam'){
@@ -4010,7 +4101,9 @@ function taskBreakdown(t, cat, baseQty){
   if(taskMaterial(t.name) === 'board'){
     const bd2 = boardCalc(t, qty);
     if(bd2){ material = bd2.cost; materialLabel = 'χαρτόνι'; materialDetail = bd2.detail; }
-    else materialDetail = 'χρειάζεται κλειστό σχήμα στην προσφορά';
+    else materialDetail = boardOptions(t).length
+      ? 'χρειάζεται κλειστό σχήμα στην προσφορά'
+      : 'δεν βρέθηκε χαρτόνι στη βάση χαρτιών';
   }
   if(taskMaterial(t.name) === 'die'){
     const d2 = dieCalc(t);
@@ -4461,9 +4554,129 @@ function toggleProcCategoryAll(catId){
   updateGrand();
 }
 
+// What the floor needs to read on the ticket: the estimator's note, what the task
+// applies to, how it is set up, and — most importantly — whether it leaves the
+// building at all.
+function procTaskTicketDetails(t){
+  const parts = [String(t.note||'').trim()];
+
+  // The choices made in the offer are worth carrying: the operator would
+  // otherwise have to open the offer to find out what was quoted.
+  const kind = taskMaterial(t.name);
+  if(kind === 'lam'){
+    const type = LAM_TYPES[t.lamType || ''];
+    parts.push([t.lamItem, type && type.label].filter(Boolean).join(' · '));
+  }
+  if(kind === 'foil' && t.clicheSize) parts.push(`κλισέ ${t.clicheSize}`);
+  if(kind === 'board' && (t.boardSize || t.boardThickness))
+    parts.push(`χαρτόνι ${t.boardSize || t.boardThickness}`);
+
+  parts.push(String(t.itemMaterial||'').trim());
+  if(t.external) parts.push('ΕΞΩΤΕΡΙΚΟΣ ΣΥΝΕΡΓΑΤΗΣ');
+  return parts.filter(Boolean).join(' · ');
+}
+
+// Every operation the shop knows how to do, whether or not it is on this offer.
+// A task deleted by mistake can then be put back exactly as it was, rather than
+// retyped with its speed and rate guessed at.
+function knownProcTasks(){
+  const out = new Map();
+  defaultProcCategories.forEach(cat => cat.tasks.forEach(t => {
+    if(t.name) out.set(t.name, Object.assign({ cat: cat.name }, t));
+  }));
+  // Anything the user has added on top counts as known too.
+  procCategories.forEach(cat => cat.tasks.forEach(t => {
+    if(t.name && !out.has(t.name)) out.set(t.name, Object.assign({ cat: cat.name }, t));
+  }));
+  return out;
+}
+
+function refreshProcTaskOptions(){
+  const dl = document.getElementById('procTaskOptions');
+  if(!dl) return;
+  dl.innerHTML = [...knownProcTasks().values()]
+    .map(t => `<option value="${esc(t.name)}">${esc(t.cat)}</option>`).join('');
+}
+
+// A note the estimator leaves for the floor — "16σέλιδο", "μόνο εξώφυλλο". It
+// belongs with the operation, and it travels with it onto the job ticket.
+// Both of these are occasional: sending a job out, and leaving a note for the
+// floor. Neither earns a permanent control on every one of a dozen rows, so they
+// live behind a right-click.
+function openProcMenu(ev, catId, taskId){
+  ev.preventDefault();
+  closeProcMenu();
+  const cat = procCategories.find(c=>c.id===catId);
+  const t = cat && cat.tasks.find(x=>x.id===taskId);
+  if(!t) return;
+
+  const m = document.createElement('div');
+  m.id = 'procRowMenu';
+  m.className = 'ctx-menu';
+  m.innerHTML = `
+    <div class="ctx-menu-item" onclick="closeProcMenu();toggleExternal(${catId},${taskId})">
+      ${t.external ? '↩ Δική μας μηχανή' : '→ Εξωτερικός συνεργάτης'}</div>
+    <div class="ctx-menu-item" onclick="closeProcMenu();toggleProcNote(${catId},${taskId})">
+      ${(t.note || t.noteOpen) ? '✕ Χωρίς λεπτομέρειες' : '✎ Λεπτομέρειες για το ticket'}</div>`;
+  document.body.appendChild(m);
+  // Kept inside the window even when the click lands near an edge.
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.min(ev.clientX, window.innerWidth - r.width - 8) + 'px';
+  m.style.top = Math.min(ev.clientY, window.innerHeight - r.height - 8) + 'px';
+  setTimeout(()=>document.addEventListener('click', closeProcMenu, { once:true }), 0);
+}
+
+function closeProcMenu(){
+  const m = document.getElementById('procRowMenu');
+  if(m) m.remove();
+}
+
+// The same menu entry opens and closes the field. Closing clears what was in it:
+// a note left behind but hidden would travel to the ticket unseen.
+function toggleProcNote(catId, taskId){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  const showing = !!(t.note || t.noteOpen);
+  if(showing){
+    t.noteOpen = false;
+    t.note = '';
+  } else {
+    t.noteOpen = true;
+  }
+  renderProc();
+  markOfferDirty();
+  if(!showing){
+    const el = document.querySelector(`#procList tr[data-task-id="${taskId}"] .proc-note`);
+    if(el) el.focus();
+  }
+}
+
+function onProcTaskNote(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.note = value;
+  markOfferDirty();
+}
+
 function onProcTaskNameInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   t.name = value;
+
+  // Choosing a known operation brings its own figures with it, so a task deleted
+  // by mistake comes back as it was instead of being retyped from memory. Only
+  // blanks are filled — nothing typed by hand is overwritten.
+  const known = knownProcTasks().get(String(value).trim());
+  if(known){
+    if(!num(t.speed) && known.speed) t.speed = known.speed;
+    if(!num(t.rate)) t.rate = known.rate || DEFAULT_PROC_RATE;
+    if(known.itemMaterial && !t.itemMaterial) t.itemMaterial = known.itemMaterial;
+    t.on = true;
+    renderProc();
+    updateGrand();
+    markOfferDirty();
+    return;
+  }
+
   if(isFoldOrSewTaskName(value) && !t.qty){
     const qty = computeBookFoldQuantity();
     if(qty>0){ t.qty = qty; t.foldAuto = true; renderProc(); return; }
@@ -5512,8 +5725,10 @@ function procTaskCalc(t, overrideQty){
   const die  = kind === 'die'  ? dieCalc(t) : null;
   const lam  = kind === 'lam'  ? lamCalc(t, qty) : null;
   const brd  = kind === 'board' ? boardCalc(t, qty) : null;
+  // A foil job pays for the die once and the foil per impression.
+  const clicheCost = kind === 'foil' ? num(t.clicheCost) : 0;
   const foilCost = (foil ? foil.cost : 0) + (die ? die.cost : 0)
-                 + (lam ? lam.cost : 0) + (brd ? brd.cost : 0);
+                 + (lam ? lam.cost : 0) + (brd ? brd.cost : 0) + clicheCost;
   const total = cost + num(t.extra) + foilCost;
   return { hours, cost, total, foil: foil || die || lam || brd, foilCost };
 }
@@ -5599,6 +5814,7 @@ function procTaskIsActive(t){
 }
 
 function renderProc(){
+  refreshProcTaskOptions();
   const list = document.getElementById('procList');
   list.innerHTML = '';
   procCategories.forEach(cat=>{
@@ -5618,11 +5834,17 @@ function renderProc(){
       const itemOptions = flatRows.filter(r=>r.material).map(r=>`<option value="${esc(r.material)}" ${t.itemMaterial===r.material?'selected':''}>${esc(r.material)}</option>`).join('');
       rowsHtml += `
         <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}${t.external ? ' proc-ext' : ''}"
-          oncontextmenu="event.preventDefault();toggleExternal(${cat.id},${t.id})"
-          title="Δεξί κλικ: ανάθεση σε εξωτερικό συνεργάτη">
+          oncontextmenu="openProcMenu(event,${cat.id},${t.id})"
+          title="Δεξί κλικ για επιλογές">
           <td style="text-align:center;"><input type="checkbox" class="proc-use" ${t.on ? 'checked' : ''}
             onchange="toggleProcTaskOn(${cat.id},${t.id},this.checked)" title="Χρησιμοποιείται σε αυτή τη δουλειά"></td>
-          <td><input value="${t.name}" oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)"></td>
+          <td><input list="procTaskOptions" value="${t.name}"
+            placeholder="διάλεξε ή γράψε εργασία"
+            oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)">
+            ${(t.note || t.noteOpen) ? `<input class="proc-note" value="${esc(t.note||'')}"
+              placeholder="λεπτομέρειες για το ticket"
+              title="Ό,τι γράψεις εδώ περνά στις Λεπτομέρειες του Job Ticket — π.χ. «16σέλιδο»"
+              oninput="onProcTaskNote(${cat.id},${t.id},this.value)">` : ''}</td>
           <td class="mi-col"><select onchange="onProcTaskItemInput(${cat.id},${t.id},this.value)" style="font-size:11px;"><option value="">— όλα —</option>${itemOptions}</select></td>
           <td><input type="number" placeholder="${document.getElementById('hdrQty').value||''}" value="${t.qty}" oninput="onProcTaskQtyInput(${cat.id},${t.id},this.value)" title="${t.foldAuto ? 'Αυτόματο από τα φύλλα βιβλίου — άλλαξέ το ελεύθερα. Σβήσε το για να ξαναγίνει αυτόματο.' : (isFoldOrSewTaskName(t.name) ? 'Χειροκίνητη τιμή — σβήσε το πεδίο για να ξαναγίνει αυτόματο.' : '')}" style="${t.foldAuto ? 'border-color:#7ea6dd;' : ''}"></td>
           <td>${t.external
@@ -5662,10 +5884,16 @@ function renderProc(){
             </select>
             <div class="pa-note c-foil"></div>`
           : taskMaterial(t.name) === 'foil' ? `
-            <label class="proc-foil-lbl">Κλισέ</label>
-            <input value="${esc(t.clicheSize||'')}" placeholder="π.χ. 8x2"
-              title="Ανάπτυγμα κλισέ σε cm — υπολογίζει τα μέτρα φοιλ"
-              oninput="onClicheInput(${cat.id},${t.id},this.value)">
+            <label class="proc-foil-lbl">Κλισέ — ανάπτυγμα / κόστος</label>
+            <div style="display:flex;gap:4px;">
+              <input value="${esc(t.clicheSize||'')}" placeholder="π.χ. 8x2" style="flex:1;min-width:0;"
+                title="Ανάπτυγμα κλισέ σε cm — υπολογίζει τα μέτρα φοιλ"
+                oninput="onClicheInput(${cat.id},${t.id},this.value)">
+              <input type="text" inputmode="decimal" value="${esc(String(t.clicheCost||''))}"
+                placeholder="€" style="flex:0 0 56px;text-align:right;"
+                title="Κόστος κατασκευής του κλισέ — μία φορά, ανεξάρτητα από την ποσότητα"
+                oninput="onClicheCostInput(${cat.id},${t.id},this.value)">
+            </div>
             <div class="pa-note c-foil"></div>` : ''}</td>
           <td><div class="auto c-total">0,00 €</div></td>
           <td><button class="rowdel" onclick="removeProcTask(${cat.id},${t.id})">×</button></td>
@@ -6152,10 +6380,30 @@ function renderBoardSim(){
   const base = boardCalc(t, qty);
   const cfg = printSettings();
 
+  // No free-text field: the thickness buttons and the cards below are the whole
+  // choice. A typed name only ever repeated what a click already said, and a
+  // stale one quietly broke the calculation.
+  const pickerHtml = '';
+
   if(!base){
+    const dim = parseDimFromText(document.getElementById('fSchemaClosed').value);
+    const boards = boardOptions(t);
+    let why;
+    if(!dim) why = 'Συμπλήρωσε το <b>Σχήμα Κλειστό</b> στην προσφορά, π.χ. 17x24.';
+    else if(!(qty > 0)) why = 'Χρειάζεται ποσότητα στην προσφορά.';
+    else if(!boards.length) why = 'Δεν βρέθηκε χαρτόνι στη βάση χαρτιών. '
+      + 'Πρόσθεσε ένα υλικό με <b>ΧΑΡΤΟΝΙ</b> ή <b>BOARD</b> στο όνομα, '
+      + 'με διαστάσεις, γραμμάριο και τιμή.';
+    else {
+      // Name the sheets and the piece, so it is obvious which way the mismatch
+      // goes rather than leaving the user to guess.
+      const bw = dim.w + (num(cfg.boardOverhang) || 0.3);
+      const bh = dim.h + (num(cfg.boardOverhang) || 0.3)*2;
+      why = `Το καπάκι <b>${bw.toFixed(1)}×${bh.toFixed(1)}cm</b> δεν χωράει σε κανένα από τα χαρτόνια:<br>`
+        + boards.map(o=>`${esc(o.label)} — ${o.w}×${o.l}cm`).join('<br>');
+    }
     document.getElementById('boardSub').textContent = '';
-    document.getElementById('boardBody').innerHTML =
-      '<div class="empty-note">Χρειάζεται κλειστό σχήμα στην προσφορά για να υπολογιστεί το καπάκι.</div>';
+    document.getElementById('boardBody').innerHTML = pickerHtml + `<div class="empty-note">${why}</div>`;
     return;
   }
 
@@ -6163,14 +6411,27 @@ function renderBoardSim(){
     `Καπάκι ${base.boardW.toFixed(1)} × ${base.boardH.toFixed(1)} cm · ράχη ${base.spineW.toFixed(1)} cm`
     + ` · ${qty.toLocaleString('el-GR')} αντίτυπα = ${(qty*2).toLocaleString('el-GR')} καπάκια`;
 
-  const saveSize = t.boardSize; t.boardSize = '';
-  const opts = boardOptions(t);
-  t.boardSize = saveSize;
-  if(!opts.length){
-    document.getElementById('boardBody').innerHTML =
-      '<div class="empty-note">Δεν βρέθηκαν χαρτόνια στη βάση χαρτιών. Πρόσθεσε ένα με «ΧΑΡΤΟΝΙ» στο όνομα.</div>';
-    return;
-  }
+  const allOpts = boardOptions(t);
+
+  // Thickness first, size second: which sizes are worth comparing depends on
+  // which board you have decided to use.
+  // The standard list, plus anything in the database that falls outside it.
+  const extra = [...new Set(allOpts.map(o => o.thickness).filter(Boolean))]
+    .filter(th => !BOARD_THICKNESSES.includes(th));
+  const thicknesses = [...BOARD_THICKNESSES, ...extra]
+    .sort((a,b) => parseFloat(a) - parseFloat(b));
+  // "Όλα" is always available: a board whose name does not spell out its
+  // thickness would otherwise be unreachable, and the grouping would quietly
+  // hide half the stock.
+  const activeTh = t.boardThickness
+    || boardThickness(t.boardSize || base.size)
+    || (thicknesses.find(th => boardsOfThickness(allOpts, th).length) || thicknesses[0] || '');
+
+  const opts = (activeTh ? boardsOfThickness(allOpts, activeTh) : allOpts)
+    .slice().sort((a, b) => {
+      const pick = t.boardSize || base.size;
+      return (b.key === pick) - (a.key === pick);
+    });
   const cards = opts.map(s=>{
     const k = s.key;
     const saved = t.boardSize; t.boardSize = k;
@@ -6180,7 +6441,8 @@ function renderBoardSim(){
     const chosen = (t.boardSize || base.size) === k;
     return `<div class="bs-card${chosen ? ' bs-chosen' : ''}">
       <div class="bs-head">${esc(s.label)}${chosen ? ' <span class="qc-tag">επιλεγμένο</span>' : ''}
-        <div class="pa-note">${s.w}×${s.l} cm · ${fmt(s.price)}/φύλλο</div></div>
+        <div class="pa-note">${s.thickness ? esc(s.thickness) + ' · ' : ''}${s.w}×${s.l} cm · ${fmt(s.price)}/φύλλο
+          <span style="${/⚠/.test(s.priceNote) ? 'color:#b3243c;' : ''}">· ${esc(s.priceNote)}</span></div></div>
       ${draw.svg}
       <div class="bs-nums">
         <div><b>${draw.per}</b><span>καπάκια/φύλλο</span></div>
@@ -6197,14 +6459,16 @@ function renderBoardSim(){
     </div>`;
   }).join('');
 
-  document.getElementById('boardBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Χαρτόνι</label>
-      <input list="paperOptions" id="boardPaperPick" value="${esc(t.boardPaper||'')}"
-        placeholder="όλα τα χαρτόνια" style="flex:1;min-width:220px;"
-        onchange="pickBoardPaper(this.value)">
-      <button class="btn" onclick="pickBoardPaper('')">Όλα</button>
-    </div>
+  const thHtml = (thicknesses.length || allOpts.length > 1) ? `
+  <div class="bs-th">
+    <label>Πάχος χαρτονιού</label>
+    ${thicknesses.map(th=>`<button class="btn${th===activeTh ? ' solid' : ''}"
+      onclick="pickBoardThickness('${esc(th)}')">${esc(th)}</button>`).join('')}
+    <span style="flex:1;"></span>
+    ${t.boardSize ? `<a href="#" onclick="event.preventDefault();pickBoardSize('')">Αυτόματα το φθηνότερο</a>` : ''}
+  </div>` : '';
+
+  document.getElementById('boardBody').innerHTML = pickerHtml + thHtml + `
     <div class="bs-tune">
       <label>Προεξοχή <input type="text" inputmode="decimal" value="${esc(String(t.boardOverhang ?? cfg.boardOverhang))}"
         onchange="setBoardTune('boardOverhang', this.value)"
@@ -6217,7 +6481,9 @@ function renderBoardSim(){
         ? `<a href="#" onclick="event.preventDefault();setBoardTune('reset')">Προεπιλογές</a>` : ''}
       ${t.boardSize ? `<a href="#" onclick="event.preventDefault();pickBoardSize('')">Αυτόματη επιλογή</a>` : ''}
     </div>
-    <div class="bs-grid">${cards}</div>
+    ${opts.length ? `<div class="bs-grid">${cards}</div>`
+      : `<div class="empty-note">Δεν υπάρχει χαρτόνι <b>${esc(activeTh)}</b> στη βάση χαρτιών.
+         Πρόσθεσέ το στην Αποθήκη, ή διάλεξε άλλο πάχος.</div>`}
     <div class="empty-note" style="margin-top:8px;">Οι διαστάσεις και η τιμή έρχονται από τη βάση χαρτιών.</div>`;
 }
 
@@ -6238,18 +6504,22 @@ function setBoardTune(field, value){
   renderBoardSim();
 }
 
-function pickBoardPaper(name){
+// Choosing a thickness clears any size chosen for a different one, so the cards
+// below always belong to the board actually being considered.
+function pickBoardThickness(th){
   if(!boardSimTask) return;
   const cat = procCategories.find(c=>c.id===boardSimTask.catId);
   const t = cat && cat.tasks.find(x=>x.id===boardSimTask.taskId);
   if(!t) return;
-  t.boardPaper = name;
-  t.boardSize = '';        // the previous choice may not be in the new list
+  t.boardThickness = th;
+  // A size chosen under another thickness no longer applies.
+  if(t.boardSize && boardThickness(t.boardSize) !== th) t.boardSize = '';
   recalcProcTask(boardSimTask.catId, boardSimTask.taskId);
   markOfferDirty();
   queueAnalysisRefresh();
   renderBoardSim();
 }
+
 
 function pickBoardSize(k){
   if(!boardSimTask) return;
@@ -6284,6 +6554,17 @@ function onDieCostInput(catId, taskId, value){
   queueAnalysisRefresh();
 }
 
+// The die itself, as distinct from the foil it stamps: tooling made once for the
+// job, where the foil is consumed by every impression.
+function onClicheCostInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  t.clicheCost = String(value).replace(',', '.');
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+  queueAnalysisRefresh();
+}
+
 function onClicheInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   if(!t) return;
@@ -6309,11 +6590,14 @@ function recalcProcTask(catId, taskId, rowEl){
   if(foilNote){
     const r = procTaskCalc(t);
     // Foil reports metres; a die is just a price. Both land in the same note.
+    // The two are shown apart, because they behave differently as the run grows.
+    const cl = num(t.clicheCost);
     foilNote.textContent = (r.foil && r.foilCost > 0)
       ? (r.foil.metres != null
-          ? `${r.foil.metres.toLocaleString('el-GR',{maximumFractionDigits:1})} μ. · ${fmt(r.foilCost)}`
+          ? `${r.foil.metres.toLocaleString('el-GR',{maximumFractionDigits:1})} μ. φοιλ ${
+              fmt(r.foilCost - cl)}${cl ? ` + κλισέ ${fmt(cl)}` : ''}`
           : fmt(r.foilCost))
-      : '';
+      : (cl ? `κλισέ ${fmt(cl)}` : '');
     foilNote.title = r.foil ? r.foil.detail : '';
   }
   recalcProcTotal();
@@ -8006,7 +8290,11 @@ function switchView(view){
   if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
   if(view==='productiontime'){ refreshRunningTimers();
     if(document.getElementById('prodTimeList').style.display !== 'none') refreshProdTimeList(); }
-  if(view==='stock'){ refreshStockList(); refreshStockLogList(); refreshStockReport(); }
+  if(view==='stock'){
+    // Materials and stock are reconciled first, so the list is complete before
+    // it is drawn rather than filling in a moment later.
+    syncMaterialsAndStock().then(()=>{ refreshStockList(); refreshStockLogList(); refreshStockReport(); });
+  }
   if(view==='reports') refreshReports();
   if(view==='clients') refreshClientsList();
   if(view==='settings'){ refreshLabelRules(); showDeployedFileDate(); }
@@ -8098,7 +8386,29 @@ async function getAuthToken(){
 // user's save would push an empty object over everyone else's data.
 let readableSlices = { offers:false, forecast:false };
 
+// Opening a screen often asks for the record three or four times in a row — the
+// list, the log, the report. They all want the same snapshot, so a fetch that has
+// just happened is reused instead of repeated. Any write clears it at once, so a
+// stale copy is never served.
+let jbCache = null, jbCacheAt = 0, jbCachePromise = null;
+const JB_CACHE_MS = 1500;
+
+function jbInvalidate(){ jbCache = null; jbCacheAt = 0; jbCachePromise = null; }
+
 async function jbGetRecord(){
+  const fresh = jbCache && (Date.now() - jbCacheAt) < JB_CACHE_MS;
+  if(fresh) return jbCache;
+  // Callers that arrive while a fetch is in flight wait for that one rather than
+  // starting another.
+  if(jbCachePromise) return jbCachePromise;
+  jbCachePromise = jbFetchRecord().then(rec=>{
+    jbCache = rec; jbCacheAt = Date.now(); jbCachePromise = null;
+    return rec;
+  }).catch(e=>{ jbCachePromise = null; throw e; });
+  return jbCachePromise;
+}
+
+async function jbFetchRecord(){
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
@@ -8134,7 +8444,7 @@ async function jbGetRecord(){
   if(!record.machineRates) record.machineRates = {};
   if(!record.taskMachineMap) record.taskMachineMap = {};
   if(!record.suppliers) record.suppliers = ['ΧΑΡΤΙΑ ΠΕΡΡΑΚΗΣ','ΠΑΠΑΝΔΡΕΟΥ','ΧΑΤΖΗΑΛΕΞΙΑΔΗΣ','ΑΓΓΕΛΙΔΗΣ','COVERBOARD','ΜΑΚΕΔΟΝΙΚΗ','ΧΑΡΤΟΡΑΜΑ','ΛΙΓΚΟΥΡΗ','ΤΣΟΛΑΚΟΣ','ΠΑΤΣΟΠΟΥΛΟΣ'];
-  if(!record.stock) record.stock = {};
+  // stock lives on the material rows
   if(!record.materials) record.materials = [];
   if(!record.stockLog) record.stockLog = [];
   if(!record.boxSizes) record.boxSizes = {};
@@ -8150,6 +8460,7 @@ async function jbGetRecord(){
 let mergeRpcAvailable = null; // null = not yet known
 
 async function jbMergePath(sliceId, path, value){
+  jbInvalidate();   // the copy in hand is about to be out of date
   if(mergeRpcAvailable === false) return jbFallbackWrite(sliceId, path, value, false);
   const key = getJbKey(), url = getJbBin();
   const token = await getAuthToken();
@@ -8207,6 +8518,7 @@ async function jbFallbackWrite(sliceId, path, value, isDelete){
 const SLICE_MAIN = 1, SLICE_OFFERS = 2, SLICE_FORECAST = 3;
 
 async function jbPutRecord(record){
+  jbInvalidate();   // the copy in hand is about to be out of date
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
@@ -9252,21 +9564,20 @@ async function consumeTicketPaper(){
     record.stockLog = record.stockLog || [];
     const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
     const warnings = [];
-    pending.forEach(r=>{
+    for(const r of pending){
       const paper = r.xarti.trim(), qty = num(r.fylla);
-      if(!record.stock[paper]) record.stock[paper] = { qty:0, unit:'φύλλα' };
-      const before = num(record.stock[paper].qty);
+      const before = stockOf(paper).qty;
       if(before < qty) warnings.push(`${paper} (είχε ${before.toLocaleString('el-GR')})`);
-      record.stock[paper].qty = Math.max(0, before - qty);
+      await setStock(paper, before - qty);
       record.stockLog.unshift({
         id: 'stk'+Date.now()+Math.random().toString(36).slice(2,6),
-        paper, type:'remove', qty, unit: record.stock[paper].unit || 'φύλλα',
+        paper, type:'remove', qty, unit: stockOf(paper).unit,
         note: `Κατανάλωση από «${jobName}»`, date: new Date().toISOString()
       });
       r.consumed = true;
-    });
+    }
     record.stockLog = record.stockLog.slice(0, 200);
-    await jbMergePath(SLICE_MAIN, ['stock'], record.stock);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     renderTkPaper();
     markTicketDirty();
@@ -9349,16 +9660,15 @@ async function postLeftoverToStock(rowId){
   if(!confirm(`Επιστροφή ${qty.toLocaleString('el-GR')} φύλλων "${paper}" στην Αποθήκη;\n\nΘα προστεθούν στο απόθεμα και θα καταγραφεί η κίνηση.`)) return;
   try{
     const record = await jbGetRecord();
-    if(!record.stock[paper]) record.stock[paper] = { qty:0, unit:'φύλλα' };
-    record.stock[paper].qty = num(record.stock[paper].qty) + qty;
+    await addStock(paper, qty);
     record.stockLog = record.stockLog || [];
     const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
     record.stockLog.unshift({
-      id: 'stk'+Date.now(), paper, type:'add', qty, unit: record.stock[paper].unit || 'φύλλα',
+      id: 'stk'+Date.now(), paper, type:'add', qty, unit: stockOf(paper).unit,
       note: `Περίσσευμα από «${jobName}»`, date: new Date().toISOString()
     });
     record.stockLog = record.stockLog.slice(0, 200);
-    await jbMergePath(SLICE_MAIN, ['stock'], record.stock);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     // Mark it posted so the same sheets can't be added to stock twice.
     r.leftoverPosted = true;
@@ -9410,13 +9720,15 @@ async function buildSeparateGangTicket(gangRows, gangSheets, client){
   // is why finishing work vanished from a gang ticket.
   procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
     if(t.name && procTaskIsActive(t) && !String(t.itemMaterial||'').trim()){
-      addTkProcRow({ label:t.name, details:'' });
+      addTkProcRow({ label:t.name, details: procTaskTicketDetails(t) });
     }
   }));
   gangRows.forEach(gr=>{
     procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
       if(t.name && procTaskIsActive(t) && sameItemName(t.itemMaterial, gr.material)){
-        addTkProcRow({ label:t.name, details:`${gr.material} — ${(num(gr.qty)||baseQty).toLocaleString('el-GR')} τεμ.` });
+        addTkProcRow({ label:t.name, details:[procTaskTicketDetails(t),
+          `${gr.material} — ${(num(gr.qty)||baseQty).toLocaleString('el-GR')} τεμ.`]
+          .filter(Boolean).join(' · ') });
       }
     }));
   });
@@ -9694,7 +10006,99 @@ function moveTkProcRow(id, dir){
   pollRunningBadge();
 }
 
+// The same list the offer uses, so a task added straight onto a ticket is named
+// the way the rest of the shop names it — and reports group it correctly.
+// Pulling from the offer is deliberate and one-way: the user asks for it, sees
+// exactly what will change, and confirms. Nothing is written until then, so a
+// ticket that has already been worked on is never quietly rewritten.
+async function pullFromOffer(){
+  const offerId = document.getElementById('tkOfferId').value;
+  if(!offerId){ statusMsg('Αυτό το ticket δεν είναι συνδεδεμένο με προσφορά.'); return; }
+  try{
+    const record = await jbGetRecord();
+    const offer = (record.offers || {})[offerId];
+    if(!offer || !offer.data){ statusMsg('Η προσφορά δεν βρέθηκε.'); return; }
+    const d = offer.data;
+
+    // What the ticket would look like, worked out before anything is touched.
+    const qty = num(d.qty);
+    const papers = offerPaperRowsForTicket(d);
+    const procs = offerProcRowsForTicket(d);
+
+    const changes = [];
+    if(qty && qty !== num(document.getElementById('tkQty').value))
+      changes.push(`Ποσότητα: ${num(document.getElementById('tkQty').value).toLocaleString('el-GR')} → ${qty.toLocaleString('el-GR')}`);
+    const psig = r => `${r.tipos||''}»${r.xarti||''}»${num(r.fylla)}»${r.opseis||''}»${r.xroma||''}`;
+    const nowPaperRows = tkPaperRows.filter(r=>r.tipos||r.xarti);
+    if(papers.map(psig).join('|') !== nowPaperRows.map(psig).join('|'))
+      changes.push('Χαρτιά: ' + papers.map(x=>`${x.xarti} ${num(x.fylla).toLocaleString('el-GR')} φύλλα`).join(', '));
+    // Details matter as much as names: a note added to a task, or a task switched
+    // to an outside supplier, changes nothing in the labels but everything on the
+    // floor. Comparing names alone reported "already up to date" and did nothing.
+    const sig = r => `${r.label}»${String(r.details||'').trim()}`;
+    const nowProcs = tkProcRows.filter(r=>r.label).map(sig).join('|');
+    if(procs.map(sig).join('|') !== nowProcs)
+      changes.push('Επεξεργασίες: ' + (procs.map(x=>x.label + (x.details ? ` (${x.details})` : ''))
+        .join(', ') || '— καμία —'));
+
+    if(!changes.length){ statusMsg('Το ticket συμφωνεί ήδη με την προσφορά — τίποτα να αλλάξει.'); return; }
+
+    // Anything measured on the floor would be lost, so it is spelled out.
+    const timed = [...tkPaperRows, ...tkProcRows]
+      .filter(r => num(r.mrSeconds) || num(r.prodSeconds)).length;
+    if(!confirm(`Θα ενημερωθούν:\n\n${changes.join('\n')}\n\n`
+      + (timed ? `⚠ ${timed} γραμμές έχουν μετρημένο χρόνο που θα χαθεί.\n\n` : '')
+      + 'Deadline, σημειώσεις και συσκευασία δεν αλλάζουν.')) return;
+
+    if(qty) document.getElementById('tkQty').value = qty;
+    if(d.schemaClosed || d.schema) document.getElementById('tkSchema').value = d.schemaClosed || d.schema;
+    tkPaperRows = []; papers.forEach(r => addTkPaperRow(r));
+    tkProcRows = [];  procs.forEach(r => addTkProcRow(r));
+    if(!tkProcRows.length) addTkProcRow();
+    renderTkPaper(); renderTkProc();
+    markTicketDirty();
+    statusMsg(`Ενημερώθηκε από την προσφορά ✓ — πάτα Αποθήκευση Ticket.`);
+  }catch(e){
+    console.error('Pull from offer error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+// The paper rows an offer describes, in the shape a ticket uses.
+function offerPaperRowsForTicket(d){
+  const out = [];
+  const baseQty = num(d.qty);
+  const add = (r, isBook) => {
+    if(r.on === false || !(r.material || r.paperName)) return;
+    const sheets = isBook
+      ? (num(r.pagesPerSheet) > 0 ? ceilSafe(baseQty * num(r.pages) / num(r.pagesPerSheet)) : 0)
+      : (num(r.piecesPerSheet) > 0 ? ceilSafe((num(r.qty)||baseQty) / num(r.piecesPerSheet)) + num(r.xtra) : 0);
+    out.push({ tipos: r.material || '', xarti: r.paperName || '', fylla: sheets,
+               opseis: r.sides || '', xroma: r.color || '' });
+  };
+  (d.bookRows||[]).forEach(r => add(r, true));
+  (d.flatRows||[]).forEach(r => add(r, false));
+  return out;
+}
+
+function offerProcRowsForTicket(d){
+  const out = [];
+  (d.procCategories||[]).forEach(cat => (cat.tasks||[]).forEach(t => {
+    if(!t.on || !t.name) return;
+    out.push({ label: t.name, details: procTaskTicketDetails(t) });
+  }));
+  return out;
+}
+
+function onTkProcName(rowId, value){
+  const r = tkProcRows.find(x=>x.id===rowId);
+  if(!r) return;
+  r.label = value;
+  markTicketDirty();
+}
+
 function renderTkProc(){
+  refreshProcTaskOptions();
   setTimeout(()=>{ markEmptyTicketCells(); growAllCells(); }, 0);
   const body = document.getElementById('tkProcBody');
   body.innerHTML = '';
@@ -9706,7 +10110,9 @@ function renderTkProc(){
     tr.innerHTML = `
       <td style="text-align:center;"><input type="checkbox" class="proc-check" ${r.done ? 'checked' : ''}
         onchange="toggleProcDone(${r.id}, this.checked)" title="Ολοκληρώθηκε"></td>
-      <td data-l="Εργασία"><textarea class="cell-grow" rows="1" placeholder="π.χ. Βιβλιοδεσία" oninput="tkProcRows.find(x=>x.id===${r.id}).label=this.value;growCell(this)">${esc(r.label)}</textarea></td>
+      <td data-l="Εργασία"><input list="procTaskOptions" class="tk-proc-name"
+        placeholder="διάλεξε ή γράψε εργασία" value="${esc(r.label)}"
+        oninput="onTkProcName(${r.id}, this.value)"></td>
       <td data-l="Λεπτομέρειες"><textarea class="cell-grow" rows="1" oninput="tkProcRows.find(x=>x.id===${r.id}).details=this.value;growCell(this)">${esc(r.details)}</textarea></td>
       <td>${timerCellHtml(r,'mr','Make Ready')}</td>
       <td>${timerCellHtml(r,'prod','Production')}</td>
@@ -9770,6 +10176,8 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkSelides').value = d.selides||'';
   document.getElementById('tkClient').value = d.client||'';
   document.getElementById('tkOfferId').value = d.offerId||'';
+  const pull = document.getElementById('pullOfferBtn');
+  if(pull) pull.style.display = d.offerId ? '' : 'none';
   document.getElementById('tkNotes').innerHTML = d.notes||'';
   tkPaperRows = []; tkProcRows = [];
   (d.paperRows||[]).forEach(r=>addTkPaperRow(r));
@@ -11153,7 +11561,7 @@ async function convertOfferToTicketInner(){
       const est = procTaskCalc(t, baseQty);
       // The item is named in the details so a multi-item ticket says which part
       // each operation belongs to.
-      addTkProcRow({ label: t.name, details: String(t.itemMaterial||'').trim(),
+      addTkProcRow({ label: t.name, details: procTaskTicketDetails(t),
                      estimatedSeconds: est.hours * 3600 });
     }
   }));
@@ -11469,9 +11877,8 @@ async function markOrderReceived(id){
       // entry has to carry the order's own unit rather than assume sheets.
       const unit = order.unit || 'φύλλα';
       if(order.material && findPaper(order.material) && sheets>0){
-        if(!record.stock[order.material]) record.stock[order.material] = { qty:0, unit };
-        record.stock[order.material].qty += sheets;
-        record.stock[order.material].unit = unit;
+        // stock now lives on the material row
+        await addStock(order.material, sheets, unit);
         record.stockLog = record.stockLog || [];
         record.stockLog.unshift({
           id: 'stk'+Date.now(), paper: order.material, type:'add', qty: sheets, unit,
@@ -11571,19 +11978,19 @@ async function deleteSelectedOrders(){
       alsoRemoveStock = confirm(`Κάποιες από αυτές τις παραγγελίες είχαν ήδη παραληφθεί και πρόσθεσαν απόθεμα (${summary}).\n\nΝα αφαιρεθούν αυτά τα φύλλα και από την Αποθήκη;`);
     }
 
-    ids.forEach(id=>{
+    for(const id of ids){
       const o = record.orders[id];
       if(!o) return;
       if(alsoRemoveStock){
         const sheets = num(o.sheets);
         if(o.status==='received' && o.material && findPaper(o.material) && sheets>0){
-          if(record.stock[o.material]) record.stock[o.material].qty = Math.max(0, record.stock[o.material].qty - sheets);
+          await setStock(o.material, stockOf(o.material).qty - sheets);
           record.stockLog = record.stockLog || [];
           record.stockLog.unshift({ id:'stk'+Date.now()+Math.random().toString(36).slice(2,6), paper:o.material, type:'remove', qty:sheets, unit:'φύλλα', note:'Μαζική διαγραφή παραγγελιών', date:new Date().toISOString() });
         }
       }
       delete record.orders[id];
-    });
+    }
     if(alsoRemoveStock) record.stockLog = record.stockLog.slice(0,200);
 
     await jbPutRecord(record);
@@ -11612,8 +12019,8 @@ async function deleteOrder(id){
 
     delete record.orders[id];
     if(alsoRemoveStock){
-      if(record.stock[order.material]){
-        record.stock[order.material].qty = Math.max(0, record.stock[order.material].qty - sheets);
+      if(paperByName[order.material]){
+        await setStock(order.material, stockOf(order.material).qty - sheets);
       }
       record.stockLog = record.stockLog || [];
       record.stockLog.unshift({ id:'stk'+Date.now(), paper: order.material, type:'remove', qty: sheets, unit:'φύλλα', note: 'Διαγραφή παραγγελίας', date: new Date().toISOString() });
@@ -11995,8 +12402,16 @@ function toggleNewOrderPanel(){
 
 function parseGreekAmount(s){
   if(!s) return 0;
-  // "5.800,00 €" -> 5800.00 ; strip currency symbol, thousands dots, swap decimal comma
-  const cleaned = s.replace(/[€\s]/g,'').replace(/\./g,'').replace(',', '.');
+  let t = String(s).replace(/[€\s]/g,'');
+
+  // "8,937" is ambiguous: a decimal comma in Greek, but people also type it as a
+  // thousands separator when copying a figure they can see. Exactly three digits
+  // after a single comma, with no dot anywhere, means thousands — nobody counts
+  // sheets to three decimal places.
+  if(/^\d{1,3},\d{3}$/.test(t)) t = t.replace(',', '');
+
+  // "5.800,00 €" -> 5800.00 ; strip thousands dots, swap decimal comma
+  const cleaned = t.replace(/\./g,'').replace(',', '.');
   const n = parseFloat(cleaned);
   return isFinite(n) ? n : 0;
 }
@@ -15885,20 +16300,21 @@ if(localStorage.getItem('sidebar_collapsed')==='1'){
 async function submitStockMovement(type){
   const statusEl = document.getElementById('stockMovementStatus');
   const paper = document.getElementById('stockPaperName').value.trim();
-  const qty = num(document.getElementById('stockQty').value);
+  const qty = parseGreekAmount(document.getElementById('stockQty').value);
   const unit = document.getElementById('stockUnit').value;
   const note = document.getElementById('stockNote').value.trim();
   if(!paper){ statusEl.textContent = 'Διάλεξε ένα χαρτί από τη λίστα.'; return; }
   if(!(qty>0)){ statusEl.textContent = 'Γράψε μια ποσότητα μεγαλύτερη από 0.'; return; }
   try{
     const record = await jbGetRecord();
-    if(!record.stock[paper]) record.stock[paper] = { qty: 0, unit };
-    const current = record.stock[paper];
+    const current = stockOf(paper);
     if(type==='remove' && qty>current.qty){
       statusEl.textContent = `Προσοχή: ζητάς αφαίρεση ${qty} ${unit}, αλλά υπάρχουν μόνο ${current.qty} ${current.unit} σε απόθεμα. Καταχωρήθηκε ως 0.`;
     }
-    current.qty = type==='add' ? current.qty + qty : Math.max(0, current.qty - qty);
-    current.unit = unit;
+    // `current` is a copy, so changing it changes nothing — the new figure has to
+    // be written back to the material row.
+    const next = type==='add' ? current.qty + qty : Math.max(0, current.qty - qty);
+    await setStock(paper, next, unit);
     record.stockLog.unshift({ id:'stk'+Date.now(), paper, type, qty, unit, note, date: new Date().toISOString() });
     record.stockLog = record.stockLog.slice(0, 200); // keep the log from growing forever
     await jbPutRecord(record);
@@ -15927,7 +16343,7 @@ async function resetAllStock(){
   if(!sureAgain) return;
   try{
     const record = await jbGetRecord();
-    Object.keys(record.stock || {}).forEach(name=>{ record.stock[name].qty = 0; });
+    for(const name of Object.keys(paperByName)) await setStock(name, 0);
     record.stockLog = [];
     await jbPutRecord(record);
     statusEl.textContent = 'Μηδενίστηκε όλη η αποθήκη και το ιστορικό κινήσεων ✓';
@@ -15951,10 +16367,14 @@ async function refreshStockList(){
     const record = await jbGetRecord();
     stockRecordCache = record;
     const search = (document.getElementById('stockSearch').value||'').toLowerCase().trim();
-    const allPaperNames = [...new Set([...Object.keys(paperByName), ...Object.keys(record.stock)])];
-    let entries = allPaperNames
+    // One list: the materials table is the whole truth now.
+    if(!papersLoaded && !Object.keys(paperByName).length){
+      el.innerHTML = '<div class="empty-note">Φόρτωση χαρτιών…</div>';
+      return;
+    }
+    let entries = Object.keys(paperByName)
       .filter(paper => !search || paper.toLowerCase().includes(search))
-      .map(paper => [paper, record.stock[paper] || { qty:0, unit:'φύλλα' }]);
+      .map(paper => [paper, stockOf(paper)]);
     entries.sort((a,b)=>a[0].localeCompare(b[0],'el'));
     if(entries.length===0){
       el.innerHTML = '<div class="empty-note">Καμία αντιστοιχία.</div>';
@@ -16046,6 +16466,59 @@ function toggleStockPaperExpand(paper){
   refreshStockList();
 }
 
+// One list, not two. Materials and their stock are kept in different places for
+// technical reasons, and anything present in one but missing from the other used
+// to show up as a half-row that could not be priced or edited. This makes both
+// sides agree, so what the user sees is a single list of materials.
+// Quantities used to live in the shared JSON while prices lived in the papers
+// table. This carries the old figures across once; afterwards the material row
+// is the only place stock is kept.
+// One place to read and change a material's stock, so nothing has to know where
+// it is kept. Reads come from the material row; writes touch that row alone.
+function stockOf(name){
+  const p = paperByName[name];
+  return { qty: p ? num(p.qty) : 0, unit: (p && p.unit) || 'φύλλα' };
+}
+
+async function setStock(name, qty, unit){
+  const p = paperByName[name] || { name, w:null, l:null, g:null, priceKg:null, priceSheet:null };
+  await upsertPaper(Object.assign({}, p, { qty: Math.max(0, num(qty)),
+                                           unit: unit || p.unit || 'φύλλα' }));
+}
+
+async function addStock(name, delta, unit){
+  const cur = stockOf(name);
+  await setStock(name, cur.qty + num(delta), unit || cur.unit);
+}
+
+async function syncMaterialsAndStock(){
+  try{
+    const record = await jbGetRecord();
+    const legacy = record.stock || {};
+    let moved = 0;
+
+    for(const [name, d] of Object.entries(legacy)){
+      const p = paperByName[name];
+      // Only fill a material that has not been given stock yet, so a figure
+      // edited in the new place is never overwritten by the old copy.
+      if(p && num(p.qty) === 0 && num(d.qty) !== 0){
+        await upsertPaper(Object.assign({}, p, { qty: num(d.qty), unit: d.unit || 'φύλλα' }));
+        moved++;
+      } else if(!p){
+        await upsertPaper({ name, w:null, l:null, g:null, priceKg:null, priceSheet:null,
+                            qty: num(d.qty), unit: d.unit || 'φύλλα' });
+        moved++;
+      }
+    }
+    if(moved){
+      record.stockMigrated = true;
+      await jbPutRecord(record);
+      statusMsg(`${moved} υλικά μεταφέρθηκαν στον κοινό πίνακα ✓`);
+    }
+    return moved;
+  }catch(e){ console.error('Stock migration error:', e); return 0; }
+}
+
 // Renaming means writing the new row and removing the old one — the name is the
 // key. Everything that refers to it by name follows in the same pass.
 async function renamePaper(oldName, newName){
@@ -16063,8 +16536,9 @@ async function renamePaper(oldName, newName){
 
     // Stock, its history and any open offer all point at the old name.
     const record = await jbGetRecord();
+    // The renamed material carries its own stock; the old copy would otherwise
+    // reappear under the previous name.
     if(record.stock && record.stock[oldName]){
-      record.stock[name] = record.stock[oldName];
       delete record.stock[oldName];
     }
     let moved = 0;
@@ -16108,6 +16582,8 @@ async function deletePaper(name){
       delete paperByName[name];
     }
     if(customPapers[name]){ delete customPapers[name]; saveCustomPapers(customPapers); }
+    // The old copy in the shared JSON has to go too, or the next sync would take
+    // it for a material that had never been migrated and bring it straight back.
     const record = await jbGetRecord();
     if(record.stock) delete record.stock[name];
     await jbPutRecord(record);
@@ -16201,7 +16677,7 @@ async function confirmStockBulkImport(){
   try{
     const record = await jbGetRecord();
     stockBulkParsed.forEach(e=>{
-      record.stock[e.name] = { qty: e.qty, unit: e.unit };
+      // quantities are written to the material rows below
       record.stockLog.unshift({ id:'stk'+Date.now()+Math.random().toString(36).slice(2,6), paper: e.name, type:'add', qty: e.qty, unit: e.unit, note:'Μαζική εισαγωγή', date: new Date().toISOString() });
     });
     record.stockLog = record.stockLog.slice(0, 200);
@@ -16209,33 +16685,26 @@ async function confirmStockBulkImport(){
 
     // Prices belong to the paper, not the stock line, so they are written there —
     // otherwise the figure would sit in the warehouse and never reach an offer.
-    // A stock line with no material behind it cannot be priced, renamed or
-    // deleted — so anything new here gets its record created too, ready for its
-    // dimensions to be filled in later.
+    // Prices go onto the material itself; the sync below gives a record to
+    // anything that does not have one yet.
     let priced = 0, created = 0;
     for(const e of stockBulkParsed){
       const existing = paperByName[e.name];
-      if(!existing && e.price == null && !/φύλλ/i.test(e.unit)) {
-        // A non-paper unit with no price: still worth a record, so it can be edited.
-      }
+      if(!existing) created++;
       const next = Object.assign({ name: e.name, w:null, l:null, g:null,
-                                   priceKg:null, priceSheet:null }, existing || {});
-      let touched = !existing;
+                                   priceKg:null, priceSheet:null }, existing || {},
+                                 { qty: e.qty, unit: e.unit });
       if(e.price != null){
         // Sheets are priced per sheet, anything else by its own unit.
         if(/φύλλ/i.test(e.unit)) next.priceSheet = e.price; else next.priceKg = e.price;
-        touched = true;
+        priced++;
       }
-      if(!touched) continue;
-      try{
-        await upsertPaper(next);
-        if(!existing) created++;
-        if(e.price != null) priced++;
-      }catch(err){ console.error('bulk material', e.name, err); }
+      try{ await upsertPaper(next); }
+      catch(err){ console.error('bulk material', e.name, err); }
     }
     statusEl.textContent = `Ορίστηκε απόθεμα για ${stockBulkParsed.length} εγγραφές ✓`
-      + (created ? ` · ${created} νέα υλικά` : '')
-      + (priced ? ` · ${priced} τιμές` : '');
+      + (priced ? ` · ${priced} τιμές` : '')
+      + (created ? ` · ${created} νέα υλικά` : '');
     stockBulkParsed = [];
     document.getElementById('stockBulkImportConfirmBtn').style.display = 'none';
     document.getElementById('stockBulkText').value = '';
