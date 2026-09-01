@@ -391,6 +391,10 @@
   .tk-timer-elsewhere{font-size:10.5px;color:#5b3a8e;text-align:center;font-weight:600;}
   /* A ganged row belongs to two jobs at once, so it is marked down the whole
      line rather than with a badge tucked in one cell. */
+  /* One product, two sheets: bracketed on the left so the pair reads as a unit. */
+  #tkPaperBody tr.row-item-part > td:first-child{box-shadow:inset 3px 0 0 #c9ced8;}
+  #tkPaperBody tr.row-item-part:not(.row-item-first) > td{border-top-style:dashed;}
+  #tkPaperBody tr.row-item-part:not(.row-item-first) > td:first-child input{opacity:0.45;}
   #tkPaperBody tr.row-gang > td{background:#faf7fe;}
   #tkPaperBody tr.row-gang > td:first-child{box-shadow:inset 3px 0 0 #8b5fc4;}
   .tk-gang{margin-top:3px;font-size:10px;font-weight:700;
@@ -3927,7 +3931,10 @@ function taskMaterial(taskName){
   if(/ΚΟΛΛΗΜΑ|ΒΙΒΛΙΟΔΕΣΙΑ|ΚΟΛΛΑ/.test(name)) return 'glue';
   if(/ΘΕΡΜΟΤΥΠΙΑ|FOIL|ΧΡΥΣΟΤΥΠΙΑ/.test(name)) return 'foil';
   if(/ΚΑΛΟΥΠΙ|ΚΟΠΤΙΚ/.test(name)) return 'die';
-  if(/ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ|ΛΑΜΙΝΑΡΙΣΜΑ/.test(name)) return 'lam';
+  // "Λαμινάρισμα" was treated as a synonym for lamination film, but in a bindery
+  // it means gluing two sheets back to back — a different job with no film and no
+  // per-m² rate, so it is left as an ordinary task.
+  if(/ΠΛΑΣΤΙΚΟΠΟΙΗΣΗ/.test(name)) return 'lam';
   if(/ΚΑΤΑΣΚΕΥΗ ΚΑΛΥΜΜΑΤΟΣ|ΧΑΡΤΟΝ/.test(name)) return 'board';
   return null;
 }
@@ -4798,14 +4805,14 @@ function onProcTaskNote(catId, taskId, value){
   markOfferDirty();
 }
 
-function onProcTaskNameInput(catId, taskId, value){
+function onProcTaskNameInput(catId, taskId, value, fromBlur){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   t.name = value;
 
-  // Choosing a known operation brings its own figures with it, so a task deleted
-  // by mistake comes back as it was instead of being retyped from memory. Only
-  // blanks are filled — nothing typed by hand is overwritten.
-  const known = knownProcTasks().get(String(value).trim());
+  // Only when the field is left, never mid-typing: rebuilding the row on every
+  // keystroke stole the cursor as soon as a half-typed name matched something
+  // known, which made a new name impossible to write.
+  const known = fromBlur ? knownProcTasks().get(String(value).trim()) : null;
   if(known){
     if(!num(t.speed) && known.speed) t.speed = known.speed;
     if(!num(t.rate)) t.rate = known.rate || DEFAULT_PROC_RATE;
@@ -5888,9 +5895,11 @@ function itemNameShare(material){
   return n > 1 ? n : 1;
 }
 
-function assignedTaskCostForItem(material){
+// The whole cost of the tasks assigned to an item. Callers that show one line per
+// paper row divide it themselves; those that group rows into one item do not.
+function assignedTaskCostForItem(material, whole){
   if(!String(material||'').trim()) return 0;
-  const share = itemNameShare(material);
+  const share = whole ? 1 : itemNameShare(material);
   let sum = 0;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
@@ -5971,7 +5980,10 @@ function renderProc(){
     // shut, that was most of the work being thrown away.
     const buildRows = !cat.collapsed;
     if(buildRows) cat.tasks.forEach(t=>{
-      const itemOptions = flatRows.filter(r=>r.material).map(r=>`<option value="${esc(r.material)}" ${t.itemMaterial===r.material?'selected':''}>${esc(r.material)}</option>`).join('');
+      // One entry per item, not per row: an item made of two papers — a card
+      // laminated back to back — is still one thing to process.
+      const itemOptions = [...new Set(flatRows.filter(r=>r.material).map(r=>r.material))]
+        .map(m=>`<option value="${esc(m)}" ${t.itemMaterial===m?'selected':''}>${esc(m)}</option>`).join('');
       rowsHtml += `
         <tr data-task-id="${t.id}" class="${t.on ? 'proc-on' : 'proc-off'}${t.external ? ' proc-ext' : ''}"
           oncontextmenu="openProcMenu(event,${cat.id},${t.id})"
@@ -5980,7 +5992,8 @@ function renderProc(){
             onchange="toggleProcTaskOn(${cat.id},${t.id},this.checked)" title="Χρησιμοποιείται σε αυτή τη δουλειά"></td>
           <td><input list="procTaskOptions" value="${t.name}"
             placeholder="διάλεξε ή γράψε εργασία"
-            oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)">
+            oninput="onProcTaskNameInput(${cat.id},${t.id},this.value)"
+            onchange="onProcTaskNameInput(${cat.id},${t.id},this.value,true)">
             ${(t.note || t.noteOpen) ? `<input class="proc-note" value="${esc(t.note||'')}"
               placeholder="λεπτομέρειες για το ticket"
               title="Ό,τι γράψεις εδώ περνά στις Λεπτομέρειες του Job Ticket — π.χ. «16σέλιδο»"
@@ -6013,8 +6026,9 @@ function renderProc(){
             <label class="proc-foil-lbl">Πλαστικοποίηση</label>
             <select onchange="onLamItemInput(${cat.id},${t.id},this.value)" style="margin-bottom:3px;">
               <option value="">— σε ποιο χαρτί; —</option>
-              ${flatRows.concat(bookRows).filter(r=>r.material||r.paperName)
-                .map(r=>{ const nm = r.material || r.paperName;
+              ${[...new Set(flatRows.concat(bookRows).filter(r=>r.material||r.paperName)
+                  .map(r=>r.material || r.paperName))]
+                .map(nm=>{
                   return `<option value="${esc(nm)}" ${String(t.lamItem||'')===nm?'selected':''}>${esc(nm)}</option>`; }).join('')}
             </select>
             <select onchange="onLamTypeInput(${cat.id},${t.id},this.value)">
@@ -6170,8 +6184,18 @@ function buildOfferPrintHtml(){
   // item — guaranteeing it always matches what's shown in the item table below.
   let multiItemGrandTotal = 0;
   if(multiItem){
+    // Per item, not per row: an item of two papers was charged its processing
+    // twice, and a price typed on one of its rows was added to the other's cost
+    // instead of replacing it.
+    const seen = new Map();
     flatRows.filter(r=>r.material).forEach(r=>{
-      multiItemGrandTotal += flatRowTotalCost(r, baseQty) + assignedTaskCostForItem(r.material);
+      const g = seen.get(r.material) || { paper: 0, manual: 0 };
+      g.paper += flatRowTotalCost(r, baseQty);
+      if(num(r.manualPrice) > 0) g.manual = num(r.manualPrice);
+      seen.set(r.material, g);
+    });
+    seen.forEach((g, name)=>{
+      multiItemGrandTotal += g.manual > 0 ? g.manual : (g.paper + assignedTaskCostForItem(name, true));
     });
     procCategories.forEach(cat=>{
       cat.tasks.forEach(task=>{
@@ -6311,23 +6335,59 @@ function buildOfferPrintHtml(){
 
   const pagesLabel = v('fPages');
 
-  const materialRows = flatRows.concat(bookRows)
-    .filter(r => r.material || r.paperName)
-    .map(r => `<tr><td>${esc(r.material)}</td><td>${esc(r.paperName)}</td><td>${esc(r.color)}</td></tr>`)
+  // An item made of two papers — a card laminated back to back — is one thing to
+  // the customer, so its papers are listed together on one line rather than as
+  // two products.
+  const matGroups = [];
+  flatRows.concat(bookRows).filter(r => r.material || r.paperName).forEach(r=>{
+    const key = (r.material || '').trim();
+    const g = key ? matGroups.find(x => x.name === key) : null;
+    if(g){
+      if(r.paperName && !g.papers.includes(r.paperName)) g.papers.push(r.paperName);
+      if(r.color && !g.colors.includes(r.color)) g.colors.push(r.color);
+    } else {
+      matGroups.push({ name: r.material || '', papers: r.paperName ? [r.paperName] : [],
+                       colors: r.color ? [r.color] : [] });
+    }
+  });
+  const materialRows = matGroups
+    .map(g => `<tr><td>${esc(g.name)}</td><td>${esc(g.papers.join(' + '))}</td><td>${
+      esc(g.colors.join(' / '))}</td></tr>`)
     .concat(
       fabricRows.filter(r=>r.material).map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`)
     )
     .join('');
 
-  const itemRows = multiItem ? flatRows
-    .filter(r => r.material)
-    .map(r => {
-      const itemQty = num(r.qty) || baseQty;
-      const itemCost = flatRowTotalCost(r, baseQty) + assignedTaskCostForItem(r.material);
-      const itemUnit = itemQty>0 ? itemCost/itemQty : 0;
-      const itemTaskNames = assignedTaskNamesForItem(r.material);
-      return `<tr><td>${esc(r.material)}</td><td>${esc(r.simShape)}</td><td>${esc(r.paperName)}</td><td>${esc(r.color)}</td><td>${itemTaskNames.map(esc).join(', ')}</td><td>${itemQty} ${t('τεμ.')}</td><td>${itemCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}<div style="font-size:9px;color:#888;font-weight:400;margin-top:2px;">${itemUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}/${t('τεμ.')}</div></td></tr>`;
-    }).join('') : '';
+  // Rows sharing an item name are one product — a card of two papers laminated
+  // together. The customer sees one line and one price; the papers add up.
+  const itemGroups = [];
+  if(multiItem) flatRows.filter(r => r.material).forEach(r=>{
+    const g = itemGroups.find(x => x.name === r.material);
+    const cost = flatRowTotalCost(r, baseQty);
+    if(g){
+      g.paperCost += cost;
+      // A price typed on any one row is the price of the whole item, so it is
+      // taken as it is rather than added to the other row's.
+      if(num(r.manualPrice) > 0) g.manual = num(r.manualPrice);
+      if(r.paperName && !g.papers.includes(r.paperName)) g.papers.push(r.paperName);
+      if(r.color && !g.colors.includes(r.color)) g.colors.push(r.color);
+      if(!g.shape && r.simShape) g.shape = r.simShape;
+      g.qty = Math.max(g.qty, num(r.qty) || baseQty);
+    } else {
+      itemGroups.push({ name: r.material, shape: r.simShape || '',
+        papers: r.paperName ? [r.paperName] : [], colors: r.color ? [r.color] : [],
+        qty: num(r.qty) || baseQty, paperCost: cost, manual: num(r.manualPrice) });
+    }
+  });
+  const itemRows = itemGroups.map(g => {
+      // Processing is charged to the item, not to each of its papers. A hand
+      // written price replaces the calculation for that item.
+      const itemCost = g.manual > 0 ? g.manual
+        : g.paperCost + assignedTaskCostForItem(g.name, true);
+      const itemUnit = g.qty>0 ? itemCost/g.qty : 0;
+      const itemTaskNames = assignedTaskNamesForItem(g.name);
+      return `<tr><td>${esc(g.name)}</td><td>${esc(g.shape)}</td><td>${esc(g.papers.join(' + '))}</td><td>${esc(g.colors.join(' / '))}</td><td>${itemTaskNames.map(esc).join(', ')}</td><td>${g.qty} ${t('τεμ.')}</td><td>${itemCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}<div style="font-size:9px;color:#888;font-weight:400;margin-top:2px;">${itemUnit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}/${t('τεμ.')}</div></td></tr>`;
+    }).join('');
 
   const procNames = showProc ? procCategories
     .map(cat => cat.tasks.filter(t=>t.name && !(multiItem && t.itemMaterial)).map(t=>esc(t.name)))
@@ -10009,6 +10069,16 @@ function renderTkPaper(){
     // Linked to another ticket: marked down the whole line, since the row belongs
     // to two jobs at once.
     if(r.gangWith) tr.classList.add('row-gang');
+    // Two papers that make one product — a card laminated back to back — stay as
+    // two rows because they are printed apart, but they are bracketed so nobody
+    // treats them as two separate items.
+    const sameItem = (r.tipos||'').trim()
+      && tkPaperRows.filter(x => (x.tipos||'').trim() === (r.tipos||'').trim()).length > 1;
+    if(sameItem){
+      const first = tkPaperRows.find(x => (x.tipos||'').trim() === (r.tipos||'').trim());
+      tr.classList.add('row-item-part');
+      if(first && first.id === r.id) tr.classList.add('row-item-first');
+    }
     tr.innerHTML = `
       <td data-l="Τύπος" oncontextmenu="openGangMenu(event,${r.id})" title="Δεξί κλικ: συνεκτύπωση">
         <textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tipos)}</textarea>
