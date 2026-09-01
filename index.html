@@ -10254,6 +10254,9 @@ function currentElapsed(r, type){
 // "Εκτύπωση" is the run itself. Timed on the paper row, because each component
 // of a job is a separate pass on the machine.
 function togglePaperTimer(rowId, type){
+  // A running clock is the one thing that must survive a closed tab, so it is
+  // written as soon as the row has been updated rather than after the usual wait.
+  setTimeout(()=>{ clearTimeout(ticketAutoSaveTimer); saveTicket(); }, 0);
   const r = tkPaperRows.find(x=>x.id===rowId);
   if(!r) return;
   const runningKey = type+'Running', startedKey = type+'StartedAt', secondsKey = type+'Seconds';
@@ -10382,6 +10385,9 @@ function resetTimer(kind, rowId, type){
 }
 
 function toggleProcTimer(taskId, type){
+  // A running clock is the one thing that must survive a closed tab, so it is
+  // written as soon as the row has been updated rather than after the usual wait.
+  setTimeout(()=>{ clearTimeout(ticketAutoSaveTimer); saveTicket(); }, 0);
   const r = tkProcRows.find(x=>x.id===taskId);
   if(!r) return;
   const runningKey = type+'Running', startedKey = type+'StartedAt', secondsKey = type+'Seconds';
@@ -16091,6 +16097,30 @@ let ticketDirty = false;
 
 let offerAutoSaveTimer = null;
 let ticketAutoSaveTimer = null;
+
+// The autosave waits a moment so a burst of typing is one write, not twenty.
+// Closing the tab inside that moment would have lost the last change, so the
+// pending save is flushed on the way out.
+function flushPendingSaves(){
+  if(offerDirty){ clearTimeout(offerAutoSaveTimer); try{ saveOffer(); }catch(e){} }
+  if(ticketDirty){ clearTimeout(ticketAutoSaveTimer); try{ saveTicket(); }catch(e){} }
+}
+
+window.addEventListener('beforeunload', (ev)=>{
+  if(!offerDirty && !ticketDirty) return;
+  flushPendingSaves();
+  // The browser may cut the request short, so the user is warned rather than
+  // told a lie about everything being saved.
+  ev.preventDefault();
+  ev.returnValue = '';
+  return '';
+});
+
+// Switching tabs or locking the screen is the common way work is left behind —
+// and unlike closing, this one always completes.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') flushPendingSaves();
+});
 
 function markOfferDirty(){
   if(!offerDirty){
