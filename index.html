@@ -383,7 +383,28 @@
   .ctx-menu-item{padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;}
   .ctx-menu-item:hover{background:var(--page);}
   .tk-proc-name{width:100%;}
-  .tk-machine{width:100%;font-size:12px;}
+  .tk-gang-span{font-size:11px;font-weight:800;letter-spacing:0.04em;color:#5b3a8e;
+    text-align:center;background:#f3ecfb;border-radius:5px;padding:6px 8px;}
+  .tk-gang-span span{display:block;font-weight:600;font-size:10.5px;letter-spacing:0;
+    margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tk-gang-note{font-size:9px;color:#8b5fc4;font-weight:700;margin-top:2px;text-align:center;}
+  .tk-timer-elsewhere{font-size:10.5px;color:#5b3a8e;text-align:center;font-weight:600;}
+  /* A ganged row belongs to two jobs at once, so it is marked down the whole
+     line rather than with a badge tucked in one cell. */
+  #tkPaperBody tr.row-gang > td{background:#faf7fe;}
+  #tkPaperBody tr.row-gang > td:first-child{box-shadow:inset 3px 0 0 #8b5fc4;}
+  .tk-gang{margin-top:3px;font-size:10px;font-weight:700;
+    color:#5b3a8e;cursor:pointer;user-select:none;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tk-gang:hover{text-decoration:underline;}
+  .tk-press{margin-top:3px;font-size:9.5px;font-weight:800;letter-spacing:0.04em;text-align:center;
+    padding:2px 4px;border-radius:4px;cursor:pointer;user-select:none;
+    background:#eaf1fe;color:#1f4f9e;border:1px solid #cfe0fb;}
+  /* A quiet field: it usually repeats the shop default, so it should not shout
+     for attention the way an empty required box does. */
+  /* The machine reads the same whether it was chosen or defaulted — it is
+     reference, not something demanding attention. */
+  #tkProcBody input.tk-machine{width:100%;font-size:11.5px;color:var(--muted);}
   .proc-note{width:100%;margin-top:4px;font-size:11px;padding:3px 6px;
     border-style:dashed;color:var(--muted);}
   .proc-note:focus{border-style:solid;color:var(--ink);}
@@ -872,6 +893,8 @@
   .order-badge.missing-info{background:#fbe0de;color:#a53125;}
 
   .pt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .pt-card-idle{opacity:0.62;}
+  .pt-card-idle .pt-total-time{color:var(--muted);}
   .pt-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
   .pt-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
   .pt-task-name{font-weight:700;font-size:14px;color:var(--ink);}
@@ -9696,7 +9719,10 @@ function toggleTicketMultiItem(){
 
 async function consumeTicketPaper(){
   // Rows split off to their own ticket are consumed there, not here.
-  const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0 && !r.consumed && !r.movedToChild);
+  // A row ganged onto another ticket does not consume paper of its own: the
+  // sheets it needs are part of the run counted over there.
+  const pending = tkPaperRows.filter(r => (r.xarti||'').trim() && num(r.fylla)>0
+    && !r.consumed && !r.movedToChild && !(r.gangWith && !r.gangHost));
   if(pending.length === 0){
     const already = tkPaperRows.filter(r=>r.consumed).length;
     const moved = tkPaperRows.filter(r=>r.movedToChild && !r.consumed).length;
@@ -9980,22 +10006,43 @@ function renderTkPaper(){
     // The live timer looks the row up by id every second.
     tr.setAttribute('data-id', r.id);
     if(r.gangRow) tr.classList.add('gang-run');
+    // Linked to another ticket: marked down the whole line, since the row belongs
+    // to two jobs at once.
+    if(r.gangWith) tr.classList.add('row-gang');
     tr.innerHTML = `
-      <td data-l="Τύπος"><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tipos)}</textarea></td>
+      <td data-l="Τύπος" oncontextmenu="openGangMenu(event,${r.id})" title="Δεξί κλικ: συνεκτύπωση">
+        <textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tipos=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tipos)}</textarea>
+        ${r.gangWith ? `<div class="tk-gang${r.gangHost ? ' is-host' : ''}"
+          onclick="openGangTicket('${esc(r.gangWith)}')"
+          title="${r.gangHost ? 'Ο χρόνος μετριέται εδώ' : 'Ο χρόνος μετριέται στο άλλο ticket'} — κλικ για άνοιγμα">
+          🔗 ${r.gangHost ? 'μαζί με' : 'ΣΥΝΕΚΤΥΠΩΣΗ στο'} ${esc(r.gangLabel || 'άλλο ticket')}${
+            r.gangFarRow ? ` · ${esc(r.gangFarRow)}` : ''}</div>` : ''}</td>
       <td class="tk-multi-col" data-l="Ποσότητα"><input class="tk-qty-cell" type="number" min="0" value="${esc(r.qty||'')}" oninput="tkPaperRows.find(x=>x.id===${r.id}).qty=this.value" title="Τεμάχια αυτής της γραμμής"></td>
       <td class="tk-multi-col" data-l="Σχήμα Είδους"><input value="${esc(r.itemShape||'')}" placeholder="π.χ. 21x29" oninput="tkPaperRows.find(x=>x.id===${r.id}).itemShape=this.value" title="Κλειστό σχήμα αυτού του είδους"></td>
       <td data-l="Χαρτί"><input list="paperOptions" value="${esc(r.xarti)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).xarti=this.value"></td>
-      <td data-l="Χρώμα"><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value;growCell(this);markEmptyTicketCells()">${esc(r.xroma)}</textarea></td>
+      <td data-l="Χρώμα" oncontextmenu="event.preventDefault();toggleDigital(${r.id})"
+        title="Δεξί κλικ: ψηφιακή εκτύπωση"><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).xroma=this.value;growCell(this);markEmptyTicketCells()">${esc(r.xroma)}</textarea>
+        ${r.digital ? `<div class="tk-press is-digital" onclick="toggleDigital(${r.id})"
+          title="Δεξί κλικ ή κλικ εδώ για επιστροφή σε offset">🖨 ΨΗΦΙΑΚΗ</div>` : ''}</td>
 
+      ${(r.gangWith && !r.gangHost) ? `
+      <td data-l="Καθαρά Φύλλα" class="tk-gang-span" colspan="7"
+        title="Φύλλα, σχήμα, μοντάζ και όψεις ανήκουν στο «${esc(r.gangLabel||'άλλο ticket')}», όπου τυπώνεται το κοινό φύλλο">
+        ΣΥΝΕΚΤΥΠΩΣΗ <span>${esc(r.gangLabel || 'άλλο ticket')}</span></td>` : `
       <td data-l="Καθαρά Φύλλα"><input value="${esc(r.fyllaNet)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaNet=this.value" title="Καθαρά φύλλα (χωρίς έξτρα/σκάρτα)"></td>
       <td data-l="Έξτρα"><input value="${esc(r.fyllaXtra)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fyllaXtra=this.value" title="Έξτρα φύλλα (σκάρτα)"></td>
-      <td data-l="Σύνολο Φύλλων"><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
+      <td data-l="Σύνολο Φύλλων"><input value="${esc(r.fylla)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).fylla=this.value" title="Σύνολο φύλλων"${r.consumed?' readonly':''}>${
+        r.consumed?'<div style="font-size:9.5px;color:#1f7a4d;font-weight:700;margin-top:2px;">✓ αφαιρέθηκε</div>':''}</td>
       <td style="white-space:nowrap;">${leftoverCell(r)}</td>
       <td data-l="Σχήμα εκτ/σης"><input value="${esc(r.sxima)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).sxima=this.value"></td>
       <td data-l="Μοντάζ"><textarea class="cell-grow" rows="1" oninput="tkPaperRows.find(x=>x.id===${r.id}).tatgab=this.value;growCell(this);markEmptyTicketCells()">${esc(r.tatgab)}</textarea></td>
-      <td data-l="Όψεις"><input value="${esc(r.opseis)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).opseis=this.value"></td>
+      <td data-l="Όψεις"><input value="${esc(r.opseis)}" oninput="tkPaperRows.find(x=>x.id===${r.id}).opseis=this.value"></td>`}
+      ${(r.gangWith && !r.gangHost) ? `
+      <td data-l="Make Ready" class="tk-timer-col tk-timer-elsewhere" colspan="2"
+        title="Το φύλλο τυπώνεται μαζί με το άλλο ticket, όπου μετριέται και ο χρόνος">
+        ⏱ μετριέται στο «${esc(r.gangLabel||'άλλο ticket')}»</td>` : `
       <td data-l="Make Ready" class="tk-timer-col">${paperTimerHtml(r,'mr')}</td>
-      <td data-l="Εκτύπωση" class="tk-timer-col">${paperTimerHtml(r,'prod')}</td>
+      <td data-l="Εκτύπωση" class="tk-timer-col">${paperTimerHtml(r,'prod')}</td>`}
       <td style="white-space:nowrap;"><button class="own-ticket-btn" onclick="splitTicketPaperRowToChild(${r.id})" title="Δημιουργία ξεχωριστού, συνδεδεμένου Job Ticket για αυτή τη γραμμή (παραμένει και εδώ — το νέο κινείται ανεξάρτητα στην Παραγωγή)">🎫</button><button class="rowdel" onclick="removeTkPaperRow(${r.id})">×</button></td>
     `;
     body.appendChild(tr);
@@ -11240,6 +11287,132 @@ async function toggleTemplateMenu(ev){
 
 // Ticking a step off is the shop-floor equivalent of crossing it out on paper —
 // the row stays legible but visibly finished.
+// Which press the sheet goes on. It changes nothing in the sums here — it is a
+// message to the floor, since a digital job skips plates and make ready entirely
+// and would otherwise be set up as if it were offset.
+// Two jobs printed on one sheet. The link is per row, because only one part of a
+// job is usually ganged, and it names which ticket holds the clock: timing both
+// would count the same press run twice and skew every rate we measure.
+async function openGangMenu(ev, rowId){
+  ev.preventDefault();
+  closeProcMenu();
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r) return;
+  const m = document.createElement('div');
+  m.id = 'procRowMenu';
+  m.className = 'ctx-menu';
+  m.innerHTML = r.gangWith
+    ? `<div class="ctx-menu-item" onclick="closeProcMenu();clearGang(${rowId})">✕ Χωρίς συνεκτύπωση</div>`
+    : `<div class="ctx-menu-item" onclick="closeProcMenu();linkGang(${rowId})">🔗 Συνεκτύπωση με άλλο ticket</div>`;
+  document.body.appendChild(m);
+  const box = m.getBoundingClientRect();
+  m.style.left = Math.min(ev.clientX, window.innerWidth - box.width - 8) + 'px';
+  m.style.top = Math.min(ev.clientY, window.innerHeight - box.height - 8) + 'px';
+  setTimeout(()=>document.addEventListener('click', closeProcMenu, { once:true }), 0);
+}
+
+async function linkGang(rowId){
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r) return;
+  try{
+    const record = await jbGetRecord();
+    const stages = record.productionStages || [];
+    const done = stages[stages.length-1];
+    const others = Object.entries(record.tickets || {})
+      .filter(([id, t]) => id !== currentTicketId && !t.archived && t.stage !== done)
+      .map(([id, t]) => ({ id, label: (t.data||{}).info || t.label || id }));
+    if(!others.length){ statusMsg('Δεν υπάρχει άλλο ενεργό ticket.'); return; }
+
+    const pick = prompt('Συνεκτύπωση με ποιο job ticket;\n\n'
+      + others.slice(0,20).map((o,i)=>`${i+1}. ${o.label}`).join('\n')
+      + '\n\nΓράψε τον αριθμό.');
+    if(pick === null) return;
+    const other = others[parseInt(pick,10) - 1];
+    if(!other){ statusMsg('Δεν βρέθηκε αυτό το ticket.'); return; }
+
+    // The clock lives on the ticket where the link was made.
+    r.gangWith = other.id;
+    r.gangLabel = other.label;
+    r.gangHost = true;
+    r.gangFarRow = '';
+
+    // Which row over there. Guessing by name tagged every matching row on a
+    // multi-item ticket, so the row is chosen explicitly — unless there is only
+    // one, in which case there is nothing to choose.
+    const t2 = record.tickets[other.id];
+    const d2 = t2.data || {};
+    const rows2 = (d2.paperRows || []).filter(x => x.tipos || x.xarti);
+    if(!rows2.length){ statusMsg('Το άλλο ticket δεν έχει γραμμές χαρτιού.'); return; }
+
+    let target = rows2[0];
+    if(rows2.length > 1){
+      const which = prompt(`Ποια γραμμή του «${other.label}»;\n\n`
+        + rows2.map((x,i)=>`${i+1}. ${x.tipos || '—'}${x.xarti ? ' · ' + x.xarti : ''}${
+            x.fylla ? ' · ' + num(x.fylla).toLocaleString('el-GR') + ' φύλλα' : ''}`).join('\n')
+        + '\n\nΓράψε τον αριθμό.');
+      if(which === null) return;
+      target = rows2[parseInt(which,10) - 1];
+      if(!target){ statusMsg('Δεν βρέθηκε αυτή η γραμμή.'); return; }
+    }
+
+    const myLabel = document.getElementById('tkInfo').value || 'άλλο ticket';
+    target.gangWith = currentTicketId;
+    target.gangLabel = myLabel;
+    target.gangHost = false;
+    target.gangFarRow = (r.tipos || '').trim();
+    r.gangFarRow = (target.tipos || '').trim();
+    t2.data = d2;
+    await jbMergePath(SLICE_MAIN, ['tickets', other.id], t2);
+
+    renderTkPaper();
+    // Both sides are written now: leaving this one to the autosave meant a reload
+    // could show the link on one ticket and not the other.
+    await saveTicket(true);
+    statusMsg(`Συνεκτύπωση με «${other.label}» ✓ — ο χρόνος μετριέται εδώ`);
+  }catch(e){
+    console.error('Gang link error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+async function clearGang(rowId){
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r || !r.gangWith) return;
+  const otherId = r.gangWith;
+  try{
+    const record = await jbGetRecord();
+    const t2 = record.tickets[otherId];
+    if(t2){
+      const d2 = t2.data || {};
+      // Match on the id we stored, not on the current ticket: loadTicket may have
+      // moved on, and then nothing would be cleared on the far side.
+      (d2.paperRows || []).forEach(x=>{
+        if(x.gangWith){ delete x.gangWith; delete x.gangLabel; delete x.gangHost; }
+      });
+      t2.data = d2;
+      record.tickets[otherId] = t2;
+      await jbPutRecord(record);
+    }
+    delete r.gangWith; delete r.gangLabel; delete r.gangHost;
+    renderTkPaper();
+    await saveTicket(true);
+    statusMsg('Η συνεκτύπωση αφαιρέθηκε ✓');
+  }catch(e){
+    console.error('Gang unlink error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+function openGangTicket(id){ if(id) loadTicket(id, true); }
+
+function toggleDigital(rowId){
+  const r = tkPaperRows.find(x=>x.id===rowId);
+  if(!r) return;
+  r.digital = !r.digital;
+  renderTkPaper();
+  markTicketDirty();
+}
+
 function toggleProcDone(rowId, on){
   const r = tkProcRows.find(x=>x.id===rowId);
   if(!r) return;
@@ -15198,7 +15371,22 @@ function collectProdTimeGroups(record, rangeDays, category){
       }
     });
   });
-  return Object.values(groups).sort((a,b)=>b.count-a.count);
+  // Machines with nothing measured yet are listed too: an empty row says "no data
+  // for this one", which is different from the machine not existing — and it is
+  // the machine you most need to start timing.
+  (record.machines || []).forEach(m=>{
+    const has = Object.values(groups).some(g => g.machine === m);
+    if(has) return;
+    groups['|IDLE|' + m.toUpperCase()] = { name: '—', machine: m, count: 0,
+      mrTotal:0, prodTotal:0, qtyTotal:0, mrCount:0, prodCount:0,
+      mrMin:null, mrMax:null, prodMin:null, prodMax:null,
+      estTotal:0, estCount:0, unitTotal:0, rateSamples:[], points:[], idle: true };
+  });
+  // Measured work first, in order of how much of it there is.
+  return Object.values(groups).sort((a,b)=>{
+    if(!!a.idle !== !!b.idle) return a.idle ? 1 : -1;
+    return b.count - a.count;
+  });
 }
 
 // Jobs are timed as a whole, so the two figures a print shop actually thinks in
@@ -15285,75 +15473,6 @@ async function setTaskMachine(taskName, machine){
 // ===== Κερδοφορία ανά δουλειά =====
 // The question this view exists to answer is "did this job pay?". That is a
 // per-job question, and euros are the only unit every part of it shares — which
-// is also why the earlier speed comparisons kept contradicting themselves.
-const DEFAULT_SHOP_HOURLY = 30;
-
-function jobLabourCost(ticket, record){
-  const d = ticket.data || {};
-  const rates = record.machineRates || {};
-  const map = record.taskMachineMap || {};
-  let seconds = 0, cost = 0;
-
-  const add = (name, secs) => {
-    if(!(secs > 0)) return;
-    seconds += secs;
-    // The record passed in is authoritative here, not the cached global.
-    const key = String(name||'').toUpperCase().trim();
-    const machine = (map[key] !== undefined && map[key] !== '')
-      ? map[key] : (DEFAULT_TASK_MACHINES[key] || '');
-    const rate = num(rates[machine]) || DEFAULT_SHOP_HOURLY;
-    cost += (secs/3600) * rate;
-  };
-
-  (d.paperRows || []).forEach(r=>{
-    // Press time lives on the paper rows: make ready plus the run, both charged
-    // at the rate set for ΕΚΤΥΠΩΣΗ.
-    add('ΕΚΤΥΠΩΣΗ', num(r.mrSeconds) + num(r.prodSeconds));
-  });
-  (d.procRows || []).forEach(r=>{
-    add(r.label, num(r.mrSeconds) + num(r.prodSeconds));
-  });
-  return { seconds, cost };
-}
-
-function collectJobProfit(record, rangeDays){
-  const cutoff = rangeDays ? Date.now() - rangeDays*86400000 : 0;
-  const rows = [];
-  Object.entries(record.tickets || {}).forEach(([id, t])=>{
-    const when = Date.parse(t.savedAt || '') || 0;
-    if(cutoff && when && when < cutoff) return;
-    const labour = jobLabourCost(t, record);
-    if(!(labour.seconds > 0)) return;   // nothing was timed, nothing to judge
-
-    const d = t.data || {};
-    const offer = d.offerId ? (record.offers || {})[d.offerId] : null;
-    const od = offer ? (offer.data || {}) : null;
-    // What the customer pays, and what the paper and printing cost — both come
-    // from the offer, because that is where they were agreed.
-    const price = od ? num(od.manualTotal) : 0;
-    // Paper and printing as the offer priced them. Processing is left out on
-    // purpose: that is the part the timers are measuring for real.
-    let materials = 0;
-    if(od){
-      const q = num(od.qty) || num(d.qty);
-      const t2 = computeTotals(q, od);
-      materials = t2.materials + t2.printing;
-    }
-
-    rows.push({
-      id, name: d.info || t.label || 'Χωρίς τίτλο',
-      qty: num(d.qty),
-      seconds: labour.seconds,
-      labour: labour.cost,
-      price, materials,
-      hasOffer: !!offer,
-      profit: price > 0 ? price - materials - labour.cost : null,
-      when: (t.savedAt || '').slice(0,10)
-    });
-  });
-  return rows.sort((a,b)=>(b.when||'').localeCompare(a.when||''));
-}
-
 function toggleProcStats(){
   const wrap = document.getElementById('ptStatsWrap');
   const caret = document.getElementById('ptStatsCaret');
@@ -15498,41 +15617,7 @@ async function refreshProdTimeList(){
     const record = await jbGetRecord();
     const rangeDays = prodTimeRange==='30' ? 30 : null;
     // Jobs first: this view exists to say whether a job paid.
-    const jobs = collectJobProfit(record, rangeDays);
-    const priced = jobs.filter(j=>j.profit !== null);
-    const totalLabour = jobs.reduce((s,j)=>s+j.labour, 0);
-    const totalProfit = priced.reduce((s,j)=>s+j.profit, 0);
-    const losers = priced.filter(j=>j.profit < 0);
 
-    const jobsHtml = jobs.length ? `
-      <div class="jp-head">
-        <div class="jp-sum">
-          <div><span class="jp-sum-val">${fmt(totalLabour)}</span><span class="jp-sum-lbl">κόστος χρόνου</span></div>
-          ${priced.length ? `<div><span class="jp-sum-val ${totalProfit<0?'jp-neg':'jp-pos'}">${fmt(totalProfit)}</span><span class="jp-sum-lbl">κέρδος σε ${priced.length} τιμολογημένες</span></div>` : ''}
-          ${losers.length ? `<div><span class="jp-sum-val jp-neg">${losers.length}</span><span class="jp-sum-lbl">με ζημιά</span></div>` : ''}
-        </div>
-      </div>
-      <div class="jp-list">
-        <div class="jp-row jp-row-head">
-          <span>Δουλειά</span><span>Χρόνος</span><span>Κόστος χρόνου</span>
-          <span>Χαρτί + εκτύπωση</span><span>Χρεώθηκε</span><span>Κέρδος</span>
-        </div>
-        ${jobs.map(j=>`
-        <div class="jp-row${j.profit !== null && j.profit < 0 ? ' jp-row-loss' : ''}"
-             onclick="loadTicket('${j.id}', true)" title="Άνοιγμα ticket">
-          <span class="jp-name">${esc(j.name)}${j.qty ? `<span class="jp-qty">${j.qty.toLocaleString('el-GR')} τεμ.</span>` : ''}</span>
-          <span>${formatDuration(j.seconds)}</span>
-          <span>${fmt(j.labour)}</span>
-          <span>${j.hasOffer ? fmt(j.materials) : '<span class="jp-none">—</span>'}</span>
-          <span>${j.price > 0 ? fmt(j.price) : '<span class="jp-none">χωρίς τιμή</span>'}</span>
-          <span class="${j.profit === null ? 'jp-none' : (j.profit < 0 ? 'jp-neg' : 'jp-pos')}">${
-            j.profit === null ? '—' : fmt(j.profit)}</span>
-        </div>`).join('')}
-      </div>
-      <div class="empty-note" style="margin:8px 0 18px;">
-        Κόστος χρόνου = μετρημένα χρονόμετρα × €/ώρα μηχανής (${DEFAULT_SHOP_HOURLY} €/ώρα όπου δεν έχει οριστεί).
-        Το κέρδος δεν αφαιρεί μεταφορικά ή γενικά έξοδα.
-      </div>` : '';
 
     const groups = collectProdTimeGroups(record, rangeDays, prodTimeCategory);
     const machines = record.machines || [];
@@ -15540,7 +15625,7 @@ async function refreshProdTimeList(){
     const taskMachineMap = record.taskMachineMap || {};
     const machineDetails = record.machineDetails || {};
     if(groups.length===0){
-      el.innerHTML = jobsHtml + '<div class="empty-note">Δεν υπάρχουν ακόμα ολοκληρωμένες μετρήσεις. '
+      el.innerHTML = '<div class="empty-note">Δεν υπάρχουν ακόμα ολοκληρωμένες μετρήσεις. '
       + 'Χρησιμοποίησε τα χρονόμετρα στα Job Tickets — μια μέτρηση περνά εδώ όταν <b>σταματήσει</b> (πράσινο ✓). '
       + 'Χρονόμετρα που τρέχουν ακόμα δεν προσμετρώνται.</div>';
       return;
@@ -15590,12 +15675,12 @@ async function refreshProdTimeList(){
       let speedBadge = '';
 
       return `
-        <div class="pt-card">
+        <div class="pt-card${g.idle ? ' pt-card-idle' : ''}">
           <div class="pt-card-head">
             <div>
-              <div class="pt-task-name">${esc(g.name)}${
-                g.machine ? `<span style="font-weight:400;color:var(--muted);font-size:0.85em;"> · ${esc(g.machine)}</span>` : ''}</div>
-              <div class="pt-task-meta">${g.count} καταγραφές &nbsp; ${machineSelect}</div>
+              <div class="pt-task-name">${g.idle ? esc(g.machine) : esc(g.name)}${
+                (g.machine && !g.idle) ? `<span style="font-weight:400;color:var(--muted);font-size:0.85em;"> · ${esc(g.machine)}</span>` : ''}</div>
+              <div class="pt-task-meta">${g.idle ? 'καμία μέτρηση ακόμα' : g.count + ' καταγραφές'} &nbsp; ${machineSelect}</div>
             </div>
             <div class="pt-total-time">${formatDuration(totalAvg)}<div class="pt-total-label">Μ.Ο. συνολικός χρόνος</div></div>
           </div>
@@ -15639,12 +15724,13 @@ async function refreshProdTimeList(){
     }).join('');
     // Per-operation statistics are folded away until there is enough measured
     // work to make them mean something. The code stays; only the display waits.
-    el.innerHTML = jobsHtml + (cards ? `
+    el.innerHTML = (cards ? `
       <div class="sectitle" style="margin-top:4px;display:flex;align-items:center;gap:8px;cursor:pointer;"
            onclick="toggleProcStats()">
         <span id="ptStatsCaret" style="font-size:10px;color:var(--muted);">▶</span>
         <span>Ανά εργασία</span>
-        <span style="font-size:11px;font-weight:400;color:var(--muted);">${groups.length} εργασίες · υπό συλλογή δεδομένων</span>
+        <span style="font-size:11px;font-weight:400;color:var(--muted);">${groups.filter(g=>!g.idle).length} με μετρήσεις${
+          groups.filter(g=>g.idle).length ? ' · ' + groups.filter(g=>g.idle).length + ' μηχανές χωρίς' : ''}</span>
       </div>
       <div id="ptStatsWrap" style="display:none;">
         <div class="empty-note" style="margin-bottom:10px;">
