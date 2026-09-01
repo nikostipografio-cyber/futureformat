@@ -397,6 +397,9 @@
   #tkPaperBody tr.row-item-part:not(.row-item-first) > td:first-child input{opacity:0.45;}
   #tkPaperBody tr.row-gang > td{background:#faf7fe;}
   #tkPaperBody tr.row-gang > td:first-child{box-shadow:inset 3px 0 0 #8b5fc4;}
+  .reprint-bar{background:#eef6ff;border:1px solid #cfe0fb;color:#1f4f9e;border-radius:8px;
+    padding:8px 14px;margin-bottom:12px;font-size:12.5px;}
+  .reprint-bar a{color:#1f4f9e;}
   .tk-gang{margin-top:3px;font-size:10px;font-weight:700;
     color:#5b3a8e;cursor:pointer;user-select:none;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1623,6 +1626,8 @@ function toggleMobileSidebar(forceClose){
   <!-- A name for the main option, alongside the ones the alternatives carry. -->
   <input type="hidden" id="fMainLabel" value="">
   <input type="hidden" id="tkOfferId" value="">
+  <input type="hidden" id="tkReprintOf" value="">
+  <div id="tkReprintBar" class="reprint-bar" style="display:none;"></div>
 
   <div id="stickyTotals">
     <span class="st-item"><span class="st-lbl">Χαρτιά</span><span class="st-val" id="stMaterials">0,00 €</span></span>
@@ -10633,6 +10638,8 @@ function collectTicket(){
     notes: document.getElementById('tkNotes').innerHTML,
     paperRows: tkPaperRows.map(({id, ...r})=>r),
     procRows: tkProcRows.map(({id, ...r})=>r),
+    reprintOf: document.getElementById('tkReprintOf').value || '',
+    reprintNo: num(window.__tkReprintNo) || '',
     tkUnitWeight: document.getElementById('tkUnitWeight').value,
     tkPackQty: document.getElementById('tkPackQty').value,
     tkUnitThickness: document.getElementById('tkUnitThickness').value,
@@ -10671,6 +10678,8 @@ function applyTicketData(d, topLevelDeadline){
   document.getElementById('tkSelides').value = d.selides||'';
   document.getElementById('tkClient').value = d.client||'';
   document.getElementById('tkOfferId').value = d.offerId||'';
+  document.getElementById('tkReprintOf').value = d.reprintOf||'';
+  showReprintBar(d);
   const pull = document.getElementById('pullOfferBtn');
   if(pull) pull.style.display = d.offerId ? '' : 'none';
   document.getElementById('tkNotes').innerHTML = d.notes||'';
@@ -11575,6 +11584,19 @@ async function clearGang(rowId){
   }
 }
 
+// A reprint carries the price of the job it repeats, so the bar says which one
+// and links back to it — otherwise the second run looks like a job with no offer.
+function showReprintBar(d){
+  const bar = document.getElementById('tkReprintBar');
+  if(!bar) return;
+  window.__tkReprintNo = d.reprintNo || '';
+  if(!d.reprintOf){ bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = '';
+  bar.innerHTML = `↻ <b>Ανατύπωση #${esc(String(d.reprintNo || 2))}</b>`
+    + ` · <a href="#" onclick="event.preventDefault();loadTicket('${esc(d.reprintOf)}', true)">δες την προηγούμενη</a>`
+    + (d.offerId ? ' · ίδια τιμή με την αρχική προσφορά' : '');
+}
+
 function openGangTicket(id){ if(id) loadTicket(id, true); }
 
 function toggleDigital(rowId){
@@ -11903,6 +11925,13 @@ async function duplicateTicket(id){
     delete data.linkGroupId;               // not part of the old order group
     delete data.isLinkChild;
     delete data.approvedQty;
+
+    // A reprint is the same job at the same agreed price, so the link to the
+    // offer is kept and the run is numbered. Without this the copy had no price
+    // behind it and invoicing had nothing to charge from.
+    data.reprintOf = id;
+    data.reprintNo = (num((src.data||{}).reprintNo) || 1) + 1;
+    if(!data.offerId && (src.data||{}).offerId) data.offerId = src.data.offerId;
     (data.paperRows || []).forEach(r=>{
       r.consumed = false;                  // stock for the new run hasn't moved yet
       r.leftover = '';
@@ -11940,7 +11969,8 @@ async function duplicateTicket(id){
     await jbMergePath(SLICE_MAIN, ['tickets', newId], copy);
     await refreshTicketList();
     await loadTicket(newId, false);
-    statusMsg(`Δημιουργήθηκε αντίγραφο στο στάδιο «${firstStage}» ✓ — βάλε ημερομηνία παράδοσης και αποθήκευσε`);
+    statusMsg(`Ανατύπωση #${data.reprintNo} στο στάδιο «${firstStage}» ✓${
+      data.offerId ? ' — ίδια τιμή με την αρχική προσφορά' : ''} — βάλε ημερομηνία παράδοσης και αποθήκευσε`);
   }catch(e){
     console.error('Duplicate ticket error:', e);
     statusMsg('Σφάλμα αντιγραφής: ' + e.message);
