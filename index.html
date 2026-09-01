@@ -383,6 +383,7 @@
   .ctx-menu-item{padding:7px 10px;cursor:pointer;font-size:12.5px;border-radius:5px;}
   .ctx-menu-item:hover{background:var(--page);}
   .tk-proc-name{width:100%;}
+  .tk-machine{width:100%;font-size:12px;}
   .proc-note{width:100%;margin-top:4px;font-size:11px;padding:3px 6px;
     border-style:dashed;color:var(--muted);}
   .proc-note:focus{border-style:solid;color:var(--ink);}
@@ -758,6 +759,16 @@
     .totals-compact, .totals-compact:has(#shipTotCard[style*="display: none"]){
       grid-template-columns:repeat(2, minmax(0, 1fr));}
   }
+  /* The three things worth seeing on opening the app, side by side rather than
+     stacked — the third used to sit below the fold. */
+  .home-cols{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:16px;align-items:start;}
+  .home-cols > .card{margin-bottom:0;min-width:0;}
+  /* The heads are wordy and the columns narrow, so they stack instead of
+     squeezing the title into four lines. */
+  .home-cols .card-head{gap:8px;}
+  .home-cols .card-body{padding:14px 16px;}
+  @media (max-width:1100px){ .home-cols{grid-template-columns:repeat(2, minmax(0, 1fr));} }
+  @media (max-width:860px){ .home-cols{grid-template-columns:1fr;} }
   .totcard{background:var(--ink);border:1px solid var(--ink);border-radius:8px;padding:10px 12px;}
   /* A dedicated card for the offer's headline figure, so it isn't buried in a
      table footer among the working numbers. */
@@ -886,6 +897,21 @@
   .pt-badge.pt-ontrack{background:#fbe9cf;color:#8a5a12;}
   .pt-badge.pt-none{background:var(--page);color:var(--muted);}
 
+  /* The manager sits in a flex column, so the table needs its own width or it
+     shrinks to the size of its shortest cell. */
+  .machine-table{width:100%;min-width:700px;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  .machines-scroll{overflow-x:auto;}
+  .machine-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.03em;
+    color:var(--muted);font-weight:800;padding:6px 5px;border-bottom:1px solid var(--line);
+    white-space:nowrap;}
+  .machine-table td{padding:4px 5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  .machine-table tr:last-child td{border-bottom:none;}
+  .machine-table input, .machine-table select{width:100%;font-size:12px;padding:3px 5px;}
+  .machine-table th:nth-child(1){width:auto;}
+  .machine-table th:nth-child(n+2):nth-child(-n+7){width:74px;}
+  .machine-table th:nth-child(8){width:86px;}
+  .machine-table th:nth-child(9){width:72px;}
+  .machine-row:hover td{background:var(--page);}
   .machine-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
   .machine-name{font-weight:700;font-size:13.5px;border:1px solid transparent;
     background:transparent;padding:3px 6px;border-radius:5px;flex:1;min-width:0;}
@@ -938,6 +964,8 @@
   .kanban-card .meta{color:var(--muted);font-size:10px;line-height:1.4;font-weight:500;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
+  .kanban-date-late{background:#fbe0de !important;border-color:#e8a9a2 !important;
+    color:#a53125 !important;font-weight:800;}
   .kanban-date-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;border:1px solid var(--line-strong);background:var(--page);color:var(--muted);transition:background 0.12s;white-space:nowrap;}
   .kanban-date-btn:hover{background:#eaf1fe;border-color:#c6d9fb;color:#2f6fed;}
   .kanban-archive-btn{margin-top:9px;font-size:10.5px;font-weight:700;color:#1f7a4d;cursor:pointer;text-align:center;background:#e3f3ea;border-radius:7px;padding:5px 0;transition:background 0.12s;}
@@ -972,7 +1000,18 @@
     .app-shell{display:none !important;}
     .offer-print{display:block !important;}
     .offer-print *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
+
+    /* The head repeats on every sheet; the space it needs is its own, so nothing
+       runs underneath it. */
+    .op-sheet thead{display:table-header-group;}
+    .op-sheet tbody{display:table-row-group;}
+    .op-sheet thead .op-header{margin:0;padding-bottom:8px;border-bottom:1px solid #e2e0da;}
+    .op-page{padding:0 !important;max-width:none;}
+    @page{ margin:12mm 14mm 14mm; }
   }
+  /* The wrapper must not add any look of its own, on screen or in print. */
+  .op-sheet{width:100%;border-collapse:collapse;}
+  .op-sheet > thead > tr > td, .op-sheet > tbody > tr > td{padding:0;border:none;vertical-align:top;}
   .op-page{max-width:800px;margin:0 auto;padding:34px;font-family:-apple-system,Segoe UI,Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:12.5px;line-height:1.5;}
   .op-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
   .op-company-info{max-width:60%;}
@@ -1210,10 +1249,16 @@ function toggleMobileSidebar(forceClose){
       <div class="totcard"><div class="lbl">Εκκρεμείς Παραγγελίες Υλικών</div><div class="val" id="homeStatOrders">–</div></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="home-cols">
       <div class="card">
         <div class="card-head"><div class="title">📅 Προς Παράδοση αυτή την Εβδομάδα</div><span style="font-size:11.5px;color:var(--muted);cursor:pointer;" onclick="switchView('production')">Όλες οι Προθεσμίες →</span></div>
         <div class="card-body" id="homeWeekList"></div>
+      </div>
+
+      <div class="card" id="homeOverdueCard" style="display:none;">
+        <div class="card-head"><div class="title" style="color:#a53125;">⚠ Εκπρόθεσμες</div>
+          <span style="font-size:11.5px;color:var(--muted);cursor:pointer;" onclick="switchView('production')">Στην Παραγωγή →</span></div>
+        <div class="card-body" id="homeOverdueList"></div>
       </div>
       <div class="card">
         <div class="card-head"><div class="title">📦 Εκκρεμείς Παραγγελίες Υλικών</div><span style="font-size:11.5px;color:var(--muted);cursor:pointer;" onclick="switchView('orders')">Όλες →</span></div>
@@ -1677,7 +1722,7 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head"><div class="title">Επεξεργασίες / Post-press</div><button class="btn" onclick="addTkProcRow()">+ Γραμμή</button></div>
       <div class="card-body" style="padding:0;">
         <table>
-          <thead><tr><th style="width:4%" title="Σημείωσε όταν ολοκληρωθεί">✓</th><th style="width:20%">Εργασία</th><th style="width:32%">Λεπτομέρειες</th><th style="width:17%">Make Ready</th><th style="width:17%">Production</th><th style="width:4%"></th></tr></thead>
+          <thead><tr><th style="width:4%" title="Σημείωσε όταν ολοκληρωθεί">✓</th><th style="width:18%">Εργασία</th><th style="width:16%">Μηχάνημα</th><th style="width:24%">Λεπτομέρειες</th><th style="width:16%">Make Ready</th><th style="width:16%">Production</th><th style="width:4%"></th></tr></thead>
           <tbody id="tkProcBody" oninput="markEmptyTicketCells()"></tbody>
         </table>
       </div>
@@ -2011,7 +2056,7 @@ function toggleMobileSidebar(forceClose){
           </span>
         </div>
       </div>
-      <div class="card-body" id="prodTimeIntro" style="color:var(--muted);font-size:12px;display:none;">Στοιχεία από τα χρονόμετρα Make Ready / Production σε όλα τα αποθηκευμένα Job Tickets, ομαδοποιημένα ανά όνομα εργασίας.</div>
+      <div class="card-body" id="prodTimeIntro" style="color:var(--muted);font-size:12px;display:none;">Στοιχεία από τα χρονόμετρα Make Ready / Production σε όλα τα αποθηκευμένα Job Tickets, ομαδοποιημένα ανά εργασία και μηχάνημα — η ίδια εργασία σε άλλη μηχανή μετριέται χωριστά.</div>
       <div class="card-body" id="prodTimeList" style="display:none;"></div>
     </div>
 
@@ -2342,7 +2387,7 @@ function toggleMobileSidebar(forceClose){
           <input id="newMachineInput" placeholder="π.χ. Xerox 1" style="flex:1;" onkeydown="if(event.key==='Enter') addMachineFromSettings()">
           <button class="btn solid" onclick="addMachineFromSettings()">+ Προσθήκη</button>
         </div>
-        <div id="machinesManagerList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+        <div id="machinesManagerList"></div>
       </div>
       </div>
     </div>
@@ -2390,6 +2435,7 @@ function toggleMobileSidebar(forceClose){
 <!-- Suggestions, not a closed list: whatever is typed still counts, so offers
      written before this list existed keep their wording. -->
 <datalist id="procTaskOptions"></datalist>
+<datalist id="machineOptions"></datalist>
 
 <datalist id="colourOptions">
   <option value="CMYK"></option>
@@ -2929,13 +2975,21 @@ async function refreshMachinesManagerList(){
   try{
     const record = await jbGetRecord();
     const machines = record.machines || [];
+    window.__machineList = machines;   // shared with the ticket's machine picker
     const details = record.machineDetails || {};
     if(machines.length===0){
       el.innerHTML = '<div class="empty-note">Δεν έχεις προσθέσει ακόμα καμία μηχανή.</div>';
       return;
     }
-    const speedUnits = ['Φύλλα','Τεμάχια','Μέτρα'];
-    el.innerHTML = machines.map(m=>{
+    // A table rather than a wall of cards: eight machines at a glance, and the
+    // same figure for every one of them lines up in a column.
+    el.innerHTML = `<div class="machines-scroll"><table class="machine-table">
+      <thead><tr>
+        <th>Μηχάνημα</th><th title="Πόσοι χειριστές χρειάζονται">Άτομα</th>
+        <th>€/ώρα ατ.</th><th>€/ώρα μηχ.</th>
+        <th>Ταχύτητα</th><th>Μονάδα</th><th title="Στήσιμο πριν από κάθε δουλειά">MR (λ.)</th>
+        <th style="text-align:right;">Σύνολο/ώρα</th><th></th>
+      </tr></thead><tbody>` + machines.map(m=>{
       const d = details[m] || {};
       const operators = num(d.operators) || 1;
       const laborRate = num(d.laborRate);
@@ -2943,32 +2997,37 @@ async function refreshMachinesManagerList(){
       const hourlyCost = operators*laborRate + machineRate;
       const mEsc = esc(m).replace(/'/g,"\\'");
       return `
-        <div class="machine-card">
-          <div class="machine-card-head">
-            <input class="machine-name" value="${esc(m)}"
-              onchange="renameMachine('${mEsc}', this.value)"
-              title="Άλλαξε το όνομα — ενημερώνονται και οι εργασίες που το χρησιμοποιούν">
-            <span onclick="deleteMachineFromSettings('${mEsc}')" title="Διαγραφή μηχανής" style="cursor:pointer;color:#c0392b;font-weight:700;">×</span>
-          </div>
-          <div class="fieldgrid c2" style="margin-top:8px;">
-            <div class="field"><label>Αριθμός χειριστών</label><input type="number" min="0" step="1" value="${d.operators||''}" placeholder="1" onchange="updateMachineDetail('${mEsc}','operators',this.value)"></div>
-            <div class="field"><label>Κόστος εργατοώρας (€)</label><input type="number" min="0" step="0.01" value="${d.laborRate||''}" placeholder="0" onchange="updateMachineDetail('${mEsc}','laborRate',this.value)"></div>
-            <div class="field"><label>Κόστος μηχανοώρας (€)</label><input type="number" min="0" step="0.01" value="${d.machineRate||''}" placeholder="0" onchange="updateMachineDetail('${mEsc}','machineRate',this.value)"></div>
-            <div class="field"><label>Μονάδα Ταχύτητας</label>
-              <select onchange="updateMachineDetail('${mEsc}','speedUnit',this.value)">
-                ${speedUnits.map(u=>`<option value="${u}" ${((d.speedUnit||'Φύλλα')===u)?'selected':''}>${u}</option>`).join('')}
-              </select>
-            </div>
-          </div>
-          <div class="field" style="margin-top:8px;"><label>Ταχύτητα (ανά ώρα)</label><input type="number" min="0" step="1" value="${d.speed||''}" placeholder="π.χ. 1000" onchange="updateMachineDetail('${mEsc}','speed',this.value)"></div>
-          <div class="field" style="margin-top:8px;"><label>Make ready (λεπτά)</label>
-            <input type="number" min="0" step="1" value="${d.makeReadyMin||''}" placeholder="π.χ. 15"
-              title="Στήσιμο πριν από κάθε δουλειά σε αυτή τη μηχανή"
-              onchange="updateMachineDetail('${mEsc}','makeReadyMin',this.value)"></div>
-          <div class="empty-note" style="margin-top:8px;">Υπολογιζόμενο κόστος/ώρα: <b style="color:var(--ink);">${hourlyCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>${(d.operators||d.laborRate||d.machineRate) ? ` (${operators} × ${laborRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€ + ${machineRate.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}€)` : ' — συμπλήρωσε τα στοιχεία πάνω'}</div>
-        </div>
+        <tr class="machine-row">
+          <td><input class="machine-name" value="${esc(m)}"
+            title="Άλλαξε το όνομα — οι αντιστοιχίσεις εργασιών ακολουθούν"
+            onchange="renameMachine('${mEsc}', this.value)"></td>
+          <td><input type="number" min="0" step="1" value="${d.operators||''}" placeholder="1"
+            onchange="updateMachineDetail('${mEsc}','operators',this.value)"></td>
+          <td><input type="number" min="0" step="0.01" value="${d.laborRate||''}" placeholder="0"
+            onchange="updateMachineDetail('${mEsc}','laborRate',this.value)"></td>
+          <td><input type="number" min="0" step="0.01" value="${d.machineRate||''}" placeholder="0"
+            onchange="updateMachineDetail('${mEsc}','machineRate',this.value)"></td>
+          <td><input type="number" min="0" step="1" value="${d.speed||''}" placeholder="π.χ. 1000"
+            onchange="updateMachineDetail('${mEsc}','speed',this.value)"></td>
+          <td><select onchange="updateMachineDetail('${mEsc}','speedUnit',this.value)">
+              ${['Φύλλα','Τεμάχια','Μέτρα','Βιβλία'].map(u=>
+                `<option value="${u}" ${(d.speedUnit||'Φύλλα')===u?'selected':''}>${u}</option>`).join('')}
+            </select></td>
+          <td><input type="number" min="0" step="1" value="${d.makeReadyMin||''}" placeholder="π.χ. 15"
+            title="Στήσιμο πριν από κάθε δουλειά σε αυτή τη μηχανή"
+            onchange="updateMachineDetail('${mEsc}','makeReadyMin',this.value)"></td>
+          <td style="text-align:right;font-weight:700;white-space:nowrap;"
+            title="${(d.operators||d.laborRate||d.machineRate) ? `${operators} χειριστές × ${laborRate.toLocaleString('el-GR',{minimumFractionDigits:2})}€ + ${machineRate.toLocaleString('el-GR',{minimumFractionDigits:2})}€` : 'Συμπλήρωσε τα στοιχεία'}">${
+            hourlyCost.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+          <td style="white-space:nowrap;">
+            <button class="btn" style="padding:2px 7px;font-size:11px;"
+              title="Ένωσέ την με άλλη μηχανή — οι μετρήσεις της μεταφέρονται"
+              onclick="mergeMachines('${mEsc}')">⇥</button>
+            <button class="rowdel" title="Διαγραφή μηχανήματος"
+              onclick="deleteMachineFromSettings('${mEsc}')">×</button></td>
+        </tr>
       `;
-    }).join('');
+    }).join('') + '</tbody></table></div>';
   }catch(e){
     console.error('Machines list error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
@@ -3018,6 +3077,56 @@ async function addMachineFromSettings(){
 
 // The name is the key everywhere — task assignments, rates, timing reports — so
 // renaming has to carry all of them across, or the machine's history is orphaned.
+// Two names for one machine — "GOLF" and "GOLF - ΚΟΛΛΗΜΑ" — split the measured
+// history in two, and neither half is a useful average. Merging rewrites the
+// ticket rows so the past counts towards the name that is kept.
+async function mergeMachines(fromName){
+  try{
+    const record = await jbGetRecord();
+    const others = (record.machines || []).filter(m => m !== fromName);
+    if(!others.length){ statusMsg('Δεν υπάρχει άλλη μηχανή για συγχώνευση.'); return; }
+
+    const target = prompt(`Συγχώνευση της «${fromName}» σε ποια μηχανή;\n\n`
+      + others.map((m,i)=>`${i+1}. ${m}`).join('\n')
+      + '\n\nΓράψε τον αριθμό ή το όνομα.');
+    if(target === null) return;
+    const t = /^\d+$/.test(target.trim())
+      ? others[parseInt(target,10) - 1]
+      : others.find(m => m.toUpperCase() === target.trim().toUpperCase());
+    if(!t){ statusMsg('Δεν βρέθηκε αυτή η μηχανή.'); return; }
+
+    // Count what will move, so the confirmation is concrete.
+    let rows = 0;
+    Object.values(record.tickets || {}).forEach(tk=>{
+      const d = tk.data || {};
+      [...(d.paperRows||[]), ...(d.procRows||[])].forEach(r=>{ if(r.machine === fromName) rows++; });
+    });
+    const tasks = Object.entries(record.taskMachineMap || {})
+      .filter(([, m]) => m === fromName).map(([k]) => k);
+
+    if(!confirm(`Η «${fromName}» θα συγχωνευθεί στην «${t}».\n\n`
+      + `${rows} γραμμές job ticket και ${tasks.length} αντιστοιχίσεις εργασιών θα δείχνουν στην «${t}».\n`
+      + `Η «${fromName}» θα διαγραφεί.\n\nΟι μετρημένοι χρόνοι δεν αλλάζουν — απλώς ενώνονται.`)) return;
+
+    Object.values(record.tickets || {}).forEach(tk=>{
+      const d = tk.data || {};
+      [...(d.paperRows||[]), ...(d.procRows||[])].forEach(r=>{ if(r.machine === fromName) r.machine = t; });
+    });
+    tasks.forEach(k => { record.taskMachineMap[k] = t; });
+    record.machines = others;
+    if(record.machineDetails) delete record.machineDetails[fromName];
+    if(record.machineRates) delete record.machineRates[fromName];
+
+    await jbPutRecord(record);
+    window.__taskMachineMap = record.taskMachineMap;
+    statusMsg(`«${fromName}» → «${t}» ✓ — ${rows} γραμμές ενώθηκαν`);
+    refreshMachinesManagerList();
+  }catch(e){
+    console.error('Merge machines error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function renameMachine(oldName, newName){
   const name = String(newName||'').trim();
   if(!name || name === oldName){ refreshMachinesManagerList(); return; }
@@ -4591,6 +4700,14 @@ function knownProcTasks(){
   return out;
 }
 
+// The presses and finishing machines, offered wherever one has to be picked.
+function refreshMachineOptions(){
+  const dl = document.getElementById('machineOptions');
+  if(!dl) return;
+  const list = (window.__machineList || []);
+  dl.innerHTML = list.map(m => `<option value="${esc(m)}"></option>`).join('');
+}
+
 function refreshProcTaskOptions(){
   const dl = document.getElementById('procTaskOptions');
   if(!dl) return;
@@ -5981,6 +6098,37 @@ function addDays(iso, days){
   return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
 }
 
+// Browsers repeat a table's <thead> on every printed page, and nothing else
+// reliably. Rather than write the whole document as a table, the finished page
+// is wrapped in one afterwards: the letterhead becomes the head, the rest the
+// body. On screen the table is invisible — it has no borders and no spacing.
+function repeatPrintHeader(){
+  const view = document.getElementById('offerPrintView');
+  if(!view) return;
+  view.querySelectorAll('.op-page').forEach(page=>{
+    if(page.querySelector(':scope > .op-sheet')) return;      // already wrapped
+    const header = page.querySelector(':scope > .op-header');
+    if(!header) return;
+
+    const table = document.createElement('table');
+    table.className = 'op-sheet';
+    const thead = document.createElement('thead');
+    const hRow = thead.insertRow();
+    const hCell = hRow.insertCell();
+    hCell.appendChild(header);                                 // moves it
+
+    const tbody = document.createElement('tbody');
+    const bRow = tbody.insertRow();
+    const bCell = bRow.insertCell();
+    // Everything left in the page becomes the body of the table.
+    while(page.firstChild) bCell.appendChild(page.firstChild);
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    page.appendChild(table);
+  });
+}
+
 function buildOfferPrintHtml(){
   if(hdrQtyTimer) applyHeaderQty();
   if(recalcTimer) recalcAllNow();
@@ -6232,6 +6380,7 @@ function buildOfferPrintHtml(){
   `;
   document.getElementById('ticketPrintView').innerHTML = '';
   document.getElementById('offerPrintView').innerHTML = html;
+  repeatPrintHeader();
 }
 
 function generatePdfOffer(){
@@ -8482,6 +8631,7 @@ async function jbMergePath(sliceId, path, value){
 }
 
 async function jbDeletePath(sliceId, path){
+  jbInvalidate();   // the copy in hand still contains what is being removed
   if(mergeRpcAvailable === false) return jbFallbackWrite(sliceId, path, null, true);
   const key = getJbKey(), url = getJbBin();
   const token = await getAuthToken();
@@ -9720,7 +9870,8 @@ async function buildSeparateGangTicket(gangRows, gangSheets, client){
   // is why finishing work vanished from a gang ticket.
   procCategories.filter(procCategoryApplies).forEach(cat=>cat.tasks.forEach(t=>{
     if(t.name && procTaskIsActive(t) && !String(t.itemMaterial||'').trim()){
-      addTkProcRow({ label:t.name, details: procTaskTicketDetails(t) });
+      addTkProcRow({ label:t.name, details: procTaskTicketDetails(t),
+                     machine: t.external ? '' : (machineForTask(t.name) || '') });
     }
   }));
   gangRows.forEach(gr=>{
@@ -9898,6 +10049,95 @@ function togglePaperTimer(rowId, type){
 // A timer left running overnight, or started on the wrong row, otherwise stays
 // wrong for ever — and a wrong figure quietly distorts the costing. Reset is on
 // right-click so the row keeps two controls instead of four.
+// Two things go wrong with a timer: it runs when it should not, and it does not
+// run when it should. Zeroing fixes the first; typing a figure fixes the second,
+// which until now meant the time was simply lost.
+function openTimerMenu(ev, kind, rowId, type){
+  ev.preventDefault();
+  // The row has its own menu; without this both fire and the second wins.
+  ev.stopPropagation();
+  closeProcMenu();
+  const rows = kind === 'paper' ? tkPaperRows : tkProcRows;
+  const r = rows.find(x=>x.id===rowId);
+  if(!r) return;
+  const secs = num(r[type + 'Seconds']);
+
+  const m = document.createElement('div');
+  m.id = 'procRowMenu';
+  m.className = 'ctx-menu';
+  m.innerHTML = `
+    <div class="ctx-menu-item" onclick="closeProcMenu();setTimerManually('${kind}',${rowId},'${type}')">
+      ✎ Χειροκίνητος χρόνος${secs ? ` (τώρα ${formatDuration(secs)})` : ''}</div>
+    <div class="ctx-menu-item" onclick="closeProcMenu();addTimerTime('${kind}',${rowId},'${type}')">
+      ＋ Πρόσθεσε χρόνο</div>
+    <div class="ctx-menu-item" onclick="closeProcMenu();resetTimer('${kind}',${rowId},'${type}')">
+      ↺ Μηδενισμός</div>
+`;
+  document.body.appendChild(m);
+  const box = m.getBoundingClientRect();
+  m.style.left = Math.min(ev.clientX, window.innerWidth - box.width - 8) + 'px';
+  m.style.top = Math.min(ev.clientY, window.innerHeight - box.height - 8) + 'px';
+  setTimeout(()=>document.addEventListener('click', closeProcMenu, { once:true }), 0);
+}
+
+// Accepts what a person would write on a job bag: "45" minutes, "1:30", "2ω 15".
+function parseDurationInput(s){
+  const t = String(s||'').trim().replace(',', '.');
+  if(!t) return null;
+  const hm = t.match(/^(\d+)\s*[:.]\s*(\d{1,2})$/);
+  if(hm) return num(hm[1])*3600 + num(hm[2])*60;
+  // "2ω 15" and "2ω 15λ" both mean two and a quarter hours; the minutes may be
+  // written with or without their unit.
+  const hrs = t.match(/(\d+(?:\.\d+)?)\s*(?:ω|h)/i);
+  const mins = t.match(/(\d+(?:\.\d+)?)\s*(?:λ|m|min)/i);
+  if(hrs){
+    const rest = mins ? num(mins[1]) : num((t.split(/ω|h/i)[1]||'').trim());
+    return num(hrs[1])*3600 + rest*60;
+  }
+  if(mins) return num(mins[1])*60;
+  const plain = parseFloat(t);
+  // A bare number is minutes — 90 means an hour and a half, not ninety hours.
+  return isFinite(plain) ? Math.round(plain * 60) : null;
+}
+
+function setTimerManually(kind, rowId, type){
+  const rows = kind === 'paper' ? tkPaperRows : tkProcRows;
+  const r = rows.find(x=>x.id===rowId);
+  if(!r) return;
+  const cur = num(r[type + 'Seconds']);
+  const ans = prompt('Χρόνος για αυτή τη γραμμή\n\nΓράψε λεπτά (π.χ. 45) ή ώρες:λεπτά (π.χ. 1:30).',
+                     cur ? formatDuration(cur) : '');
+  if(ans === null) return;
+  const secs = parseDurationInput(ans);
+  if(secs === null){ statusMsg('Δεν κατάλαβα τον χρόνο — γράψε π.χ. 45 ή 1:30.'); return; }
+  applyTimerSeconds(kind, r, type, secs);
+  statusMsg(`Ορίστηκε ${formatDuration(secs)} ✓`);
+}
+
+function addTimerTime(kind, rowId, type){
+  const rows = kind === 'paper' ? tkPaperRows : tkProcRows;
+  const r = rows.find(x=>x.id===rowId);
+  if(!r) return;
+  const ans = prompt('Πόσο χρόνο να προσθέσω;\n\nΛεπτά (π.χ. 20) ή ώρες:λεπτά (π.χ. 0:45).', '');
+  if(ans === null) return;
+  const add = parseDurationInput(ans);
+  if(add === null){ statusMsg('Δεν κατάλαβα τον χρόνο — γράψε π.χ. 20 ή 0:45.'); return; }
+  const total = num(r[type + 'Seconds']) + add;
+  applyTimerSeconds(kind, r, type, total);
+  statusMsg(`+${formatDuration(add)} — σύνολο ${formatDuration(total)} ✓`);
+}
+
+// A running timer is stopped first, so the figure typed is not immediately
+// added to by the clock that is still going.
+function applyTimerSeconds(kind, r, type, secs){
+  r[type + 'Seconds'] = Math.max(0, secs);
+  r[type + 'Running'] = false;
+  r[type + 'StartedAt'] = null;
+  if(kind === 'paper') renderTkPaper(); else renderTkProc();
+  markTicketDirty();
+  if(typeof pollRunningBadge === 'function') pollRunningBadge();
+}
+
 function resetTimer(kind, rowId, type){
   const rows = kind === 'paper' ? tkPaperRows : tkProcRows;
   const r = rows.find(x=>x.id===rowId);
@@ -9967,7 +10207,7 @@ function paperTimerHtml(r, type){
                       : 'δεν έχει ξεκινήσει'))}">
       <button class="btn timer-btn" style="padding:3px 7px;font-size:11px;${running?'background:#c0392b;color:#fff;border-color:#c0392b;':''}"
         onclick="togglePaperTimer(${r.id},'${type}')">${running ? '⏸' : '▶'}</button>
-      <span class="timer-${type}-display" oncontextmenu="event.preventDefault();resetTimer('paper',${r.id},'${type}')"
+      <span class="timer-${type}-display" oncontextmenu="openTimerMenu(event,'paper',${r.id},'${type}')"
         title="Δεξί κλικ για μηδενισμό"
         style="font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:700;cursor:context-menu;${
         done ? 'color:#0e8a45;' : (running ? 'color:#c0392b;' : '')}">${formatDuration(elapsed)}${done ? ' ✓' : ''}</span>
@@ -9984,7 +10224,7 @@ function timerCellHtml(r, type, label){
                 : (done ? 'Ολοκληρωμένη μέτρηση — μετράει στο Production Time'
                         : 'Δεν έχει ξεκινήσει')}">
       <button class="btn" style="padding:4px 8px;font-size:11px;${running?'background:#c0392b;color:#fff;':''}" onclick="toggleProcTimer(${r.id},'${type}')">${running ? '⏸' : '▶'}</button>
-      <span class="timer-${type}-display" oncontextmenu="event.preventDefault();resetTimer('proc',${r.id},'${type}')"
+      <span class="timer-${type}-display" oncontextmenu="openTimerMenu(event,'proc',${r.id},'${type}')"
         title="Δεξί κλικ για μηδενισμό"
         style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;cursor:context-menu;${
         done ? 'color:#0e8a45;' : (running ? 'color:#c0392b;' : '')}">${formatDuration(elapsed)}${done ? ' ✓' : ''}</span>
@@ -10090,6 +10330,37 @@ function offerProcRowsForTicket(d){
   return out;
 }
 
+// Which machine does what is worth recording even without a planning board: it
+// is how the costing knows the hourly rate, and how reports group the work.
+function updateTkMachineHint(){
+  const body = document.getElementById('tkProcBody');
+  if(!body) return;
+  let hint = document.getElementById('tkMachineHint');
+  const named = tkProcRows.filter(r=>r.label).length;
+  const withMachine = tkProcRows.filter(r=>r.label && (r.machine || machineForTask(r.label))).length;
+  const missing = named - withMachine;
+
+  if(!missing){ if(hint) hint.remove(); return; }
+  if(!hint){
+    hint = document.createElement('div');
+    hint.id = 'tkMachineHint';
+    hint.className = 'empty-note';
+    hint.style.cssText = 'color:#a5701f;background:#fdf3e0;border:1px solid #f0dcb4;'
+      + 'border-radius:8px;padding:8px 12px;margin-top:10px;';
+    body.closest('.card').appendChild(hint);
+  }
+  hint.innerHTML = `⚙ ${missing} ${missing===1 ? 'εργασία δεν έχει' : 'εργασίες δεν έχουν'} μηχάνημα — `
+    + 'Συμπλήρωσε τη στήλη Μηχάνημα.';
+}
+
+function setTkProcMachine(rowId, value){
+  const r = tkProcRows.find(x=>x.id===rowId);
+  if(!r) return;
+  r.machine = String(value||'').trim();
+  markTicketDirty();
+  updateTkMachineHint();
+}
+
 function onTkProcName(rowId, value){
   const r = tkProcRows.find(x=>x.id===rowId);
   if(!r) return;
@@ -10099,12 +10370,13 @@ function onTkProcName(rowId, value){
 
 function renderTkProc(){
   refreshProcTaskOptions();
+  refreshMachineOptions();
+  setTimeout(updateTkMachineHint, 0);
   setTimeout(()=>{ markEmptyTicketCells(); growAllCells(); }, 0);
   const body = document.getElementById('tkProcBody');
   body.innerHTML = '';
   tkProcRows.forEach((r, idx)=>{
     const tr = document.createElement('tr');
-    tr.setAttribute('data-id', r.id);
     tr.setAttribute('data-id', r.id);
     if(r.done) tr.classList.add('proc-done');
     tr.innerHTML = `
@@ -10113,6 +10385,10 @@ function renderTkProc(){
       <td data-l="Εργασία"><input list="procTaskOptions" class="tk-proc-name"
         placeholder="διάλεξε ή γράψε εργασία" value="${esc(r.label)}"
         oninput="onTkProcName(${r.id}, this.value)"></td>
+      <td data-l="Μηχάνημα"><input list="machineOptions" class="tk-machine"
+        value="${esc(r.machine||'')}" placeholder="${esc(machineForTask(r.label) || '—')}"
+        title="Ποιο μηχάνημα θα το κάνει — κενό σημαίνει το προεπιλεγμένο για την εργασία"
+        onchange="setTkProcMachine(${r.id}, this.value)"></td>
       <td data-l="Λεπτομέρειες"><textarea class="cell-grow" rows="1" oninput="tkProcRows.find(x=>x.id===${r.id}).details=this.value;growCell(this)">${esc(r.details)}</textarea></td>
       <td>${timerCellHtml(r,'mr','Make Ready')}</td>
       <td>${timerCellHtml(r,'prod','Production')}</td>
@@ -10503,6 +10779,10 @@ async function saveTicket(){
 }
 
 async function loadTicket(id, locked){
+  // The machine list may not be fetched yet if a ticket is the first thing opened.
+  if(!window.__machineList){
+    try{ const r0 = await jbGetRecord(); window.__machineList = r0.machines || []; }catch(e){}
+  }
   try{
     const record = await jbGetRecord();
     const t = record.tickets[id];
@@ -11561,7 +11841,10 @@ async function convertOfferToTicketInner(){
       const est = procTaskCalc(t, baseQty);
       // The item is named in the details so a multi-item ticket says which part
       // each operation belongs to.
+      // The analysis card lets a machine be picked per task; that choice is part
+      // of the plan and belongs on the ticket with the rest of it.
       addTkProcRow({ label: t.name, details: procTaskTicketDetails(t),
+                     machine: t.external ? '' : (machineForTask(t.name) || ''),
                      estimatedSeconds: est.hours * 3600 });
     }
   }));
@@ -11787,6 +12070,13 @@ if(tkProcRows.length===0) addTkProcRow();
 
 // ===== Παραγγελίες (Orders) =====
 let ordersFilter = 'all';
+
+// The last column means the job is finished, so a passed date there is history
+// rather than a problem.
+function isDoneStage(stage){
+  const stages = window.__prodStages || [];
+  return !!stage && stages.length > 0 && stage === stages[stages.length - 1];
+}
 
 function todayISO(){
   const d = new Date();
@@ -13556,6 +13846,8 @@ async function refreshProductionBoard(){
   try{
     const record = await jbGetRecord();
     const stages = record.productionStages;
+    // Shared so a card can tell whether its column is the final one.
+    window.__prodStages = stages || [];
     const tickets = Object.entries(record.tickets).map(([id,t]) => ({ id, ...t })).filter(isTicketActive);
     const linkGroups = buildLinkGroupIndex(tickets);
 
@@ -13798,7 +14090,9 @@ async function refreshProductionBoard(){
             <div class="kanban-card-labels" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
               <input type="checkbox" class="kanban-bulk-checkbox" data-id="${t.id}" ${bulkSelectedIds.has(t.id)?'checked':''} style="display:${bulkSelectMode?'inline-block':'none'};margin-right:2px;">
               ${labelsHtml}
-              <span class="kanban-date-btn" title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
+              <span class="kanban-date-btn${
+                t.deadlineDate && t.deadlineDate < todayISO() && !isDoneStage(t.stage) ? ' kanban-date-late' : ''}"
+                title="Ημερομηνία παράδοσης">${t.deadlineDate ? esc(fmtDateShort(t.deadlineDate)) : 'Ημ/νία'}</span>
               ${info.linkGroupId ? `<span class="link-chip" title="Μέρος της παραγγελίας «${esc(orderName)}» — πέρνα το ποντίκι για να δεις τα υπόλοιπα μέρη">🔗${group.length>1 ? ` ${partNo}/${group.length}` : ''}</span>` : ''}
             </div>
             <div class="name">${esc(info.info || t.label || '(χωρίς τίτλο)')}</div>
@@ -14854,7 +15148,7 @@ function collectProdTimeGroups(record, rangeDays, category){
     // named ΕΚΤΥΠΩΣΗ — otherwise the hours spent printing never reach the report.
     const printRows = (data.paperRows||[])
       .filter(p => num(p.mrSeconds) > 0 || num(p.prodSeconds) > 0)
-      .map(p => ({ label:'ΕΚΤΥΠΩΣΗ', mrSeconds:p.mrSeconds, prodSeconds:p.prodSeconds,
+      .map(p => ({ label:'ΕΚΤΥΠΩΣΗ', machine:p.machine, mrSeconds:p.mrSeconds, prodSeconds:p.prodSeconds,
                    mrRunning:p.mrRunning, prodRunning:p.prodRunning, rowSheets:num(p.fylla) }));
 
     [...(data.procRows||[]), ...printRows].forEach(r=>{
@@ -14865,8 +15159,17 @@ function collectProdTimeGroups(record, rangeDays, category){
       if(r.mrRunning || r.prodRunning) return;
       const mr = num(r.mrSeconds), prod = num(r.prodSeconds), est = num(r.estimatedSeconds);
       if(mr<=0 && prod<=0) return;
-      const key = name.toUpperCase();
-      if(!groups[key]) groups[key] = { name, count:0, mrTotal:0, prodTotal:0, qtyTotal:0, mrCount:0, prodCount:0, mrMin:null, mrMax:null, prodMin:null, prodMax:null, estTotal:0, estCount:0, unitTotal:0, rateSamples:[], points:[] };
+      // Grouped by task and machine together: the same cut on a three-knife
+      // trimmer and by hand are different operations, and averaging them hides
+      // both. The machine also sets the rate, so mixing them mis-costs the work.
+      // Rows recorded before machines were tracked have none, so the shop's own
+      // assignment fills in — read from this record rather than a global that may
+      // not have been fetched yet, or the same task splits into two rows.
+      const upper = name.toUpperCase();
+      const machine = (r.machine
+        || taskMachineMap[upper] || DEFAULT_TASK_MACHINES[upper] || '').trim();
+      const key = (name + '|' + machine).toUpperCase();
+      if(!groups[key]) groups[key] = { name, machine, count:0, mrTotal:0, prodTotal:0, qtyTotal:0, mrCount:0, prodCount:0, mrMin:null, mrMax:null, prodMin:null, prodMax:null, estTotal:0, estCount:0, unitTotal:0, rateSamples:[], points:[] };
       const g = groups[key];
       g.count++;
       if(mr>0){
@@ -15130,46 +15433,22 @@ async function refreshRunningTimers(){
     ${forgotten.length ? `<div class="empty-note" style="color:#b3243c;margin-bottom:10px;">
       ${forgotten.length} ${forgotten.length===1?'χρονόμετρο τρέχει':'χρονόμετρα τρέχουν'} πάνω από ${FORGOTTEN_HOURS} ώρες —
       μάλλον ξεχάστηκαν ανοιχτά.</div>` : ''}
+    <div class="empty-note" style="margin-bottom:8px;">Κλικ σε γραμμή για να ανοίξει το ticket.</div>
     <div class="jp-list">
-      <div class="jp-row jp-row-head" style="grid-template-columns:2.2fr 1.4fr 1fr 1fr 0.8fr;">
-        <span>Δουλειά</span><span>Γραμμή</span><span>Φάση</span><span>Χρόνος</span><span></span>
+      <div class="jp-row jp-row-head" style="grid-template-columns:2.2fr 1.4fr 1fr 1fr;">
+        <span>Δουλειά</span><span>Γραμμή</span><span>Φάση</span><span>Χρόνος</span>
       </div>
       ${running.map(r=>`
       <div class="jp-row${r.seconds > FORGOTTEN_HOURS*3600 ? ' jp-row-loss' : ''}"
-           style="grid-template-columns:2.2fr 1.4fr 1fr 1fr 0.8fr;">
-        <span class="jp-name" onclick="loadTicket('${r.ticketId}', true)" style="cursor:pointer;"
-          title="Άνοιγμα ticket">${esc(r.job)}</span>
+           style="grid-template-columns:2.2fr 1.4fr 1fr 1fr;cursor:pointer;"
+           onclick="loadTicket('${r.ticketId}', true)"
+           title="Άνοιγμα του ticket για να σταματήσεις το χρονόμετρο">
+        <span class="jp-name">${esc(r.job)}</span>
         <span>${esc(r.line)}</span>
         <span class="jp-none">${esc(r.phase)}</span>
         <span class="${r.seconds > FORGOTTEN_HOURS*3600 ? 'jp-neg' : ''}">${formatDuration(r.seconds)}</span>
-        <span><button class="btn" style="padding:3px 9px;font-size:11px;"
-          onclick="stopRunningTimer('${r.ticketId}',${r.rowId},'${r.type}')">Σταμάτα</button></span>
       </div>`).join('')}
     </div>`;
-}
-
-// Stops a timer without leaving this screen, so a forgotten one can be dealt
-// with the moment it is spotted.
-async function stopRunningTimer(ticketId, rowId, type){
-  try{
-    const record = await jbGetRecord();
-    const t = record.tickets[ticketId];
-    if(!t) return;
-    const d = t.data || {};
-    const row = [...(d.paperRows||[]), ...(d.procRows||[])].find(r=>r.id === rowId);
-    if(!row) return;
-    const started = num(row[type + 'StartedAt']);
-    row[type + 'Seconds'] = num(row[type + 'Seconds']) + (started ? (Date.now()-started)/1000 : 0);
-    row[type + 'Running'] = false;
-    row[type + 'StartedAt'] = null;
-    await jbMergePath(SLICE_MAIN, ['tickets', ticketId], t);
-    statusMsg('Το χρονόμετρο σταμάτησε ✓');
-    refreshRunningTimers();
-    if(currentTicketId === ticketId) loadTicket(ticketId, false);
-  }catch(e){
-    console.error('Stop timer error:', e);
-    statusMsg('Σφάλμα: ' + e.message);
-  }
 }
 
 // A count in the sidebar, visible from every screen — the card only helps if you
@@ -15279,7 +15558,10 @@ async function refreshProdTimeList(){
       const unitLabel = g.unit || 'Φύλλα';
       const reliability = rateReliability(g.rateSamples);
 
-      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
+      // The machine the measurements actually came from, falling back to the
+      // task's default for older tickets that never named one.
+      const assignedMachine = g.machine
+        || taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
       const rate = assignedMachine ? num(machineRates[assignedMachine]) : 0;
       const avgCost = rate>0 ? (totalAvg/3600)*rate : null;
       // Setup is part of the job, so planning and costing per 1.000 include it:
@@ -15311,7 +15593,8 @@ async function refreshProdTimeList(){
         <div class="pt-card">
           <div class="pt-card-head">
             <div>
-              <div class="pt-task-name">${esc(g.name)}</div>
+              <div class="pt-task-name">${esc(g.name)}${
+                g.machine ? `<span style="font-weight:400;color:var(--muted);font-size:0.85em;"> · ${esc(g.machine)}</span>` : ''}</div>
               <div class="pt-task-meta">${g.count} καταγραφές &nbsp; ${machineSelect}</div>
             </div>
             <div class="pt-total-time">${formatDuration(totalAvg)}<div class="pt-total-label">Μ.Ο. συνολικός χρόνος</div></div>
@@ -15390,7 +15673,8 @@ async function exportProdTimeCsv(){
       const mrPct = totalAvg>0 ? Math.round(mrAvg/totalAvg*100) : 0;
       const prodPct = totalAvg>0 ? 100-mrPct : 0;
       const throughput = g.prodTotal>0 ? (g.qtyTotal / (g.prodTotal/3600)) : 0;
-      const assignedMachine = taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
+      const assignedMachine = g.machine
+        || taskMachineMap[g.name.toUpperCase()] || DEFAULT_TASK_MACHINES[g.name.toUpperCase()] || '';
       const rate = assignedMachine ? num(machineRates[assignedMachine]) : 0;
       const cost = rate>0 ? (totalAvg/3600)*rate : 0;
       const estAvg = g.estCount ? g.estTotal/g.estCount : 0;
@@ -15441,11 +15725,39 @@ async function refreshHomeDashboard(){
     document.getElementById('homeStatOrders').textContent = pendingOrders.length;
 
     // Overdue banner
+    // A count in a banner tells you there is a problem; the list tells you which
+    // jobs, how late, and lets you open one.
+    const overdueCard = document.getElementById('homeOverdueCard');
+    const overdueList = document.getElementById('homeOverdueList');
     if(overdue.length>0){
-      banner.style.display = 'flex';
-      banner.innerHTML = `⚠️ Υπάρχουν <b>${overdue.length}</b> εκπρόθεσμες εργασίες — <span style="text-decoration:underline;cursor:pointer;" onclick="switchView('production')">δες τα στην Παραγωγή</span>`;
+      // The list below says the same thing with the detail, so the banner stays
+      // out of the way.
+      banner.style.display = 'none';
+      if(overdueCard && overdueList){
+        overdueCard.style.display = '';
+        // The latest first: those are the ones that have been waiting longest.
+        const sorted = overdue.slice().sort((a,b)=>a.deadlineDate.localeCompare(b.deadlineDate));
+        overdueList.innerHTML = `<div class="jp-list">
+          <div class="jp-row jp-row-head" style="grid-template-columns:2fr 1fr 1fr auto;">
+            <span>Δουλειά</span><span>Στάδιο</span><span>Προθεσμία</span><span style="text-align:right;">Καθυστέρηση</span>
+          </div>
+          ${sorted.map(t=>{
+            const days = Math.round((new Date(todayStr) - new Date(t.deadlineDate)) / 86400000);
+            return `<div class="jp-row jp-row-loss" style="grid-template-columns:2fr 1fr 1fr auto;cursor:pointer;"
+                 onclick="loadTicket('${t.id}', true)">
+              <span class="jp-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;
+                white-space:nowrap;">${esc(t.label || 'Χωρίς τίτλο')}</span>
+              <span class="jp-none">${esc(t.stage || '')}</span>
+              <span>${esc(fmtDateShort(t.deadlineDate))}</span>
+              <span class="jp-neg" style="white-space:nowrap;text-align:right;padding-left:10px;">${
+                days} ${days===1?'μέρα':'μέρες'}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
     } else {
       banner.style.display = 'none';
+      if(overdueCard) overdueCard.style.display = 'none';
     }
 
     // Προς παράδοση αυτή την εβδομάδα
