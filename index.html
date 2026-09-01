@@ -1475,7 +1475,7 @@ function toggleMobileSidebar(forceClose){
           </tr>
         </thead>
         <tbody id="flatBody"></tbody>
-        <tfoot><tr><td colspan="20" style="text-align:right;" id="flatTotalLabel">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="19" style="text-align:right;" id="flatTotalLabel">Σύνολο Flat Work</td><td class="auto" id="flatTotal" style="text-align:center;">0,00 €</td><td colspan="2"></td></tr></tfoot>
       </table>
     </div>
   </div>
@@ -4090,15 +4090,37 @@ function boardCalc(t, qty){
 
 // Lamination is charged by the square metre of film, so what matters is the
 // sheet size and how many sheets — not how many finished pieces come off them.
-const LAM_TYPES = {
-  'matt1':  { label:'Ματ / Gloss — 1 όψη',            key:'std',  sides:1 },
-  'matt2':  { label:'Ματ / Gloss — 2 όψεις',          key:'std',  sides:2 },
-  'soft1':  { label:'Αντισκατς / Soft touch — 1 όψη',   key:'soft', sides:1 },
-  'soft2':  { label:'Αντισκατς / Soft touch — 2 όψεις', key:'soft', sides:2 }
+// The finish and the number of sides are two separate choices — pairing them
+// gave eight combinations in one list and still could not say "gloss, one side".
+const LAM_FINISHES = {
+  'gloss': { label:'Gloss',      key:'std'  },
+  'matt':  { label:'Ματ',        key:'std'  },
+  'anti':  { label:'Antiscratch', key:'soft' },
+  'soft':  { label:'Soft touch', key:'soft' }
 };
 
+// Older offers stored finish and sides together; they still read correctly.
+const LAM_TYPES = {
+  'matt1':  { label:'Ματ — 1 όψη',          key:'std',  sides:1, finish:'matt'  },
+  'matt2':  { label:'Ματ — 2 όψεις',        key:'std',  sides:2, finish:'matt'  },
+  'soft1':  { label:'Soft touch — 1 όψη',   key:'soft', sides:1, finish:'soft'  },
+  'soft2':  { label:'Soft touch — 2 όψεις', key:'soft', sides:2, finish:'soft'  }
+};
+
+// The pair the calculation actually needs, from either storage form.
+function lamChoice(t){
+  const f = LAM_FINISHES[t.lamFinish || ''];
+  // Both halves are needed. Assuming one side when only the finish was picked
+  // charged for a job nobody had specified yet.
+  if(f){
+    const sides = num(t.lamSides);
+    return sides > 0 ? { label: f.label, key: f.key, sides } : null;
+  }
+  return LAM_TYPES[t.lamType || ''] || null;
+}
+
 function lamCalc(t, baseQty){
-  const type = LAM_TYPES[t.lamType || ''];
+  const type = lamChoice(t);
   if(!type) return null;
   const cfg = printSettings();
   const rate = type.key === 'soft'
@@ -4539,6 +4561,15 @@ function recalcFlatTotal(){
   // hide, so the cost moves to the caption.
   const el = document.getElementById('flatTotal');
   const label = document.getElementById('flatTotalLabel');
+  // Columns are hidden or shown by mode, so a fixed colspan pushed the figure off
+  // the end of the table. It is counted from what is actually on screen.
+  if(label){
+    const firstRow = document.querySelector('#flatBody tr');
+    if(firstRow){
+      const visible = [...firstRow.children].filter(td => td.offsetParent !== null).length;
+      if(visible > 2) label.setAttribute('colspan', String(visible - 2));
+    }
+  }
   updateOfferTotalCard(multi, priceTotal, costTotal, pricedRows);
   // In a multi-item offer this line IS the offer's price, so it stops looking
   // like another calculated cell and reads as the answer.
@@ -4703,8 +4734,9 @@ function procTaskTicketDetails(t){
   // otherwise have to open the offer to find out what was quoted.
   const kind = taskMaterial(t.name);
   if(kind === 'lam'){
-    const type = LAM_TYPES[t.lamType || ''];
-    parts.push([t.lamItem, type && type.label].filter(Boolean).join(' · '));
+    const ch = lamChoice(t);
+    parts.push([t.lamItem, ch && `${ch.label} — ${ch.sides} όψη${ch.sides>1?'ς':''}`]
+      .filter(Boolean).join(' · '));
   }
   if(kind === 'foil' && t.clicheSize) parts.push(`κλισέ ${t.clicheSize}`);
   if(kind === 'board' && (t.boardSize || t.boardThickness))
@@ -5822,23 +5854,38 @@ function addProcCategory(){
   if(!name) return;
   procCategories.push({ id: procCatSeq++, name, tasks: [] });
   renderProc();
+  // Any change to the task list belongs to the quantity being edited, so the
+  // snapshot has to be refreshed — otherwise it leaks onto the other tabs.
+  updateGrand();
+  markOfferDirty();
 }
 function toggleProcCategoryHidden(catId){
   const cat = procCategories.find(c=>c.id===catId);
   if(!cat) return;
   cat.collapsed = !cat.collapsed;
   renderProc();          // rows for a newly opened category are built now
+  // Any change to the task list belongs to the quantity being edited, so the
+  // snapshot has to be refreshed — otherwise it leaks onto the other tabs.
+  updateGrand();
+  markOfferDirty();
 }
 function addProcTask(catId){
   const cat = procCategories.find(c=>c.id===catId);
   cat.tasks.push({ id: procTaskSeq++, name:'', qty:'', speed:'', rate:'', extra:'', itemMaterial:'' });
   cat.collapsed = false; // otherwise the new row would be added out of sight
   renderProc();
+  updateGrand();
+  markOfferDirty();
 }
 function removeProcTask(catId, taskId){
   const cat = procCategories.find(c=>c.id===catId);
   cat.tasks = cat.tasks.filter(t=>t.id!==taskId);
   renderProc();
+  // Without this the alternative quantity's snapshot was never refreshed, so a
+  // task deleted there came back on switching tabs — and worse, the deletion
+  // landed on the main quantity instead.
+  updateGrand();
+  markOfferDirty();
 }
 
 function prompt2(msg, def){
@@ -6031,11 +6078,20 @@ function renderProc(){
                 .map(nm=>{
                   return `<option value="${esc(nm)}" ${String(t.lamItem||'')===nm?'selected':''}>${esc(nm)}</option>`; }).join('')}
             </select>
-            <select onchange="onLamTypeInput(${cat.id},${t.id},this.value)">
-              <option value="">— είδος —</option>
-              ${Object.entries(LAM_TYPES).map(([k,v])=>
-                `<option value="${k}" ${t.lamType===k?'selected':''}>${esc(v.label)}</option>`).join('')}
-            </select>
+            <div style="display:flex;gap:4px;">
+              <select style="flex:1;min-width:0;" onchange="onLamFinishInput(${cat.id},${t.id},this.value)">
+                <option value="">— είδος —</option>
+                ${Object.entries(LAM_FINISHES).map(([k,v])=>{
+                  const cur = t.lamFinish || (LAM_TYPES[t.lamType||''] || {}).finish || '';
+                  return `<option value="${k}" ${cur===k?'selected':''}>${esc(v.label)}</option>`; }).join('')}
+              </select>
+              <select style="flex:0 0 78px;" onchange="onLamSidesInput(${cat.id},${t.id},this.value)">
+                <option value="">— όψεις —</option>
+                ${[1,2].map(n=>{
+                  const cur = num(t.lamSides) || (LAM_TYPES[t.lamType||''] || {}).sides || 0;
+                  return `<option value="${n}" ${cur===n?'selected':''}>${n===1?'1 όψη':'2 όψεις'}</option>`; }).join('')}
+              </select>
+            </div>
             <div class="pa-note c-foil"></div>`
           : taskMaterial(t.name) === 'foil' ? `
             <label class="proc-foil-lbl">Κλισέ — ανάπτυγμα / κόστος</label>
@@ -6768,10 +6824,27 @@ function onBoardSizeInput(catId, taskId, value){
   queueAnalysisRefresh();
 }
 
-function onLamTypeInput(catId, taskId, value){
+// Finish and sides are stored apart now; the old combined field is cleared so a
+// half-migrated task cannot report two different things.
+function onLamFinishInput(catId, taskId, value){
   const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
   if(!t) return;
-  t.lamType = value;
+  if(!num(t.lamSides)) t.lamSides = (LAM_TYPES[t.lamType||''] || {}).sides || '';
+  t.lamFinish = value;
+  t.lamType = '';
+  recalcProcTask(catId, taskId);
+  markOfferDirty();
+  queueAnalysisRefresh();
+}
+
+function onLamSidesInput(catId, taskId, value){
+  const t = procCategories.find(c=>c.id===catId).tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  // Only carried over from an older combined value — never invented, or picking
+  // the sides alone would silently choose a finish and start charging.
+  if(!t.lamFinish) t.lamFinish = (LAM_TYPES[t.lamType||''] || {}).finish || '';
+  t.lamSides = num(value) || '';
+  t.lamType = '';
   recalcProcTask(catId, taskId);
   markOfferDirty();
   queueAnalysisRefresh();
@@ -7347,7 +7420,12 @@ function switchQtyTab(id){
   if(id !== null){
     const target = extraQuantities.find(x=>x.id===id);
     if(!target) return;
-    if(!num(target.qty)){ statusMsg('Βάλε πρώτα ποσότητα σε αυτή την καρτέλα.'); return; }
+    // An alternative may differ only in binding or finishing, keeping the same
+    // run length. Refusing to open it left the tab unreachable and made it look
+    // as though its settings had been lost.
+    if(!num(target.qty) && !target.snap){
+      statusMsg('Βάλε πρώτα ποσότητα σε αυτή την καρτέλα.'); return;
+    }
   }
   stashCurrentTab();
   editingExtraQtyId = id;
@@ -8235,7 +8313,14 @@ async function toggleOfferTemplateMenu(ev){
 }
 
 function collectOffer(){
-  return {
+  // The live form belongs to whichever tab is open. Saving from an alternative
+  // wrote that alternative as the main offer and left the alternative holding a
+  // stale copy — so the tab is stashed first, and the main quantity is then read
+  // from its own backup rather than from the form.
+  stashCurrentTab();
+  const mainSnap = editingExtraQtyId !== null && window.__mainOfferBackup
+    ? window.__mainOfferBackup.snap : null;
+  const data = {
     client: document.getElementById('fClient').value,
     title: document.getElementById('fTitle').value,
     schemaClosed: document.getElementById('fSchemaClosed').value,
@@ -8263,6 +8348,7 @@ function collectOffer(){
     // snapRaw is a cache of snap — storing both would double the saved size.
     shipRows: shipRows.map(({id, ...rest})=>rest),
     extraQuantities: extraQuantities.map(({id, snapRaw, ...rest})=>rest),
+    // Replaced below when an alternative tab is the one on screen.
     flatRows: flatRows.map(({id, ...r})=>r),
     bookRows: bookRows.map(({id, ...r})=>r),
     fabricRows: fabricRows.map(({id, ...r})=>r),
@@ -8270,6 +8356,22 @@ function collectOffer(){
     pkExtraWeight: document.getElementById('pkExtraWeight').value,
     pkExtraThickness: document.getElementById('pkExtraThickness').value
   };
+
+  // The main quantity is whatever the main tab holds, not what happens to be on
+  // screen. Its own fields are put back from the backup taken when we left it.
+  if(mainSnap){
+    data.flatRows = JSON.parse(JSON.stringify(mainSnap.flatRows || []));
+    data.bookRows = JSON.parse(JSON.stringify(mainSnap.bookRows || []));
+    data.fabricRows = JSON.parse(JSON.stringify(mainSnap.fabricRows || []));
+    data.shipRows = JSON.parse(JSON.stringify(mainSnap.shipRows || []));
+    data.procCategories = JSON.parse(JSON.stringify(mainSnap.procCategories || []));
+    if(mainSnap.pages !== undefined) data.pages = mainSnap.pages;
+    if(mainSnap.schemaClosed !== undefined) data.schemaClosed = mainSnap.schemaClosed;
+    if(mainSnap.manualTotal !== undefined) data.manualTotal = mainSnap.manualTotal;
+    if(mainSnap.markup !== undefined) data.markup = mainSnap.markup;
+    if(window.__mainOfferBackup.qty) data.qty = window.__mainOfferBackup.qty;
+  }
+  return data;
 }
 
 function applyOfferData(d){
