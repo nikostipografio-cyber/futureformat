@@ -12152,7 +12152,13 @@ async function convertOfferToTicketInner(){
 
   // If items were marked for a gang run, the choice belongs here — one press run
   // can have its own ticket from the start, rather than being split out later.
-  const gangRows = (partial || flatRows).filter(r=>r.gangPick && (r.material || r.paperName));
+  // Ganging is a multi-item idea: several products sharing one sheet. In a
+  // Βιβλίο/Έντυπο offer the column is hidden, but a tick left behind by an
+  // earlier switch of type still produced a second ticket out of nowhere.
+  const gangAllowed = !!(document.getElementById('fMultiItem')||{}).checked;
+  const gangRows = gangAllowed
+    ? (partial || flatRows).filter(r=>r.gangPick && (r.material || r.paperName))
+    : [];
   let gangSheets = 0;
   if(gangRows.length >= 2){
     const suggested = (typeof suggestedGangSheets === 'function') ? suggestedGangSheets(gangRows) : '';
@@ -14236,6 +14242,12 @@ function ticketQtyIsAmbiguous(data){
   // same job — two cover stocks, or a body and a cover — share one run length,
   // and calling that "multiple items" hid the figure the press actually needs.
   // Only genuinely different quantities mean there is no single answer.
+  // A figure in the header is the run length of the whole job, and it is what the
+  // press needs. Per-row quantities only override it on a multi-item job, and
+  // that case is already covered by the flag above — otherwise stale values left
+  // behind by a change of offer type would hide a perfectly good number.
+  if(num(d.qty) > 0) return false;
+
   const quantities = [...new Set(rows.map(r => num(r.qty)).filter(q => q > 0))];
   return quantities.length > 1;
 }
