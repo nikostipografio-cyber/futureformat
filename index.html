@@ -2584,7 +2584,7 @@ async function loadPapers(){
     const key = getJbKey(), url = getJbBin();
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/papers?select=*`, {
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` },
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` },
       cache: 'no-store'
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -2657,7 +2657,7 @@ async function upsertPaper(paper){
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/papers`, {
       method: 'POST',
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ name: paper.name, w: paper.w ?? null, l: paper.l ?? null, g: paper.g ?? null,
         priceKg: paper.priceKg ?? null, priceSheet: paper.priceSheet ?? null,
         // Stock lives with the material now: one row, written on its own, so two
@@ -2881,7 +2881,7 @@ async function refreshUserRolesList(){
   try{
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/user_roles?select=*`, {
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
@@ -2921,7 +2921,7 @@ async function saveUserRole(){
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/user_roles`, {
       method: 'POST',
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ email, can_view_offers: canOffers, can_view_forecast: canForecast })
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -2944,7 +2944,7 @@ async function deleteUserRole(email){
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/user_roles?email=eq.${encodeURIComponent(email)}`, {
       method: 'DELETE',
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     refreshUserRolesList();
@@ -8639,8 +8639,13 @@ function switchView(view){
   if(view==='settings'){ refreshLabelRules(); showDeployedFileDate(); }
 }
 
-function getJbKey(){ return document.getElementById('jbKey').value.trim(); }
-function getJbBin(){ return document.getElementById('jbBin').value.trim(); }
+// A key or address pasted from a mail or a chat often carries an invisible
+// character. Anything outside printable ASCII makes the browser refuse the whole
+// request with a message that names nothing, so it is stripped at the source.
+const jbClean = s => String(s == null ? '' : s).replace(/[^\u0021-\u007E]/g, '');
+
+function getJbKey(){ return jbClean(document.getElementById('jbKey').value); }
+function getJbBin(){ return jbClean(document.getElementById('jbBin').value).replace(/\/+$/, ''); }
 
 function onJbChange(){
   localStorage.setItem('offer_jb_key', getJbKey());
@@ -8714,8 +8719,21 @@ async function restoreFromBackup(){
 
 async function getAuthToken(){
   if(supabaseAuthClient){
-    const { data: { session } } = await supabaseAuthClient.auth.getSession();
-    if(session) return session.access_token;
+    try{
+      const { data: { session } } = await supabaseAuthClient.auth.getSession();
+      if(session) return jbClean(session.access_token);
+    }catch(e){
+      // A session stored with a stray character makes the auth library itself
+      // build an invalid header, and every call fails with a message that names
+      // nothing. The bad session is thrown away so the app can carry on.
+      console.warn('Χαλασμένη συνεδρία — καθαρίζεται:', e.message);
+      try{
+        Object.keys(localStorage)
+          .filter(k => /^sb-.*-auth-token/.test(k))
+          .forEach(k => localStorage.removeItem(k));
+      }catch(err){}
+      statusMsg('Η σύνδεση χάλασε — συνδέσου ξανά.');
+    }
   }
   return getJbKey(); // fallback to the anon key if not logged in yet
 }
@@ -8755,7 +8773,7 @@ async function jbFetchRecord(){
   // (offers, forecast) simply won't come back at all if unauthorized, and we
   // merge whatever we DO get into one combined object, exactly like before.
   const res = await fetch(`${url}/rest/v1/app_data?select=record`, {
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` },
+    headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` },
     cache: 'no-store'
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -8805,7 +8823,7 @@ async function jbMergePath(sliceId, path, value){
   const token = await getAuthToken();
   const res = await fetch(`${url}/rest/v1/rpc/app_merge`, {
     method: 'POST',
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_id: sliceId, p_path: path, p_value: value })
   });
   if(res.status === 404){
@@ -8827,7 +8845,7 @@ async function jbDeletePath(sliceId, path){
   const token = await getAuthToken();
   const res = await fetch(`${url}/rest/v1/rpc/app_delete_path`, {
     method: 'POST',
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_id: sliceId, p_path: path })
   });
   if(res.status === 404){
@@ -8862,7 +8880,7 @@ async function jbPutRecord(record){
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
-  const headers = { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  const headers = { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
   const now = new Date().toISOString();
 
   const mainSlice = Object.assign({}, record);
@@ -10782,7 +10800,7 @@ async function openTicketAttachment(idx){
     const token = await getAuthToken();
     const res = await fetch(`${url}/storage/v1/object/sign/attachments/${a.path}`, {
       method: 'POST',
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiresIn: 3600 }) // link stays valid for 1 hour
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -10810,7 +10828,7 @@ async function uploadTicketAttachment(){
     const path = `${Date.now()}_${safeName}`;
     const res = await fetch(`${url}/storage/v1/object/attachments/${path}`, {
       method: 'POST',
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' },
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': file.type || 'application/octet-stream' },
       body: file
     });
     if(!res.ok){
@@ -10844,7 +10862,7 @@ async function deleteTicketAttachment(idx){
       const token = await getAuthToken();
       await fetch(`${url}/storage/v1/object/attachments/${attachment.path}`, {
         method: 'DELETE',
-        headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+        headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
       });
     }catch(e){ console.error('Delete storage file error (non-fatal):', e); }
   }
@@ -13386,7 +13404,7 @@ async function checkUserPermissions(){
     const key = getJbKey(), url = getJbBin();
     const token = await getAuthToken();
     const res = await fetch(`${url}/rest/v1/user_roles?email=eq.${encodeURIComponent(user.email)}&select=can_view_offers,can_view_forecast`, {
-      headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
     });
     if(!res.ok) return; // don't lock people out if this check itself fails — RLS on the data itself is the real boundary
     const rows = await res.json();
@@ -14213,8 +14231,13 @@ function ticketQtyIsAmbiguous(data){
   if(d.isLinkChild) return false;
 
   if(rows.some(r => r.gangRow || /ΣΥΝΕΚΤΥΠΩΣΗ/i.test(String(r.tatgab||'')))) return true;
-  // Older tickets carry no flag, so multi-item is inferred from the rows.
-  return rows.filter(r => num(r.qty) > 0).length > 1;
+
+  // Older tickets carry no flag, so it has to be inferred. Two papers for the
+  // same job — two cover stocks, or a body and a cover — share one run length,
+  // and calling that "multiple items" hid the figure the press actually needs.
+  // Only genuinely different quantities mean there is no single answer.
+  const quantities = [...new Set(rows.map(r => num(r.qty)).filter(q => q > 0))];
+  return quantities.length > 1;
 }
 
 async function refreshProductionBoard(){
@@ -17194,7 +17217,7 @@ async function deletePaperRow(name){
   const token = await getAuthToken();
   const res = await fetch(`${url}/rest/v1/papers?name=eq.${encodeURIComponent(name)}`, {
     method: 'DELETE',
-    headers: { 'apikey': key, 'Authorization': `Bearer ${token}` }
+    headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
 }
