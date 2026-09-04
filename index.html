@@ -9171,7 +9171,16 @@ function toggleProcInOfferBtn(){
     : 'Οι επεξεργασίες δεν θα εμφανίζονται στο PDF.');
 }
 
+// Same guard as the ticket: overlapping saves would each create their own record.
+let offerSaveInFlight = null;
+
 async function saveOffer(){
+  if(offerSaveInFlight) return offerSaveInFlight;
+  offerSaveInFlight = saveOfferInner().finally(()=>{ offerSaveInFlight = null; });
+  return offerSaveInFlight;
+}
+
+async function saveOfferInner(){
   if(recalcTimer) recalcAllNow();   // save what the figures actually are
   // Whichever tab is open, what gets stored is the main quantity — the switch
   // back and forth is invisible and keeps the tab you were on.
@@ -10967,7 +10976,17 @@ function defaultTicketStage(record){
   return stages[1] || stages[0] || 'Νέο';
 }
 
+// Two saves that overlap both find no id and both create one, so the job lands on
+// the board twice. The first call is allowed to finish and the others wait for it.
+let ticketSaveInFlight = null;
+
 async function saveTicket(){
+  if(ticketSaveInFlight) return ticketSaveInFlight;
+  ticketSaveInFlight = saveTicketInner().finally(()=>{ ticketSaveInFlight = null; });
+  return ticketSaveInFlight;
+}
+
+async function saveTicketInner(){
   try{
     const data = collectTicket();
     const id = currentTicketId || ('t' + Date.now());
