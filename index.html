@@ -2411,6 +2411,18 @@ function toggleMobileSidebar(forceClose){
     </div>
 
     <div class="card">
+      <div class="card-head"><div class="title">🗑 Κάδος</div>
+        <button class="btn" onclick="toggleTrashCard()" id="trashToggleBtn">Εμφάνιση</button></div>
+      <div id="trashBody" style="display:none;">
+        <div class="card-body">
+          <div class="empty-note" style="margin-bottom:10px;">Ό,τι διαγράφεις μένει εδώ
+            30 ημέρες πριν χαθεί οριστικά.</div>
+          <div id="trashList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-head"><div class="title">🏭 Διαχείριση Μηχανών</div><button class="btn" onclick="toggleMachinesManagerCard()" id="machinesManagerToggleBtn">Εμφάνιση</button></div>
       <div id="machinesManagerBody" style="display:none;">
       <div class="card-body">
@@ -9411,9 +9423,104 @@ async function loadOffer(id){
   }
 }
 
-async function deleteOffer(id){
-  if(!confirm('Διαγραφή αυτής της προσφοράς;')) return;
+// Deleted work waits a month before it is really gone. A wrong click, a duplicate
+// removed too hastily — those are recoverable for thirty days instead of being
+// retyped from memory.
+const TRASH_DAYS = 30;
+
+async function moveToTrash(kind, id, item){
+  if(!item) return;
+  const record = await jbGetRecord();
+  const trash = record.trash || {};
+  trash[kind + ':' + id] = {
+    kind, id, item,
+    deletedAt: new Date().toISOString(),
+    label: item.label || (item.data||{}).info || (item.data||{}).title || id,
+  };
+  await jbMergePath(SLICE_MAIN, ['trash'], trash);
+}
+
+// Anything past its month goes for good, quietly, whenever the bin is opened.
+async function purgeOldTrash(){
   try{
+    const record = await jbGetRecord();
+    const trash = record.trash || {};
+    const cutoff = Date.now() - TRASH_DAYS * 86400000;
+    let removed = 0;
+    Object.keys(trash).forEach(k => {
+      if(new Date(trash[k].deletedAt).getTime() < cutoff){ delete trash[k]; removed++; }
+    });
+    if(removed) await jbMergePath(SLICE_MAIN, ['trash'], trash);
+    return removed;
+  }catch(e){ console.error('Trash purge error:', e); return 0; }
+}
+
+function toggleTrashCard(){
+  const body = document.getElementById('trashBody');
+  const btn = document.getElementById('trashToggleBtn');
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  btn.textContent = open ? 'Απόκρυψη' : 'Εμφάνιση';
+  if(open) renderTrash();
+}
+
+async function renderTrash(){
+  const el = document.getElementById('trashList');
+  if(!el) return;
+  el.innerHTML = '<div class="empty-note">Φόρτωση…</div>';
+  try{
+    await purgeOldTrash();
+    const record = await jbGetRecord();
+    const items = Object.entries(record.trash || {})
+      .map(([key, v]) => Object.assign({ key }, v))
+      .sort((a, b) => String(b.deletedAt).localeCompare(String(a.deletedAt)));
+    if(!items.length){ el.innerHTML = '<div class="empty-note">Ο κάδος είναι άδειος.</div>'; return; }
+
+    el.innerHTML = `<div class="jp-row jp-row-head" style="grid-template-columns:2.4fr 1fr 1fr auto;">
+        <span>Τι ήταν</span><span>Είδος</span><span>Διαγράφηκε</span><span>Απομένουν</span>
+      </div>` + items.map(it => {
+        const days = TRASH_DAYS - Math.floor((Date.now() - new Date(it.deletedAt).getTime()) / 86400000);
+        return `<div class="jp-row" style="grid-template-columns:2.4fr 1fr 1fr auto;">
+          <span class="jp-name">${esc(it.label)}</span>
+          <span class="jp-none">${it.kind === 'offer' ? 'προσφορά' : 'job ticket'}</span>
+          <span>${esc(fmtDateShort(String(it.deletedAt).slice(0,10)))}</span>
+          <span style="white-space:nowrap;">
+            <span class="${days <= 5 ? 'jp-neg' : 'jp-none'}" style="margin-right:8px;">${
+              days} ${days === 1 ? 'μέρα' : 'μέρες'}</span>
+            <button class="btn" style="padding:3px 9px;font-size:11px;"
+              onclick="restoreFromTrash('${esc(it.key)}')">↩ Επαναφορά</button></span>
+        </div>`;
+      }).join('');
+  }catch(e){
+    el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function restoreFromTrash(key){
+  try{
+    const record = await jbGetRecord();
+    const entry = (record.trash || {})[key];
+    if(!entry){ statusMsg('Δεν βρέθηκε'); return; }
+    const slice = entry.kind === 'offer' ? SLICE_OFFERS : SLICE_MAIN;
+    const bucket = entry.kind === 'offer' ? 'offers' : 'tickets';
+    await jbMergePath(slice, [bucket, entry.id], entry.item);
+    const trash = record.trash || {};
+    delete trash[key];
+    await jbMergePath(SLICE_MAIN, ['trash'], trash);
+    statusMsg(`Επαναφέρθηκε: ${entry.label} ✓`);
+    if(entry.kind === 'offer') refreshOfferList(); else refreshTicketList();
+    renderTrash();
+  }catch(e){
+    console.error('Restore error:', e);
+    statusMsg('Σφάλμα επαναφοράς: ' + e.message);
+  }
+}
+
+async function deleteOffer(id){
+  if(!confirm('Διαγραφή αυτής της προσφοράς;\n\nΘα μείνει στον κάδο για 30 ημέρες.')) return;
+  try{
+    const rec = await jbGetRecord();
+    await moveToTrash('offer', id, (rec.offers||{})[id]);
     await jbDeletePath(SLICE_OFFERS, ['offers', id]);
     if(currentOfferId===id) currentOfferId = null;
     await refreshOfferList();
@@ -11231,10 +11338,12 @@ function releaseSplitLinksInForm(deletedId){
 async function deleteTicket(id, skipConfirm){
   // Callers that already asked a fuller question pass skipConfirm, so the user
   // isn't made to confirm the same deletion twice.
-  if(!skipConfirm && !confirm('Διαγραφή αυτού του job ticket;')) return;
+  if(!skipConfirm && !confirm('Διαγραφή αυτού του job ticket;\n\nΘα μείνει στον κάδο για 30 ημέρες.')) return;
   try{
     const record = await jbGetRecord();
     const doomed = record.tickets[id];
+    const recT = await jbGetRecord();
+    await moveToTrash('ticket', id, (recT.tickets||{})[id]);
     await jbDeletePath(SLICE_MAIN, ['tickets', id]);
     const freed = await releaseSplitLinks(record, id, doomed);
     // The parent may be open in the form right now. Its in-memory rows still
