@@ -14356,9 +14356,14 @@ function ticketQtyIsAmbiguous(data){
   const d = data || {};
   const rows = (d.paperRows || []).filter(r => (r.tipos||'').trim() || (r.xarti||'').trim());
 
-  // A job from a multi-item offer has no single quantity, and neither does a
-  // part split off from it — the flag is inherited, so both cards say the same.
-  if(d.fromMultiOffer === true || d.multiItem === true) return true;
+  // The flag says where the job came from, not what it is. A job that carries it
+  // but has one figure in the header — because the offer was switched to
+  // Βιβλίο/Έντυπο, or the ticket was copied — has a perfectly good number to
+  // show, and hiding it behind "πολλαπλά" helped nobody at the press.
+  const rowQuantities = [...new Set(rows.map(r => num(r.qty)).filter(q => q > 0))];
+  if(d.fromMultiOffer === true || d.multiItem === true){
+    return rowQuantities.length > 1 || !(num(d.qty) > 0);
+  }
 
   // A ticket split from an ordinary job is one item with one figure, and that
   // figure is what the press needs.
@@ -14376,8 +14381,7 @@ function ticketQtyIsAmbiguous(data){
   // behind by a change of offer type would hide a perfectly good number.
   if(num(d.qty) > 0) return false;
 
-  const quantities = [...new Set(rows.map(r => num(r.qty)).filter(q => q > 0))];
-  return quantities.length > 1;
+  return rowQuantities.length > 1;
 }
 
 async function refreshProductionBoard(){
