@@ -998,6 +998,9 @@
   .kanban-card .meta{color:var(--muted);font-size:10px;line-height:1.4;font-weight:500;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
+  .forgotten-bar{background:#fdf3e0;border:1px solid #f0dcb4;color:#a5701f;
+    border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;font-weight:600;}
+  .forgotten-link{color:#a5701f;text-decoration:underline;cursor:pointer;margin-left:6px;}
   .kanban-date-late{background:#fbe0de !important;border-color:#e8a9a2 !important;
     color:#a53125 !important;font-weight:800;}
   .kanban-date-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;border:1px solid var(--line-strong);background:var(--page);color:var(--muted);transition:background 0.12s;white-space:nowrap;}
@@ -2028,6 +2031,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewProduction" style="display:none;">
+    <div id="prodForgottenBar" class="forgotten-bar" style="display:none;"></div>
     <div class="card board-card">
       <div class="card-head">
         <div class="title">Παραγωγή</div>
@@ -3600,10 +3604,7 @@ function platesPerSide(colour){
 //                  This drives ink and run time, because the sheet total
 //                  already covers every signature.
 function plateSidesForRow(r, kind){
-  if(kind === 'book'){
-    const pages = num(r.pages), pps = num(r.pagesPerSheet);
-    return pps > 0 ? ceilSafe(pages/(pps/2)) : 0;
-  }
+  if(kind === 'book') return bookRowSides(r);
   return passesPerSheetForRow(r, kind);
 }
 
@@ -4665,9 +4666,7 @@ function recalcBookRow(id){
   // Το κανονικό είναι σελίδες ÷ μισό ανάπτυγμα. Κάποιες δουλειές δεν ακολουθούν —
   // ένα χαρτί που περνά μία φορά, ή ένθετο που τυπώνεται αλλιώς — και τότε ο
   // αριθμός γράφεται με το χέρι.
-  const sidesEkt = num(r.sidesManual) > 0
-    ? num(r.sidesManual)
-    : (pps>0 ? ceilSafe(pages/(pps/2)) : 0);
+  const sidesEkt = bookRowSides(r);
   const printCost = sidesEkt * num(r.pricePerSide);
   const total = pCost + printCost;
   tr.querySelector('.c-sheets').textContent = sheets;
@@ -4921,8 +4920,7 @@ function recalcBookTotal(){
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     const pCost = paperCost(r, totalSheets);
-    const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
-    const printCost = sidesEkt * num(r.pricePerSide);
+    const printCost = bookRowSides(r) * num(r.pricePerSide);
     grandTotal += pCost + printCost;
   });
   document.getElementById('bookTotal').textContent = fmt(grandTotal);
@@ -7001,8 +6999,9 @@ function computeTotals(baseQty, snap){
     const sheets = pps>0 ? ceilSafe((baseQty*pages)/pps) : 0;
     const totalSheets = sheets + Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     bookPaper += paperCost(r, totalSheets);
-    const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
-    bookPrint += sidesEkt * num(r.pricePerSide);
+    // Ίδιος κανόνας με τη γραμμή: ένας χειροκίνητος αριθμός όψεων πρέπει να
+    // περνά και στα σύνολα, αλλιώς η οθόνη δείχνει δύο διαφορετικές αλήθειες.
+    bookPrint += bookRowSides(r) * num(r.pricePerSide);
   });
 
   const fabricTotal = _fabric.reduce((s,r)=>s+fabricCalc(r, baseQty).cost,0);
@@ -8670,6 +8669,7 @@ function switchView(view){
   }
   if(view==='production') setTimeout(fitBoardToViewport, 90);
   if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
+  if(view==='production') refreshForgottenBar();
   if(view==='productiontime'){ refreshRunningTimers();
     if(document.getElementById('prodTimeList').style.display !== 'none') refreshProdTimeList(); }
   if(view==='stock'){
@@ -11782,6 +11782,15 @@ function showReprintBar(d){
 
 function openGangTicket(id){ if(id) loadTicket(id, true); }
 
+// Οι όψεις εκτύπωσης μιας γραμμής βιβλίου, από ένα σημείο — η γραμμή, τα σύνολα
+// και το PDF διάβαζαν τον ίδιο τύπο γραμμένο τρεις φορές, και μια αλλαγή στον
+// έναν άφηνε τους άλλους πίσω.
+function bookRowSides(r){
+  if(num(r.sidesManual) > 0) return num(r.sidesManual);
+  const pps = num(r.pagesPerSheet);
+  return pps > 0 ? ceilSafe(num(r.pages)/(pps/2)) : 0;
+}
+
 function editBookSides(ev, rowId){
   ev.preventDefault();
   const r = bookRows.find(x => x.id === rowId);
@@ -12413,7 +12422,8 @@ async function convertOfferToTicketInner(){
     // Extra copies converted to sheets, matching how the offer costs them.
     const xtra = Math.round(num(r.xtra) * (pps>0 ? pages/pps : 0));
     const totalSheets = sheets + xtra;
-    const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
+    // Το ticket παίρνει τις όψεις που ισχύουν, χειροκίνητες ή υπολογισμένες.
+    const sidesEkt = bookRowSides(r);
     addTkPaperRow({ tipos: r.material, xarti: r.paperName, xroma: r.color, fyllaNet: sheets || '', fyllaXtra: xtra || '', fylla: totalSheets || '', opseis: sidesEkt || '' });
   });
   if(tkPaperRows.length===0) addTkPaperRow();
@@ -15908,6 +15918,30 @@ function toggleProcStats(){
 }
 
 // ===== Χρονόμετρα που τρέχουν =====
+// Ένα χρονόμετρο που ξεχάστηκε ανοιχτό αλλοιώνει κάθε μέτρηση που βγάζουμε από
+// αυτό, γι' αυτό φαίνεται και στην Παραγωγή — εκεί που κοιτάει ο χειριστής.
+async function refreshForgottenBar(){
+  const bar = document.getElementById('prodForgottenBar');
+  if(!bar) return;
+  try{
+    const record = await jbGetRecord();
+    const running = collectRunningTimers(record);
+    const forgotten = running.filter(r => r.seconds > FORGOTTEN_HOURS*3600);
+    if(!forgotten.length){ bar.style.display = 'none'; bar.innerHTML = ''; return; }
+    bar.style.display = '';
+    const names = [...new Set(forgotten.map(f => f.job))].slice(0, 3).join(', ');
+    bar.innerHTML = `⏱ <b>${forgotten.length}</b> ${
+        forgotten.length === 1 ? 'χρονόμετρο τρέχει' : 'χρονόμετρα τρέχουν'
+      } πάνω από ${FORGOTTEN_HOURS} ώρες — μάλλον ξεχάστηκαν ανοιχτά.`
+      + ` <span style="color:var(--muted);">${esc(names)}</span>`
+      + ` <span class="forgotten-link" onclick="switchView('productiontime')">δες τα →</span>`;
+  }catch(e){
+    console.error('Forgotten bar error:', e);
+    bar.style.display = 'none';
+  }
+}
+
+
 // A timer left on overnight silently ruins the costing of a job, and nothing on
 // screen says so unless that very ticket is open. This gathers them from every
 // saved ticket so a forgotten one can be found and stopped.
