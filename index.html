@@ -657,6 +657,10 @@
     border:1px solid transparent;background:transparent;padding:3px 6px;border-radius:5px;}
   .stock-name:hover:not(:disabled){border-color:var(--line);background:#fff;}
   .stock-name:focus{border-color:#2f6fed;background:#fff;}
+  .stock-dims{width:100%;max-width:150px;font-size:12px;text-align:center;
+    border-color:transparent;background:transparent;color:var(--muted);}
+  .stock-dims:hover{border-color:var(--line);background:var(--card);}
+  .stock-dims:focus{border-color:#2f6fed;background:var(--card);color:var(--ink);}
   .stock-price{width:82px;text-align:right;font-size:12.5px;padding:4px 6px;
     border:1px solid transparent;background:transparent;border-radius:5px;}
   .stock-price:hover:not(:disabled){border-color:var(--line);background:#fff;}
@@ -998,6 +1002,30 @@
   .kanban-card .meta{color:var(--muted);font-size:10px;line-height:1.4;font-weight:500;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
+  .chat-fab{position:fixed;right:20px;bottom:20px;width:46px;height:46px;border-radius:50%;
+    background:#1f4f9e;color:#fff;border:none;font-size:20px;cursor:pointer;z-index:60;
+    box-shadow:0 3px 10px rgba(0,0,0,0.22);}
+  .chat-fab:hover{background:#17407f;}
+  .chat-badge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;
+    border-radius:9px;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;
+    line-height:18px;padding:0 4px;}
+  .chat-window{position:fixed;right:20px;bottom:76px;width:330px;max-width:calc(100vw - 40px);
+    background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:61;
+    box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
+  .chat-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+    padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;}
+  .chat-window .chat-ask{padding:10px 12px;}
+  @media (max-width:600px){ .chat-window{right:10px;left:10px;width:auto;} }
+  .chat-log{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:8px;
+    padding:4px 2px 10px;}
+  .chat-msg{font-size:12.5px;line-height:1.4;padding:6px 11px 7px;border-radius:9px;
+    background:var(--page);max-width:78%;align-self:flex-start;white-space:pre-wrap;
+    display:flex;flex-direction:column;}
+  .chat-mine{background:#eaf1fe;color:#1f4f9e;align-self:flex-end;}
+  .chat-meta{font-size:10px;color:var(--muted);margin-bottom:1px;line-height:1.2;}
+  .chat-mine .chat-meta{color:#5b86c9;}
+  .chat-ask{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:10px;}
+  .chat-ask input{flex:1;font-size:12.5px;}
   .forgotten-bar{background:#fdf3e0;border:1px solid #f0dcb4;color:#a5701f;
     border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;font-weight:600;}
   .forgotten-link{color:#a5701f;text-decoration:underline;cursor:pointer;margin-left:6px;}
@@ -1346,6 +1374,23 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div id="offerListTableWrap"></div>
         <div id="offerListPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Τσατ">
+    💬<span class="chat-badge" id="chatBadge" style="display:none;"></span></button>
+  <div class="chat-window" id="chatCard" style="display:none;">
+    <div class="chat-head" onclick="toggleChat()">
+      <b>💬 Τσατ</b>
+      <span style="font-size:16px;">×</span>
+    </div>
+    <div id="chatBody">
+      <div id="chatLog" class="chat-log"></div>
+      <div class="chat-ask">
+        <input id="chatInput" placeholder="Γράψε μήνυμα…" maxlength="500"
+          onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="btn solid" onclick="sendChat()" id="chatSend">Στείλε</button>
       </div>
     </div>
   </div>
@@ -3897,6 +3942,17 @@ function glueSettings(){
 // Glue follows the spine, and the spine is already known: sheet thickness comes
 // from the paper's weight, the page count gives how many leaves are stacked, and
 // the closed format gives the height being glued.
+// Τι λείπει για να υπολογιστεί η κόλλα. Οι τρεις λόγοι που δίνουν μηδέν.
+function glueMissingReason(){
+  const body = bookRows.find(r => rowIsOn(r) && r.paperName && num(r.pages) > 0) || bookRows[0];
+  if(!body || !String(body.paperName||'').trim()) return 'λείπει το χαρτί του σώματος';
+  if(!(num(body.pages) > 0)) return 'λείπουν οι σελίδες του σώματος';
+  const paper = paperByName[body.paperName];
+  if(!paper) return `το χαρτί «${body.paperName}» δεν είναι στη βάση`;
+  if(!(num(paper.g) > 0)) return `λείπει το γραμμάριο του «${body.paperName}»`;
+  return 'γράψε τα γραμμάρια με το χέρι στις Ρυθμίσεις';
+}
+
 function glueGramsPerCopy(){
   const g = glueSettings();
   const body = bookRows.find(r => rowIsOn(r) && r.paperName && num(r.pages) > 0) || bookRows[0];
@@ -4306,6 +4362,9 @@ function taskBreakdown(t, cat, baseQty){
     materialDetail = `${grams.toLocaleString('el-GR',{maximumFractionDigits:2})} γρ./αντίτυπο`
       + (auto.spineMm ? ` (ράχη ${auto.spineMm.toFixed(1)}mm × ${auto.heightCm}cm)` : '')
       + ` × ${qty.toLocaleString('el-GR')} = ${kg.toLocaleString('el-GR',{maximumFractionDigits:2})} κιλά`;
+    // Το μηδέν εδώ σημαίνει ότι λείπει κάτι, όχι ότι δεν χρειάζεται κόλλα. Χωρίς
+    // εξήγηση το «0 κιλά» έμοιαζε με σωστό αποτέλεσμα.
+    if(!(grams > 0)) materialDetail += ' — ' + glueMissingReason();
   }
 
   const quoted = procTaskCalc(t, baseQty).total;
@@ -8670,6 +8729,7 @@ function switchView(view){
   if(view==='production') setTimeout(fitBoardToViewport, 90);
   if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
   if(view==='production') refreshForgottenBar();
+  renderChat(true);   // ο μετρητής μένει ενημερωμένος σε κάθε καρτέλα
   if(view==='productiontime'){ refreshRunningTimers();
     if(document.getElementById('prodTimeList').style.display !== 'none') refreshProdTimeList(); }
   if(view==='stock'){
@@ -13588,6 +13648,7 @@ function showAppAfterLogin(){
   supabaseAuthClient.auth.getUser().then(({data})=>{
     const el = document.getElementById('currentUserEmail');
     if(el && data && data.user) el.textContent = 'Συνδεδεμένος/η ως: ' + data.user.email;
+    if(data && data.user) window.__me = data.user.email;
   });
 }
 
@@ -15917,6 +15978,113 @@ function toggleProcStats(){
   if(caret) caret.textContent = showing ? '▶' : '▼';
 }
 
+// ===== Συνεννόηση =====
+// Ένα κοινό ταμπλό μηνυμάτων στην Παραγωγή. Ό,τι λέγεται στον διάδρομο και
+// ξεχνιέται — «το χαρτί ήρθε λειψό», «η ΑΛΦΑ πάει Τρίτη» — μένει γραμμένο.
+const CHAT_KEEP = 60;    // πόσα μηνύματα κρατάμε
+const CHAT_DAYS = 30;    // και για πόσο
+
+// Το όριο των 60 κρατά τη βάση ελαφριά· αυτό εδώ κρατά το ταμπλό χρήσιμο. Ένα
+// «το χαρτί ήρθε λειψό» από τον περασμένο μήνα δεν αφορά κανέναν σήμερα.
+function chatFresh(msgs){
+  const cutoff = Date.now() - CHAT_DAYS * 86400000;
+  return (msgs || []).filter(m => new Date(m.at).getTime() >= cutoff);
+}
+
+function chatWho(){
+  const mail = String(window.__me || '').trim();
+  return mail ? mail.split('@')[0] : 'κάποιος';
+}
+
+function toggleChat(){
+  const win = document.getElementById('chatCard');
+  const open = win.style.display === 'none';
+  win.style.display = open ? 'flex' : 'none';
+  if(open){
+    renderChat();
+    document.getElementById('chatInput').focus();
+    // Ό,τι έχει διαβαστεί δεν ξαναμετράει ως καινούριο.
+    try{ localStorage.setItem('ff_chat_seen', String(chatLastAt || '')); }catch(e){}
+    const badge = document.getElementById('chatBadge');
+    if(badge) badge.style.display = 'none';
+  }
+}
+
+// Πόσα δεν έχει δει ακόμα — ο αριθμός πάνω στο κουμπί.
+let chatLastAt = '';
+function updateChatBadge(msgs){
+  const badge = document.getElementById('chatBadge');
+  if(!badge) return;
+  chatLastAt = msgs.length ? msgs[msgs.length-1].at : '';
+  let seen = '';
+  try{ seen = localStorage.getItem('ff_chat_seen') || ''; }catch(e){}
+  const open = document.getElementById('chatCard').style.display !== 'none';
+  const unread = open ? 0 : msgs.filter(m => String(m.at) > seen && m.who !== chatWho()).length;
+  badge.textContent = unread > 9 ? '9+' : String(unread);
+  badge.style.display = unread ? '' : 'none';
+}
+
+async function renderChat(quiet){
+  const log = document.getElementById('chatLog');
+  if(!log) return;
+  try{
+    const record = await jbGetRecord();
+    const all = record.chat || [];
+    const msgs = chatFresh(all).slice(-CHAT_KEEP);
+    // Τα ξεπερασμένα φεύγουν με την πρώτη ματιά, χωρίς να τρέχει τίποτα από πίσω.
+    if(msgs.length < all.length){
+      jbMergePath(SLICE_MAIN, ['chat'], msgs).catch(e => console.error('Chat purge:', e));
+    }
+    updateChatBadge(msgs);
+    if(!msgs.length){
+      log.innerHTML = '<div class="empty-note">Κανένα μήνυμα ακόμα.</div>';
+      return;
+    }
+    const me = chatWho();
+    log.innerHTML = msgs.map(m => {
+      const mine = m.who === me;
+      return `<div class="chat-msg${mine ? ' chat-mine' : ''}">
+        <div class="chat-meta">${esc(m.who)} · ${esc(chatWhen(m.at))}</div>
+        ${esc(m.text)}</div>`;
+    }).join('');
+    if(!quiet) log.scrollTop = log.scrollHeight;
+  }catch(e){
+    log.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+// Η ώρα όπως τη λέει κανείς: «πριν 5΄», «χθες 14:20».
+function chatWhen(iso){
+  const t = new Date(iso), now = new Date();
+  const mins = Math.round((now - t) / 60000);
+  if(mins < 1) return 'μόλις τώρα';
+  if(mins < 60) return `πριν ${mins}΄`;
+  const hhmm = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+  if(t.toDateString() === now.toDateString()) return hhmm;
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  if(t.toDateString() === y.toDateString()) return 'χθες ' + hhmm;
+  return fmtDateShort(iso.slice(0,10)) + ' ' + hhmm;
+}
+
+async function sendChat(){
+  const input = document.getElementById('chatInput');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  input.value = '';
+  try{
+    const record = await jbGetRecord();
+    // Μόνο τα τελευταία μένουν: ένα ταμπλό, όχι αρχείο.
+    const msgs = chatFresh(record.chat).slice(-(CHAT_KEEP - 1));
+    msgs.push({ who: chatWho(), at: new Date().toISOString(), text });
+    await jbMergePath(SLICE_MAIN, ['chat'], msgs);
+    renderChat();
+  }catch(e){
+    console.error('Chat error:', e);
+    statusMsg('Δεν στάλθηκε: ' + e.message);
+    input.value = text;   // να μη χαθεί ό,τι έγραψε
+  }
+}
+
 // ===== Χρονόμετρα που τρέχουν =====
 // Ένα χρονόμετρο που ξεχάστηκε ανοιχτό αλλοιώνει κάθε μέτρηση που βγάζουμε από
 // αυτό, γι' αυτό φαίνεται και στην Παραγωγή — εκεί που κοιτάει ο χειριστής.
@@ -17278,8 +17446,11 @@ async function refreshStockList(){
             <input class="stock-name" value="${esc(paper)}"
               onchange="renamePaper('${escPaper}', this.value)"
               onclick="event.stopPropagation()" title="Άλλαξε το όνομα"></td>
-          <td style="text-align:center;color:var(--muted);font-size:12px;">${
-            p && num(p.w) ? `${num(p.w)}×${num(p.l)}${num(p.g) ? ' · ' + num(p.g) + 'gr' : ''}` : '—'}</td>
+          <td style="text-align:center;" onclick="event.stopPropagation()">
+            <input type="text" class="stock-dims" placeholder="π.χ. 70x100 130"
+              title="Διαστάσεις σε cm και γραμμάριο — π.χ. 70x100 130"
+              value="${p && num(p.w) ? `${num(p.w)}x${num(p.l)}${num(p.g) ? ' ' + num(p.g) : ''}` : ''}"
+              onchange="savePaperDims('${escPaper}', this.value)"></td>
           <td style="text-align:right;" onclick="event.stopPropagation()">
             <input type="text" inputmode="decimal" class="stock-price" value="${p ? esc(String(p.priceKg||'')) : ''}"
               placeholder="—" ${p ? '' : 'disabled'}
@@ -17479,6 +17650,34 @@ async function deletePaper(name){
 
 // Prices live with the paper, not with the stock line, so a change here is felt
 // by every offer that uses it.
+// Χαρτί που προστέθηκε βιαστικά μένει χωρίς γραμμάριο, και τότε η κόλλα και το
+// βάρος βγάζουν μηδέν. Εδώ συμπληρώνεται χωρίς να ξαναφτιαχτεί το χαρτί.
+async function savePaperDims(name, value){
+  const t = String(value || '').trim();
+  // Δέχεται «70x100 130», «70×100», «70 100 130» — ό,τι γράφει ο καθένας.
+  const nums = t.match(/\d+(?:[.,]\d+)?/g) || [];
+  if(t && nums.length < 2){
+    statusMsg('Γράψε πλάτος και μήκος, π.χ. 70x100 130');
+    refreshStockList();
+    return;
+  }
+  const [w, l, g] = nums.map(x => num(x));
+  try{
+    const p = paperByName[name] || { name };
+    await upsertPaper(Object.assign({}, p, {
+      name,
+      w: t ? w : null,
+      l: t ? l : null,
+      g: t && g ? g : (t ? (num(p.g) || null) : null),
+    }));
+    statusMsg(t ? `${name}: ${w}×${l}${g ? ' · ' + g + 'gr' : ''} ✓` : `${name}: καθαρίστηκαν οι διαστάσεις`);
+    refreshStockList();
+  }catch(e){
+    console.error('Save dims error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function savePaperPrice(name, field, value){
   const p = paperByName[name];
   if(!p){ statusMsg('Το χαρτί δεν υπάρχει στη βάση χαρτιών.'); return; }
