@@ -5983,10 +5983,24 @@ function assignedTaskCostForItem(material, whole){
   let sum = 0;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
-      if(t.itemMaterial && sameItemName(t.itemMaterial, material)) sum += procTaskCalc(t).total;
+      if(!procTaskIsPriced(t)) return;
+      if(t.itemMaterial){
+        if(sameItemName(t.itemMaterial, material)) sum += procTaskCalc(t).total;
+      } else {
+        // «— όλα —»: η εργασία γίνεται σε κάθε είδος χωριστά, οπότε κάθε είδος
+        // επιβαρύνεται με ολόκληρο το κόστος της — δεν είναι μοίρασμα μιας
+        // δουλειάς αλλά η ίδια δουλειά επαναλαμβανόμενη.
+        sum += procTaskCalc(t).total;
+      }
     });
   });
   return sum / share;
+}
+
+// Μια εργασία μετράει μόνο όταν είναι τικαρισμένη και βγάζει κόστος. Οι υπόλοιπες
+// είναι απλώς γραμμές του καταλόγου που δεν αφορούν αυτή τη δουλειά.
+function procTaskIsPriced(t){
+  return !!(t && t.on && t.name && procTaskCalc(t).total > 0);
 }
 
 function assignedTaskNamesForItem(material){
@@ -5994,7 +6008,8 @@ function assignedTaskNamesForItem(material){
   if(!String(material||'').trim()) return names;
   procCategories.forEach(cat=>{
     cat.tasks.forEach(t=>{
-      if(t.itemMaterial && sameItemName(t.itemMaterial, material) && t.name) names.push(t.name);
+      if(!procTaskIsPriced(t)) return;
+      if(!t.itemMaterial || sameItemName(t.itemMaterial, material)) names.push(t.name);
     });
   });
   return names;
@@ -6286,11 +6301,8 @@ function buildOfferPrintHtml(){
     seen.forEach((g, name)=>{
       multiItemGrandTotal += g.manual > 0 ? g.manual : (g.paper + assignedTaskCostForItem(name, true));
     });
-    procCategories.forEach(cat=>{
-      cat.tasks.forEach(task=>{
-        if(!task.itemMaterial) multiItemGrandTotal += procTaskCalc(task).total;
-      });
-    });
+    // Οι εργασίες «— όλα —» έχουν ήδη μοιραστεί στις γραμμές των ειδών παραπάνω·
+    // αν προστίθεντο και εδώ, θα χρεώνονταν δύο φορές.
   }
 
   const grand = manualTotal > 0 ? manualTotal : (multiItem ? multiItemGrandTotal : grandTotalValue());
@@ -6479,7 +6491,10 @@ function buildOfferPrintHtml(){
     }).join('');
 
   const procNames = showProc ? procCategories
-    .map(cat => cat.tasks.filter(t=>t.name && !(multiItem && t.itemMaterial)).map(t=>esc(t.name)))
+    // Μόνο όσες κοστολογήθηκαν πραγματικά — ο κατάλογος έχει δεκάδες εργασίες που
+    // δεν αφορούν αυτή τη δουλειά, και ο πελάτης δεν χρειάζεται να τις δει.
+    .map(cat => cat.tasks.filter(t => procTaskIsPriced(t) && !(multiItem && t.itemMaterial))
+      .map(t => esc(t.name)))
     .flat()
     .join(', ') : '';
 
