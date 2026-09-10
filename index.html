@@ -392,14 +392,18 @@
   /* A ganged row belongs to two jobs at once, so it is marked down the whole
      line rather than with a badge tucked in one cell. */
   /* One product, two sheets: bracketed on the left so the pair reads as a unit. */
-  #tkPaperBody tr.row-item-part > td:first-child{box-shadow:inset 3px 0 0 #c9ced8;}
-  #tkPaperBody tr.row-item-part:not(.row-item-first) > td{border-top-style:dashed;}
-  #tkPaperBody tr.row-item-part:not(.row-item-first) > td:first-child input{opacity:0.45;}
+  /* Ένα προϊόν από δύο χαρτιά: οι γραμμές του βάφονται ίδια, χωρίς διαχωριστικό
+     ανάμεσά τους — διαβάζονται ως ένα πράγμα. */
+  #tkPaperBody tr.row-item-part > td{background:#eef6ee;}
+  #tkPaperBody tr.row-item-part:not(.row-item-first) > td{border-top-color:transparent;}
+  #tkPaperBody tr.row-item-part:not(.row-item-first) > td:first-child input{opacity:0.5;}
   #tkPaperBody tr.row-gang > td{background:#faf7fe;}
   #tkPaperBody tr.row-gang > td:first-child{box-shadow:inset 3px 0 0 #8b5fc4;}
   .reprint-bar{background:#eef6ff;border:1px solid #cfe0fb;color:#1f4f9e;border-radius:8px;
     padding:8px 14px;margin-bottom:12px;font-size:12.5px;}
   .reprint-bar a{color:#1f4f9e;}
+  /* Ένας αριθμός που γράφτηκε με το χέρι δεν πρέπει να μοιάζει με υπολογισμένο. */
+  .c-sides.is-manual{color:#1f4f9e;font-weight:800;text-decoration:underline dotted;}
   .tk-gang{margin-top:3px;font-size:10px;font-weight:700;
     color:#5b3a8e;cursor:pointer;user-select:none;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -4631,7 +4635,9 @@ function renderBiblio(){
       <td><div class="auto c-papercost">0,00 €</div></td>
       <td class="fixed"><input list="colourOptions" value="${r.color}" placeholder="π.χ. CMYK"
         oninput="bookRows.find(x=>x.id===${r.id}).color=this.value"></td>
-      <td><div class="auto c-sides">0</div></td>
+      <td oncontextmenu="editBookSides(event,${r.id})"
+        title="Δεξί κλικ: χειροκίνητες όψεις"><div class="auto c-sides${
+        r.sidesManual ? ' is-manual' : ''}">0</div></td>
       <td><input type="number" step="0.01" value="${r.pricePerSide}" oninput="bookRows.find(x=>x.id===${r.id}).pricePerSide=this.value;recalcBookRow(${r.id})"></td>
       <td><div class="auto c-printcost">0,00 €</div></td>
       <td><div class="auto c-total">0,00 €</div></td>
@@ -4656,13 +4662,23 @@ function recalcBookRow(id){
   const sheetsPerCopy = pps>0 ? pages/pps : 0;
   const totalSheets = sheets + Math.round(num(r.xtra) * sheetsPerCopy);
   const pCost = paperCost(r, totalSheets);
-  const sidesEkt = pps>0 ? ceilSafe(pages/(pps/2)) : 0;
+  // Το κανονικό είναι σελίδες ÷ μισό ανάπτυγμα. Κάποιες δουλειές δεν ακολουθούν —
+  // ένα χαρτί που περνά μία φορά, ή ένθετο που τυπώνεται αλλιώς — και τότε ο
+  // αριθμός γράφεται με το χέρι.
+  const sidesEkt = num(r.sidesManual) > 0
+    ? num(r.sidesManual)
+    : (pps>0 ? ceilSafe(pages/(pps/2)) : 0);
   const printCost = sidesEkt * num(r.pricePerSide);
   const total = pCost + printCost;
   tr.querySelector('.c-sheets').textContent = sheets;
   tr.querySelector('.c-totalsheets').textContent = totalSheets;
   tr.querySelector('.c-papercost').textContent = fmt(pCost);
-  tr.querySelector('.c-sides').textContent = sidesEkt;
+  const sidesCell = tr.querySelector('.c-sides');
+  sidesCell.textContent = sidesEkt;
+  sidesCell.classList.toggle('is-manual', num(r.sidesManual) > 0);
+  sidesCell.title = num(r.sidesManual) > 0
+    ? `Χειροκίνητο — αυτόματο θα ήταν ${pps>0 ? ceilSafe(pages/(pps/2)) : 0}. Δεξί κλικ για αλλαγή.`
+    : 'Δεξί κλικ για χειροκίνητες όψεις';
   tr.querySelector('.c-printcost').textContent = fmt(printCost);
   tr.querySelector('.c-total').textContent = fmt(total);
   recalcBookTotal();
@@ -11750,6 +11766,25 @@ function showReprintBar(d){
 }
 
 function openGangTicket(id){ if(id) loadTicket(id, true); }
+
+function editBookSides(ev, rowId){
+  ev.preventDefault();
+  const r = bookRows.find(x => x.id === rowId);
+  if(!r) return;
+  const pps = num(r.pagesPerSheet);
+  const auto = pps > 0 ? ceilSafe(num(r.pages)/(pps/2)) : 0;
+  const ans = prompt(
+    `Όψεις εκτύπωσης για «${r.material || r.paperName || 'αυτή τη γραμμή'}»\n\n`
+    + `Αυτόματος υπολογισμός: ${auto}\n`
+    + `Γράψε τον δικό σου αριθμό — ή άφησέ το κενό για να επιστρέψει στο αυτόματο.`,
+    r.sidesManual ? String(r.sidesManual) : String(auto));
+  if(ans === null) return;
+  const v = num(ans);
+  r.sidesManual = v > 0 ? v : '';
+  recalcAllNow();
+  markOfferDirty();
+  statusMsg(v > 0 ? `Όψεις: ${v} (χειροκίνητα) ✓` : 'Επιστροφή στον αυτόματο υπολογισμό ✓');
+}
 
 function toggleDigital(rowId){
   const r = tkPaperRows.find(x=>x.id===rowId);
