@@ -1009,6 +1009,11 @@
   .chat-badge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;
     border-radius:9px;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;
     line-height:18px;padding:0 4px;}
+  /* Ψηλότερα από τη μπάρα συνόλων, που είναι κολλημένη στο κάτω μέρος. */
+  .notes-window{position:fixed;right:20px;bottom:96px;width:340px;max-width:calc(100vw - 40px);
+    background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:62;
+    box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
+  @media (max-width:600px){ .notes-window{right:10px;left:10px;width:auto;} }
   .chat-window{position:fixed;right:20px;bottom:76px;width:330px;max-width:calc(100vw - 40px);
     background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:61;
     box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
@@ -1378,6 +1383,20 @@ function toggleMobileSidebar(forceClose){
     </div>
   </div>
 
+  <div class="notes-window" id="offerNotesWin" style="display:none;">
+    <div class="chat-head" onclick="toggleOfferNotes()">
+      <b>💬 Σχόλια <span id="offerNotesFor" style="font-weight:400;color:var(--muted);"></span></b>
+      <span style="font-size:16px;">×</span>
+    </div>
+    <div class="empty-note" style="padding:8px 14px 0;">Εσωτερικά — δεν φαίνονται στον πελάτη.</div>
+    <div id="offerNotesLog" class="chat-log"></div>
+    <div class="chat-ask">
+      <input id="offerNotesInput" placeholder="Γράψε σχόλιο…" maxlength="500"
+        onkeydown="if(event.key==='Enter') sendOfferNote()">
+      <button class="btn solid" onclick="sendOfferNote()">Πρόσθεσε</button>
+    </div>
+  </div>
+
   <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Τσατ">
     💬<span class="chat-badge" id="chatBadge" style="display:none;"></span></button>
   <div class="chat-window" id="chatCard" style="display:none;">
@@ -1416,6 +1435,8 @@ function toggleMobileSidebar(forceClose){
       <button class="btn" id="stageBtn" onclick="toggleOfferSentInForm()"
         title="Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη">📝 Προς υπολογισμό</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
+      <button class="btn" onclick="toggleOfferNotes()" id="offerNotesBtn"
+        title="Εσωτερικά σχόλια — δεν φαίνονται στον πελάτη">💬 Σχόλια</button>
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
     </div>
   </div>
@@ -4478,6 +4499,15 @@ function addBookRow(vals){
 }
 function removeBookRow(id){ bookRows = bookRows.filter(r=>r.id!==id); renderBiblio(); }
 
+// Μια ανανέωση του πίνακα — από την ποσότητα ή τον επανυπολογισμό — ξανάγραφε το
+// πεδίο με την παλιά τιμή, και ό,τι πληκτρολογούσες χανόταν. Η τιμή κρατιέται σε
+// κάθε πάτημα, ώστε να επιβιώνει μιας ανανέωσης.
+function onPaperTyping(kind, id, value){
+  const rows = kind === 'flat' ? flatRows : bookRows;
+  const row = rows.find(r => r.id === id);
+  if(row) row.paperName = value;
+}
+
 function onPaperPick(kind, id, value){
   const rows = kind==='flat' ? flatRows : bookRows;
   const row = rows.find(r=>r.id===id);
@@ -4518,7 +4548,9 @@ function renderFlat(){
         ${r.itemApproved ? 'checked' : ''} onchange="onItemApproved(${r.id}, this.checked)"
         title="Εγκρίθηκε από τον πελάτη"></td>
       <td><input list="flatMaterialOptions" value="${r.material}" placeholder="Εξώφυλλο..." oninput="flatRows.find(x=>x.id===${r.id}).material=this.value"></td>
-      <td data-l="Χαρτί"><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('flat',${r.id},this.value)"></td>
+      <td data-l="Χαρτί"><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..."
+        oninput="onPaperTyping('flat',${r.id},this.value)"
+        onchange="onPaperPick('flat',${r.id},this.value)"></td>
       <td><input type="number" value="${r.qty}" placeholder="${document.getElementById('hdrQty').value || ''}" oninput="flatRows.find(x=>x.id===${r.id}).qty=this.value;recalcFlatRow(${r.id})"></td>
       <td class="mi-col"><input class="c-simshape" value="${esc(r.simShape||'')}" placeholder="π.χ. 9x5" oninput="flatRows.find(x=>x.id===${r.id}).simShape=this.value" title="Σχήμα τεμαχίου σε cm"></td>
       <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-piecesPerSheet" value="${r.piecesPerSheet}" oninput="flatRows.find(x=>x.id===${r.id}).piecesPerSheet=this.value;recalcFlatRow(${r.id})" style="min-width:0;"><button title="${r.simShape ? 'Μοντάζ με σχήμα ' + esc(r.simShape) + ' — κλικ για αλλαγή' : 'Προσομοίωση χωρητικότητας φύλλου (μοντάζ)'}" onclick="simulateFlatFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
@@ -4629,8 +4661,12 @@ function recalcFlatTotal(){
 
   let costTotal = 0, priceTotal = 0, pricedRows = 0;
   flatRows.filter(rowIsOn).forEach(r=>{
+    // Οι επεξεργασίες χρεώνονται σε είδη μόνο στα Πολλαπλά Είδη. Σε προσφορά
+    // Βιβλίο/Έντυπο έχουν το δικό τους σύνολο, και προσθέτοντάς τες και εδώ το
+    // «Σύνολο Flat Work» έβγαινε φουσκωμένο.
+    const multiHere = !!(document.getElementById('fMultiItem')||{}).checked;
     const cost = flatRowTotalCost(r, baseQty)
-               + (r.material ? assignedTaskCostForItem(r.material) : 0);
+               + ((multiHere && r.material) ? assignedTaskCostForItem(r.material) : 0);
     costTotal += cost;
     const manual = num(r.manualPrice);
     if(manual > 0){ priceTotal += manual; pricedRows++; }
@@ -4684,7 +4720,9 @@ function renderBiblio(){
       <td class="cb-cell"><input type="checkbox" class="cb-cost" ${rowIsOn(r) ? 'checked' : ''}
         onchange="toggleRowOn('book',${r.id},this.checked)" title="Μετράει στο κόστος"></td>
       <td><input value="${r.material}" placeholder="π.χ. ΣΩΜΑ" oninput="bookRows.find(x=>x.id===${r.id}).material=this.value"></td>
-      <td><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..." onchange="onPaperPick('book',${r.id},this.value)"></td>
+      <td><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..."
+        oninput="onPaperTyping('book',${r.id},this.value)"
+        onchange="onPaperPick('book',${r.id},this.value)"></td>
       <td><input type="number" value="${r.pages}" oninput="bookRows.find(x=>x.id===${r.id}).pages=this.value;recalcBookRow(${r.id})"></td>
       <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-pagesPerSheet" value="${r.pagesPerSheet}" oninput="bookRows.find(x=>x.id===${r.id}).pagesPerSheet=this.value;recalcBookRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου βάσει Σχήματος" onclick="simulateBookFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
       <td><div class="auto c-sheets">0</div></td>
@@ -7437,6 +7475,13 @@ function currentTabQty(){
 }
 
 function stashCurrentTab(){
+  // Ό,τι γράφεται εκείνη τη στιγμή ανήκει σε ΑΥΤΗ την καρτέλα. Αν μείνει ενεργό,
+  // το πεδίο θα στείλει την τιμή του αφού έχει φορτωθεί η επόμενη — και θα γραφτεί
+  // εκεί. Το κλείνουμε πρώτα, μαζί με ό,τι εκκρεμεί.
+  const active = document.activeElement;
+  if(active && /^(INPUT|TEXTAREA)$/.test(active.tagName)) active.blur();
+  clearTimeout(hdrQtyTimer);
+  hdrQtyTimer = null;
   const qty = currentTabQty();
   if(editingExtraQtyId === null){
     window.__mainOfferBackup = { snap: snapshotOffer(), qty };
@@ -7868,8 +7913,31 @@ function applyHeaderQty(){
   clearTimeout(hdrQtyTimer);
   hdrQtyTimer = null;
   renderQtyTabs();
+  // Ξαναχτίζοντας τους πίνακες χάνεται ό,τι πληκτρολογεί κάποιος εκείνη τη
+  // στιγμή — η μισή λέξη γινόταν οριστική τιμή. Το ενεργό πεδίο προστατεύεται.
+  const active = document.activeElement;
+  const keep = active && /^(INPUT|TEXTAREA)$/.test(active.tagName)
+    && active.closest('#bookBody, #flatBody')
+    ? { id: active.closest('tr').getAttribute('data-id'),
+        body: active.closest('#bookBody') ? 'bookBody' : 'flatBody',
+        col: [...active.closest('tr').children].indexOf(active.closest('td')),
+        value: active.value, start: active.selectionStart, end: active.selectionEnd,
+        tab: editingExtraQtyId }   // σε ποια καρτέλα γραφόταν
+    : null;
   renderBiblio();
   renderFlat();
+  // Αν άλλαξε καρτέλα στο μεταξύ, ό,τι γραφόταν ανήκει στην προηγούμενη — και
+  // επαναφέροντάς το εδώ θα περνούσε στη γραμμή της καινούριας.
+  if(keep && keep.tab === editingExtraQtyId){
+    const tr = document.querySelector(`#${keep.body} tr[data-id="${keep.id}"]`);
+    const td = tr && tr.children[keep.col];
+    const inp = td && td.querySelector('input, textarea');
+    if(inp){
+      inp.value = keep.value;
+      inp.focus();
+      try{ inp.setSelectionRange(keep.start, keep.end); }catch(e){}
+    }
+  }
   refreshAutoFoldTasks();   // folding and sewing follow the sheet count
   renderProc();             // every other task follows the header quantity
   updateGrand();
@@ -8420,10 +8488,14 @@ async function toggleOfferTemplateMenu(ev){
 
 function collectOffer(){
   // The live form belongs to whichever tab is open. Saving from an alternative
-  // wrote that alternative as the main offer and left the alternative holding a
-  // stale copy — so the tab is stashed first, and the main quantity is then read
-  // from its own backup rather than from the form.
-  stashCurrentTab();
+  // wrote that alternative as the main offer, so the tab is stashed first and the
+  // main quantity is then read from its own backup.
+  //
+  // Only the alternative is stashed: when the main tab is the one open, the form
+  // IS the main quantity and there is nothing to copy. Stashing it here overwrote
+  // the backup with whatever was on screen mid-switch — which is how a paper
+  // typed into an alternative ended up on the main one.
+  if(editingExtraQtyId !== null) stashCurrentTab();
   const mainSnap = editingExtraQtyId !== null && window.__mainOfferBackup
     ? window.__mainOfferBackup.snap : null;
   const data = {
@@ -8906,7 +8978,10 @@ async function jbFetchRecord(){
   if(!record.suppliers) record.suppliers = ['ΧΑΡΤΙΑ ΠΕΡΡΑΚΗΣ','ΠΑΠΑΝΔΡΕΟΥ','ΧΑΤΖΗΑΛΕΞΙΑΔΗΣ','ΑΓΓΕΛΙΔΗΣ','COVERBOARD','ΜΑΚΕΔΟΝΙΚΗ','ΧΑΡΤΟΡΑΜΑ','ΛΙΓΚΟΥΡΗ','ΤΣΟΛΑΚΟΣ','ΠΑΤΣΟΠΟΥΛΟΣ'];
   // stock lives on the material rows
   if(!record.materials) record.materials = [];
-  if(!record.stockLog) record.stockLog = [];
+  if(!Array.isArray(record.stockLog)){
+    record.stockLog = record.stockLog && typeof record.stockLog === 'object'
+      ? Object.values(record.stockLog) : [];
+  }
   if(!record.boxSizes) record.boxSizes = {};
   return record;
 }
@@ -9285,14 +9360,10 @@ async function saveOffer(){
 
 async function saveOfferInner(){
   if(recalcTimer) recalcAllNow();   // save what the figures actually are
-  // Whichever tab is open, what gets stored is the main quantity — the switch
-  // back and forth is invisible and keeps the tab you were on.
-  if(editingExtraQtyId !== null){
-    const openTab = editingExtraQtyId;
-    switchQtyTab(null);
-    try { await saveOffer(); } finally { switchQtyTab(openTab); }
-    return;
-  }
+  // Παλιότερα η αποθήκευση γύριζε στιγμιαία στην κύρια καρτέλα και πίσω. Αυτό
+  // συνέβαινε και στη μέση της πληκτρολόγησης — ό,τι έγραφες έμπαινε στην κύρια
+  // αντί για την εναλλακτική. Πλέον το collectOffer διαβάζει την κύρια από το
+  // δικό της αντίγραφο, οπότε η καρτέλα δεν χρειάζεται να αλλάξει καθόλου.
   try{
     const data = collectOffer();
     const id = currentOfferId || ('o' + Date.now());
@@ -9340,6 +9411,7 @@ async function saveOfferInner(){
     clientsCache = record.clients;
     refreshClientOptions();
     currentOfferId = id;
+    setTimeout(refreshOfferNotesCount, 0);   // πόσα σχόλια έχει αυτή η προσφορά
     updateApproveButton(record.offers[id].approved);
     markOfferClean();
     refreshOfferTicketLink();
@@ -9498,6 +9570,7 @@ async function loadOffer(id){
     if(!o){ statusMsg('Δεν βρέθηκε'); return; }
     applyOfferData(o.data);
     currentOfferId = id;
+    setTimeout(refreshOfferNotesCount, 0);   // πόσα σχόλια έχει αυτή η προσφορά
     switchView('form');
     updateApproveButton(o.approved || false);
     // After the button, not before: the tabs read the approval from it.
@@ -9624,6 +9697,9 @@ async function deleteOffer(id){
 
 function newOffer(){
   window.__currentOfferSentAt = '';   // a fresh offer has not been sent
+  updateOfferNotesBadge(0);
+  const nw = document.getElementById('offerNotesWin');
+  if(nw) nw.style.display = 'none';   // τα σχόλια ανήκαν στην προηγούμενη
   setTimeout(updateStageButton, 0);
   setTimeout(()=>toggleExtraQtyCard(false), 0);   // a new offer starts with one quantity
   editingExtraQtyId = null;
@@ -10129,7 +10205,11 @@ async function consumeTicketPaper(){
   if(!confirm(`Αφαίρεση από την Αποθήκη:\n\n${summary}\n\nΘα καταγραφεί ως κατανάλωση αυτής της δουλειάς. Συνέχεια;`)) return;
   try{
     const record = await jbGetRecord();
-    record.stockLog = record.stockLog || [];
+    // Ίδιος έλεγχος με την ανάγνωση: αν είναι αντικείμενο, το unshift θα έσκαγε.
+    if(!Array.isArray(record.stockLog)){
+      record.stockLog = record.stockLog && typeof record.stockLog === 'object'
+        ? Object.values(record.stockLog) : [];
+    }
     const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
     const warnings = [];
     for(const r of pending){
@@ -11131,6 +11211,7 @@ function collapseTicketSections(){
 
 function newTicket(){
   setTicketMultiItem(false); // a fresh ticket starts as a single item
+  showReprintBar();          // η μπάρα ανήκε στο προηγούμενο ticket
   collapseTicketSections();
   document.getElementById('tkInfo').value = '';
   document.getElementById('tkQty').value = '';
@@ -11830,6 +11911,9 @@ async function clearGang(rowId){
 // A reprint carries the price of the job it repeats, so the bar says which one
 // and links back to it — otherwise the second run looks like a job with no offer.
 function showReprintBar(d){
+  // Χωρίς όρισμα σημαίνει «καθάρισέ τη»: η μπάρα ανήκει στο ticket που ήταν
+  // ανοιχτό, και έμενε στην οθόνη πάνω από το επόμενο.
+  d = d || {};
   const bar = document.getElementById('tkReprintBar');
   if(!bar) return;
   window.__tkReprintNo = d.reprintNo || '';
@@ -12507,6 +12591,7 @@ async function convertOfferToTicketInner(){
   recalcTicketPackaging();
 
   currentTicketId = null;
+  showReprintBar();   // νέα δουλειά από προσφορά — δεν είναι ανατύπωση
   // A multi-item offer becomes a multi-item ticket: quantity and shape live on
   // the rows, not in the header.
   setTicketMultiItem(!!(document.getElementById('fMultiItem')||{}).checked);
@@ -15978,6 +16063,79 @@ function toggleProcStats(){
   if(caret) caret.textContent = showing ? '▶' : '▼';
 }
 
+// ===== Σχόλια προσφοράς =====
+// Ό,τι λέγεται για μια συγκεκριμένη δουλειά — «περιμένουμε δείγμα», «ο πελάτης
+// το σκέφτεται» — μένει μαζί της. Ξεχωριστά από την Περιγραφή, που τη διαβάζει
+// ο πελάτης, και ξεχωριστά από τη φόρμα, που δεν αλλάζει.
+function toggleOfferNotes(){
+  const win = document.getElementById('offerNotesWin');
+  const open = win.style.display === 'none';
+  win.style.display = open ? 'flex' : 'none';
+  if(open){
+    renderOfferNotes();
+    document.getElementById('offerNotesInput').focus();
+  }
+}
+
+async function renderOfferNotes(){
+  const log = document.getElementById('offerNotesLog');
+  const forEl = document.getElementById('offerNotesFor');
+  if(!log) return;
+  if(!currentOfferId){
+    forEl.textContent = '';
+    log.innerHTML = '<div class="empty-note">Αποθήκευσε πρώτα την προσφορά.</div>';
+    return;
+  }
+  forEl.textContent = '— ' + (document.getElementById('fClient').value || 'προσφορά');
+  try{
+    const record = await jbGetRecord();
+    const notes = ((record.offerNotes || {})[currentOfferId]) || [];
+    log.innerHTML = notes.length
+      ? notes.map(n => `<div class="chat-msg${n.who === chatWho() ? ' chat-mine' : ''}">
+          <div class="chat-meta">${esc(n.who)} · ${esc(chatWhen(n.at))}</div>
+          ${esc(n.text)}</div>`).join('')
+      : '<div class="empty-note">Κανένα σχόλιο ακόμα.</div>';
+    log.scrollTop = log.scrollHeight;
+    updateOfferNotesBadge(notes.length);
+  }catch(e){
+    log.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+// Ο αριθμός στο κουμπί, χωρίς να ανοίξει το παράθυρο.
+async function refreshOfferNotesCount(){
+  if(!currentOfferId){ updateOfferNotesBadge(0); return; }
+  try{
+    const record = await jbGetRecord();
+    updateOfferNotesBadge((((record.offerNotes || {})[currentOfferId]) || []).length);
+  }catch(e){ updateOfferNotesBadge(0); }
+}
+
+function updateOfferNotesBadge(n){
+  const btn = document.getElementById('offerNotesBtn');
+  if(btn) btn.textContent = n ? `💬 Σχόλια (${n})` : '💬 Σχόλια';
+}
+
+async function sendOfferNote(){
+  const input = document.getElementById('offerNotesInput');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  if(!currentOfferId){ statusMsg('Αποθήκευσε πρώτα την προσφορά.'); return; }
+  input.value = '';
+  try{
+    const record = await jbGetRecord();
+    const all = record.offerNotes || {};
+    const notes = (all[currentOfferId] || []).slice(-40);
+    notes.push({ who: chatWho(), at: new Date().toISOString(), text });
+    await jbMergePath(SLICE_MAIN, ['offerNotes', currentOfferId], notes);
+    renderOfferNotes();
+  }catch(e){
+    console.error('Offer note error:', e);
+    statusMsg('Δεν αποθηκεύτηκε: ' + e.message);
+    input.value = text;
+  }
+}
+
 // ===== Συνεννόηση =====
 // Ένα κοινό ταμπλό μηνυμάτων στην Παραγωγή. Ό,τι λέγεται στον διάδρομο και
 // ξεχνιέται — «το χαρτί ήρθε λειψό», «η ΑΛΦΑ πάει Τρίτη» — μένει γραμμένο.
@@ -18306,7 +18464,10 @@ async function refreshStockLogList(){
   if(!key || !bin){ el.innerHTML = ''; return; }
   try{
     const record = await jbGetRecord();
-    let log = record.stockLog||[];
+    // Παλιές βάσεις κρατούσαν το ιστορικό ως αντικείμενο· χωρίς αυτό η Αποθήκη
+    // έσκαγε με «log.slice is not a function» και δεν έδειχνε τίποτα.
+    const raw = record.stockLog;
+    let log = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.values(raw) : []);
     if(stockLogFilterPaper){
       log = log.filter(l=>l.paper===stockLogFilterPaper);
       titleEl.innerHTML = `Ιστορικό Κινήσεων — ${esc(stockLogFilterPaper)} <a href="javascript:void(0)" onclick="clearStockLogFilter()" style="font-size:11.5px;color:var(--muted);font-weight:400;margin-left:8px;">× Όλα τα χαρτιά</a>`;
