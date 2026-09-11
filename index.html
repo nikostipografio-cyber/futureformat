@@ -4661,12 +4661,8 @@ function recalcFlatTotal(){
 
   let costTotal = 0, priceTotal = 0, pricedRows = 0;
   flatRows.filter(rowIsOn).forEach(r=>{
-    // Οι επεξεργασίες χρεώνονται σε είδη μόνο στα Πολλαπλά Είδη. Σε προσφορά
-    // Βιβλίο/Έντυπο έχουν το δικό τους σύνολο, και προσθέτοντάς τες και εδώ το
-    // «Σύνολο Flat Work» έβγαινε φουσκωμένο.
-    const multiHere = !!(document.getElementById('fMultiItem')||{}).checked;
     const cost = flatRowTotalCost(r, baseQty)
-               + ((multiHere && r.material) ? assignedTaskCostForItem(r.material) : 0);
+               + (r.material ? assignedTaskCostForItem(r.material) : 0);
     costTotal += cost;
     const manual = num(r.manualPrice);
     if(manual > 0){ priceTotal += manual; pricedRows++; }
@@ -6074,6 +6070,10 @@ function itemNameShare(material){
 // paper row divide it themselves; those that group rows into one item do not.
 function assignedTaskCostForItem(material, whole){
   if(!String(material||'').trim()) return 0;
+  // Οι επεξεργασίες χρεώνονται σε είδη μόνο στα Πολλαπλά Είδη. Σε προσφορά
+  // Βιβλίο/Έντυπο έχουν το δικό τους σύνολο, και προσθέτοντάς τες και στις
+  // γραμμές μετρούσαν δύο φορές.
+  if(!(document.getElementById('fMultiItem')||{}).checked) return 0;
   const share = whole ? 1 : itemNameShare(material);
   let sum = 0;
   procCategories.forEach(cat=>{
@@ -9570,6 +9570,11 @@ async function loadOffer(id){
     if(!o){ statusMsg('Δεν βρέθηκε'); return; }
     applyOfferData(o.data);
     currentOfferId = id;
+    // Αν ήμασταν σε εναλλακτική καρτέλα της προηγούμενης προσφοράς, η εφαρμογή
+    // συνέχιζε να νομίζει ότι είμαστε εκεί — και έδειχνε γραμμές που δεν ανήκουν
+    // πουθενά.
+    editingExtraQtyId = null;
+    window.__mainOfferBackup = null;
     setTimeout(refreshOfferNotesCount, 0);   // πόσα σχόλια έχει αυτή η προσφορά
     switchView('form');
     updateApproveButton(o.approved || false);
