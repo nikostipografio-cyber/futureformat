@@ -8622,7 +8622,13 @@ function applyOfferData(d){
   } else {
     procCategories = [];
   }
-  renderShip();   // the rows were restored above, but nothing had drawn them yet
+  // Όλοι οι πίνακες ξαναζωγραφίζονται. Το Flat Work και το Βιβλίο έλειπαν από
+  // εδώ: οι γραμμές καθαρίζονταν στα δεδομένα αλλά έμεναν στην οθόνη, και μια
+  // προσφορά χωρίς Flat Work έδειχνε τις γραμμές της προηγούμενης.
+  renderFlat();
+  renderBiblio();
+  renderFabric();
+  renderShip();
   // Folding and sewing are derived from the book rows, so they are recomputed on
   // load — a saved offer otherwise showed the plain header quantity there.
   refreshAutoFoldTasks();
