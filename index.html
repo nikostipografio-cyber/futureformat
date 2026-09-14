@@ -6499,7 +6499,9 @@ function buildOfferPrintHtml(){
         <div class="op-infogrid">
           <div>${row(t('Ποσότητα'), q.toLocaleString('el-GR') + ' ' + t('τεμ.'))
             }${s.schemaClosed ? row(t('Σχήμα'), esc(s.schemaClosed)) : ''
-            }${s.pages ? row(t('Σελίδες'), esc(s.pages)) : ''}</div>
+            }${s.pages ? row(t('Σελίδες'), esc(s.pages)) : ''
+            }${s.deadline ? row(t('Χρόνος παράδοσης'), esc(s.deadline) + ' ' + t('Εργάσιμες ημέρες')) : ''
+            }${s.shipping ? row(t('Τρόπος αποστολής'), esc(s.shipping)) : ''}</div>
         </div>
 
         ${altRows ? (altMulti ? `
@@ -6514,6 +6516,7 @@ function buildOfferPrintHtml(){
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
         ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
+        ${s.paymentTerms ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -7371,9 +7374,15 @@ function snapshotOfferRaw(){
     multiItem: document.getElementById('fMultiItem').checked,
     pages: document.getElementById('fPages').value,
     schemaClosed: document.getElementById('fSchemaClosed').value,
-    // Η Περιγραφή πάει στο PDF, άρα ανήκει στην κάθε εναλλακτική χωριστά: μια
-    // προσφορά με κλωστοραφή δεν λέει τα ίδια με μια με κόλλημα.
+    // Ό,τι μπορεί να διαφέρει ανά επιλογή ανήκει στην κάθε καρτέλα: μια εναλλακτική
+    // με κλωστοραφή θέλει άλλον χρόνο παράδοσης και άλλη περιγραφή. Ο πελάτης και
+    // ο τίτλος μένουν κοινά — είναι η ίδια προσφορά.
     notes: document.getElementById('fNotes').value,
+    deadline: document.getElementById('fDeadline').value,
+    validityDays: document.getElementById('fValidityDays').value,
+    shipping: document.getElementById('fShipping').value,
+    vat: document.getElementById('fVat').value,
+    paymentTerms: document.getElementById('fPaymentTerms').value,
     // The final price and markup are per-quantity too. Leaving them out meant a
     // price typed on one tab silently overwrote the other's.
     manualTotal: document.getElementById('fManualTotal').value,
@@ -7528,7 +7537,11 @@ function loadTabSnapshot(snap, qty){
   shipRows = JSON.parse(JSON.stringify(snap.shipRows || []));
   procCategories = JSON.parse(JSON.stringify(snap.procCategories || []));
   if(snap.multiItem !== undefined) document.getElementById('fMultiItem').checked = !!snap.multiItem;
-  if(snap.notes !== undefined) document.getElementById('fNotes').value = snap.notes;
+  [['notes','fNotes'], ['deadline','fDeadline'], ['validityDays','fValidityDays'],
+   ['shipping','fShipping'], ['vat','fVat'], ['paymentTerms','fPaymentTerms']]
+    .forEach(([key, id]) => {
+      if(snap[key] !== undefined){ const el = document.getElementById(id); if(el) el.value = snap[key]; }
+    });
   if(qty !== undefined) document.getElementById('hdrQty').value = qty;
   document.getElementById('fManualTotal').value = snap.manualTotal || '';
   document.getElementById('fMarkup').value = snap.markup || '';
@@ -8562,7 +8575,10 @@ function collectOffer(){
     data.shipRows = JSON.parse(JSON.stringify(mainSnap.shipRows || []));
     data.procCategories = JSON.parse(JSON.stringify(mainSnap.procCategories || []));
     // Η Περιγραφή λείπει από εδώ και σωζόταν αυτή της ανοιχτής καρτέλας ως κύρια.
-    if(mainSnap.notes !== undefined) data.notes = mainSnap.notes;
+    // Ίδια λίστα με το snapshot: η αποθήκευση από εναλλακτική δεν πρέπει να
+    // γράψει τα δικά της στοιχεία ως κύρια.
+    ['notes','deadline','validityDays','shipping','vat','paymentTerms']
+      .forEach(k => { if(mainSnap[k] !== undefined) data[k] = mainSnap[k]; });
     if(mainSnap.pages !== undefined) data.pages = mainSnap.pages;
     if(mainSnap.schemaClosed !== undefined) data.schemaClosed = mainSnap.schemaClosed;
     if(mainSnap.manualTotal !== undefined) data.manualTotal = mainSnap.manualTotal;
