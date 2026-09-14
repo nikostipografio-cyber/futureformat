@@ -1002,6 +1002,10 @@
   .kanban-card .meta{color:var(--muted);font-size:10px;line-height:1.4;font-weight:500;letter-spacing:0.2px;}
   .kanban-label-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9d9f;font-size:11px;width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;background:var(--page);transition:background 0.12s,color 0.12s;}
   .kanban-label-btn:hover{background:#eaf1fe;color:#2f6fed;border-color:#c6d9fb;}
+  /* Στην Παραγωγή το τσατ είναι ήδη ανοιχτό κάτω από τις στήλες — η φούσκα θα
+     ήταν δεύτερο, περιττό σημείο για το ίδιο πράγμα. */
+  /* Σταθερό στο κάτω μέρος: ο πίνακας κυλάει από πάνω του, το πεδίο γραψίματος
+     μένει πάντα εκεί. Κοντό — είναι για συνεννόηση, όχι για διάβασμα. */
   .chat-fab{position:fixed;right:20px;bottom:20px;width:46px;height:46px;border-radius:50%;
     background:#1f4f9e;color:#fff;border:none;font-size:20px;cursor:pointer;z-index:60;
     box-shadow:0 3px 10px rgba(0,0,0,0.22);}
@@ -1014,14 +1018,16 @@
     background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:62;
     box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
   @media (max-width:600px){ .notes-window{right:10px;left:10px;width:auto;} }
-  .chat-window{position:fixed;right:20px;bottom:76px;width:330px;max-width:calc(100vw - 40px);
+  /* Πιο φαρδύ και ψηλό: δύο γραμμές κείμενο χωρούσαν με το ζόρι, και κάθε φορά
+     έπρεπε να κυλήσεις για να δεις τι ειπώθηκε πριν. */
+  .chat-window{position:fixed;right:20px;bottom:76px;width:440px;max-width:calc(100vw - 40px);
     background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:61;
     box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
   .chat-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;
     padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;}
   .chat-window .chat-ask{padding:10px 12px;}
   @media (max-width:600px){ .chat-window{right:10px;left:10px;width:auto;} }
-  .chat-log{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:8px;
+  .chat-log{max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:8px;
     padding:4px 2px 10px;}
   .chat-msg{font-size:12.5px;line-height:1.4;padding:6px 11px 7px;border-radius:9px;
     background:var(--page);max-width:78%;align-self:flex-start;white-space:pre-wrap;
@@ -1031,9 +1037,11 @@
   .chat-mine .chat-meta{color:#5b86c9;}
   .chat-ask{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:10px;}
   .chat-ask input{flex:1;font-size:12.5px;}
-  .forgotten-bar{background:#fdf3e0;border:1px solid #f0dcb4;color:#a5701f;
-    border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;font-weight:600;}
-  .forgotten-link{color:#a5701f;text-decoration:underline;cursor:pointer;margin-left:6px;}
+  /* Ίδιο κόκκινο με τα εκπρόθεσμα: ένα ξεχασμένο χρονόμετρο χαλάει κάθε μέτρηση
+     που βγάζουμε από αυτό, και πρέπει να φωνάζει όσο και μια χαμένη προθεσμία. */
+  .forgotten-bar{background:#fbe0de;border:1px solid #e8a9a2;color:#a53125;
+    border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;font-weight:700;}
+  .forgotten-link{color:#a53125;text-decoration:underline;cursor:pointer;margin-left:6px;}
   .kanban-date-late{background:#fbe0de !important;border-color:#e8a9a2 !important;
     color:#a53125 !important;font-weight:800;}
   .kanban-date-btn{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;border:1px solid var(--line-strong);background:var(--page);color:var(--muted);transition:background 0.12s;white-space:nowrap;}
@@ -2322,6 +2330,8 @@ function toggleMobileSidebar(forceClose){
     <div class="card">
       <div class="card-head"><div class="title">📃 Τιμολόγηση</div>
         <div style="display:flex;gap:8px;">
+          <input id="invBoardSearch" placeholder="🔎 Αναζήτηση κάρτας..." style="max-width:220px;"
+            oninput="filterInvoicingBoard(this.value)">
           <span class="board-zoom-chip" id="invZoomLabel" title="Zoom πίνακα — Ctrl + ροδέλα ποντικιού. Κλικ για επαναφορά στο 100%." onclick="setBoardZoom('invoicing',100)">100%</span>
           <button class="btn" onclick="openBoardColourPicker('invoicing', event)" title="Χρώμα φόντου πίνακα (ή δεξί κλικ στο φόντο)">Φόντο</button>
           <button class="btn" onclick="addInvoicingColumn()">+ Νέα Στήλη</button>
@@ -14361,37 +14371,44 @@ function closeBoardSettings(){
 
 // Dims what doesn't match instead of removing it, so the column a card sits in
 // stays visible — that's usually the thing you were looking for.
-function filterProductionBoard(term){
-  const board = document.getElementById('productionBoard');
+// Η Τιμολόγηση γεμίζει κι αυτή με κάρτες, και το ψάξιμο με το μάτι είναι το ίδιο
+// κουραστικό. Ίδια συμπεριφορά με την Παραγωγή, ξεχωριστό πεδίο.
+// Ίδια συμπεριφορά για τους δύο πίνακες, γραμμένη μία φορά.
+function filterBoardCards(board, term, inputId){
   if(!board) return;
   const q = String(term||'').trim().toLocaleLowerCase('el');
   const cards = board.querySelectorAll('.kanban-card');
   if(!q){
     board.classList.remove('board-searching');
-    cards.forEach(c=>c.classList.remove('search-hit'));
-    updateBoardSearchCount(null);
+    cards.forEach(c => c.classList.remove('search-hit'));
+    markBoardSearch(inputId, null);
     return;
   }
   board.classList.add('board-searching');
   let hits = 0;
-  cards.forEach(card=>{
-    const text = card.textContent.toLocaleLowerCase('el');
-    const match = text.includes(q);
+  cards.forEach(card => {
+    const match = card.textContent.toLocaleLowerCase('el').includes(q);
     card.classList.toggle('search-hit', match);
     if(match) hits++;
   });
-  updateBoardSearchCount(hits);
-  // Bring the first match into view; searching for something off-screen is the
-  // whole point on a wide board.
-  const first = board.querySelector('.kanban-card.search-hit');
-  if(first) first.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  markBoardSearch(inputId, hits);
 }
 
-function updateBoardSearchCount(hits){
-  const input = document.getElementById('boardSearch');
+// Κόκκινο πλαίσιο όταν δεν βρίσκει τίποτα — αλλιώς απλά κοιτάς έναν άδειο πίνακα
+// χωρίς να ξέρεις αν έφταιξε η αναζήτηση.
+function markBoardSearch(inputId, hits){
+  const input = document.getElementById(inputId);
   if(!input) return;
   input.style.borderColor = hits === 0 ? '#c0392b' : '';
   input.title = hits === null ? '' : `${hits} κάρτες ταιριάζουν`;
+}
+
+function filterInvoicingBoard(term){
+  filterBoardCards(document.getElementById('invoicingBoard'), term, 'invBoardSearch');
+}
+
+function filterProductionBoard(term){
+  filterBoardCards(document.getElementById('productionBoard'), term, 'boardSearch');
 }
 
 function highlightLinkGroup(groupId){
@@ -16193,9 +16210,12 @@ function updateChatBadge(msgs){
   badge.style.display = unread ? '' : 'none';
 }
 
+// Δύο σημεία δείχνουν τα ίδια μηνύματα: το αιωρούμενο παράθυρο, και το σταθερό
+// κουτί κάτω από τις στήλες της Παραγωγής. Γράφονται μαζί.
 async function renderChat(quiet){
   const log = document.getElementById('chatLog');
   if(!log) return;
+  const logs = [log];
   try{
     const record = await jbGetRecord();
     const all = record.chat || [];
@@ -16206,19 +16226,22 @@ async function renderChat(quiet){
     }
     updateChatBadge(msgs);
     if(!msgs.length){
-      log.innerHTML = '<div class="empty-note">Κανένα μήνυμα ακόμα.</div>';
+      logs.forEach(el => el.innerHTML = '<div class="empty-note">Κανένα μήνυμα ακόμα.</div>');
       return;
     }
     const me = chatWho();
-    log.innerHTML = msgs.map(m => {
+    const html = msgs.map(m => {
       const mine = m.who === me;
       return `<div class="chat-msg${mine ? ' chat-mine' : ''}">
         <div class="chat-meta">${esc(m.who)} · ${esc(chatWhen(m.at))}</div>
         ${esc(m.text)}</div>`;
     }).join('');
-    if(!quiet) log.scrollTop = log.scrollHeight;
+    logs.forEach(el => {
+      el.innerHTML = html;
+      if(!quiet) el.scrollTop = el.scrollHeight;
+    });
   }catch(e){
-    log.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+    logs.forEach(el => el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>');
   }
 }
 
