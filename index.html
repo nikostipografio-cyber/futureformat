@@ -6457,7 +6457,9 @@ function buildOfferPrintHtml(){
   // Only the options ticked in the comparison table reach the customer; the rest
   // stay in the offer for our own use.
   const altBlocks = extraQuantities.filter(e => e.inPdf !== false)
-    .filter(e => num(e.qty) > 0 && e.snap && specOf(e.snap) !== mainSpec)
+    // Γράφεται πάντα ολόκληρο, ακόμα κι αν αλλάζει μόνο η ποσότητα: ο πελάτης
+    // διαβάζει την κάθε επιλογή αυτοτελώς, χωρίς να ανατρέχει πιο πάνω.
+    .filter(e => num(e.qty) > 0 && e.snap)
     .sort((a,b)=>num(a.qty) - num(b.qty))
     .map(e => {
       const s = e.snap, q = num(e.qty);
@@ -6511,7 +6513,7 @@ function buildOfferPrintHtml(){
         </table>`) : ''}
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
-        ${v('fNotes') ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${v('fNotes')}</div>` : ''}
+        ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -6524,8 +6526,10 @@ function buildOfferPrintHtml(){
 
   // Quantities that differ only in run length stay in the compact price table;
   // listing them twice would just repeat the same figure.
+  // Όσες έχουν αντίγραφο γράφονται ολόκληρες παραπάνω· εδώ μένουν μόνο οι παλιές
+  // που δεν έχουν — αλλιώς η ίδια ποσότητα θα εμφανιζόταν δύο φορές.
   const priceOnlyExtras = extraQuantities.filter(e => e.inPdf !== false)
-    .filter(e => num(e.qty) > 0 && (!e.snap || specOf(e.snap) === mainSpec))
+    .filter(e => num(e.qty) > 0 && !e.snap)
     .sort((a,b)=>num(a.qty) - num(b.qty));   // same order as the tabs and the comparison
 
   const extraQtyRows = priceOnlyExtras.map(e=>{
@@ -7367,6 +7371,9 @@ function snapshotOfferRaw(){
     multiItem: document.getElementById('fMultiItem').checked,
     pages: document.getElementById('fPages').value,
     schemaClosed: document.getElementById('fSchemaClosed').value,
+    // Η Περιγραφή πάει στο PDF, άρα ανήκει στην κάθε εναλλακτική χωριστά: μια
+    // προσφορά με κλωστοραφή δεν λέει τα ίδια με μια με κόλλημα.
+    notes: document.getElementById('fNotes').value,
     // The final price and markup are per-quantity too. Leaving them out meant a
     // price typed on one tab silently overwrote the other's.
     manualTotal: document.getElementById('fManualTotal').value,
@@ -7521,6 +7528,7 @@ function loadTabSnapshot(snap, qty){
   shipRows = JSON.parse(JSON.stringify(snap.shipRows || []));
   procCategories = JSON.parse(JSON.stringify(snap.procCategories || []));
   if(snap.multiItem !== undefined) document.getElementById('fMultiItem').checked = !!snap.multiItem;
+  if(snap.notes !== undefined) document.getElementById('fNotes').value = snap.notes;
   if(qty !== undefined) document.getElementById('hdrQty').value = qty;
   document.getElementById('fManualTotal').value = snap.manualTotal || '';
   document.getElementById('fMarkup').value = snap.markup || '';
@@ -8553,6 +8561,8 @@ function collectOffer(){
     data.fabricRows = JSON.parse(JSON.stringify(mainSnap.fabricRows || []));
     data.shipRows = JSON.parse(JSON.stringify(mainSnap.shipRows || []));
     data.procCategories = JSON.parse(JSON.stringify(mainSnap.procCategories || []));
+    // Η Περιγραφή λείπει από εδώ και σωζόταν αυτή της ανοιχτής καρτέλας ως κύρια.
+    if(mainSnap.notes !== undefined) data.notes = mainSnap.notes;
     if(mainSnap.pages !== undefined) data.pages = mainSnap.pages;
     if(mainSnap.schemaClosed !== undefined) data.schemaClosed = mainSnap.schemaClosed;
     if(mainSnap.manualTotal !== undefined) data.manualTotal = mainSnap.manualTotal;
