@@ -456,6 +456,26 @@
   .fc-headcard.fc-pending{background:#3d3524;}
   #qtyTabsBar{display:none;gap:6px;flex-wrap:wrap;margin:-14px -16px 12px;
     padding:10px 16px 0;border-bottom:2px solid var(--line);background:var(--page);}
+  /* Κολλάει κάτω από την κορυφή όταν κυλάς — η ενεργή καρτέλα φαίνεται πάντα. */
+  .nav-badge{margin-left:auto;min-width:18px;height:18px;border-radius:9px;background:#c0392b;
+    color:#fff;font-size:10.5px;font-weight:800;line-height:18px;text-align:center;padding:0 5px;}
+  .sidebar.collapsed .nav-badge{display:none !important;}
+  .alert-row{padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .alert-row:last-child{border-bottom:none;}
+  .alert-row:hover{background:var(--page);}
+  .alert-head{font-size:12.5px;display:flex;gap:8px;align-items:baseline;}
+  .alert-text{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:pre-wrap;}
+  /* Αδιάβαστη: μπλε γραμμή αριστερά, όπως ένα αδιάβαστο mail. */
+  .alert-new{box-shadow:inset 3px 0 0 #1f4f9e;padding-left:12px;}
+  .alert-new .alert-text{color:var(--ink);}
+  .mention-list{position:absolute;bottom:46px;left:12px;right:12px;background:var(--card);
+    border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.14);
+    z-index:70;overflow:hidden;}
+  .mention-opt{padding:7px 12px;font-size:12.5px;cursor:pointer;}
+  .mention-opt:hover{background:#eaf1fe;color:#1f4f9e;}
+  .qty-tabs-top{position:sticky;top:0;z-index:30;display:flex;gap:4px;flex-wrap:wrap;
+    background:var(--page);padding:8px 0 6px;margin-bottom:6px;
+    border-bottom:1px solid var(--line);}
   .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
     gap:1px;padding:8px 16px 9px;border:1px solid var(--line);border-bottom:none;
     border-radius:9px 9px 0 0;background:var(--page);cursor:pointer;margin-bottom:-2px;
@@ -1014,6 +1034,8 @@
     border-radius:9px;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;
     line-height:18px;padding:0 4px;}
   /* Ψηλότερα από τη μπάρα συνόλων, που είναι κολλημένη στο κάτω μέρος. */
+  /* Η λίστα ονομάτων τοποθετείται μέσα στο παράθυρο, όχι στη σελίδα. */
+  .notes-window .chat-ask{position:relative;}
   .notes-window{position:fixed;right:20px;bottom:96px;width:340px;max-width:calc(100vw - 40px);
     background:var(--card);border:1px solid var(--line);border-radius:12px;z-index:62;
     box-shadow:0 8px 28px rgba(0,0,0,0.18);flex-direction:column;}
@@ -1096,9 +1118,6 @@
     .op-sheet thead{display:table-header-group;}
     .op-sheet tbody{display:table-row-group;}
     .op-sheet thead .op-header{margin:0;padding-bottom:8px;border-bottom:1px solid #e2e0da;}
-    .op-alt-page .op-sheet thead .op-header{border-bottom:none;padding-bottom:0;}
-    .op-alt-page .op-header{border-bottom:none;}
-    .op-alt-page .op-alt-head{margin-top:10px;}
     .op-page{padding:0 !important;max-width:none;}
     @page{ margin:12mm 14mm 14mm; }
   }
@@ -1125,8 +1144,7 @@
   .op-meta-row td{font-size:11px;color:#444;padding:1px 4px;}
   /* An alternative with a different specification prints as its own block, so
      the customer compares products rather than bare numbers. */
-  .op-alt{margin-top:0;padding-top:0;page-break-inside:avoid;}
-  .op-alt-page{page-break-before:always;break-before:page;}
+  .op-alt{margin-top:18px;padding-top:14px;border-top:1px dashed #bbb;page-break-inside:avoid;}
   .op-optname{color:#6b665c;font-weight:400;font-size:0.92em;}
   .op-alt-head{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;
     margin-bottom:8px;}
@@ -1325,6 +1343,7 @@ function toggleMobileSidebar(forceClose){
     <button class="sidebar-link" id="navForecast" onclick="switchView('forecast');toggleMobileSidebar(true)"><span class="icon">📈</span><span class="label">Forecasting</span></button>
     <button class="sidebar-link" id="navReports" onclick="switchView('reports');toggleMobileSidebar(true)"><span class="icon">📊</span><span class="label">Αναφορές</span></button>
     <button class="sidebar-link" id="navSettings" onclick="switchView('settings');toggleMobileSidebar(true)"><span class="icon">⚙️</span><span class="label">Ρυθμίσεις</span></button>
+    <button class="sidebar-link" id="navAlerts" onclick="switchView('alerts');toggleMobileSidebar(true)"><span class="icon">🔔</span><span class="label">Ειδοποιήσεις</span><span class="nav-badge" id="alertsBadge" style="display:none;"></span></button>
   </div>
   <div class="app">
 
@@ -1415,8 +1434,11 @@ function toggleMobileSidebar(forceClose){
     <div class="empty-note" style="padding:8px 14px 0;">Εσωτερικά — δεν φαίνονται στον πελάτη.</div>
     <div id="offerNotesLog" class="chat-log"></div>
     <div class="chat-ask">
-      <input id="offerNotesInput" placeholder="Γράψε σχόλιο…" maxlength="500"
+      <input id="offerNotesInput" placeholder="Γράψε σχόλιο… (@όνομα για να ειδοποιήσεις)"
+        maxlength="500" autocomplete="off"
+        oninput="onOfferNoteTyping(this.value)"
         onkeydown="if(event.key==='Enter') sendOfferNote()">
+      <div id="mentionList" class="mention-list" style="display:none;"></div>
       <button class="btn solid" onclick="sendOfferNote()">Πρόσθεσε</button>
     </div>
   </div>
@@ -1439,6 +1461,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewForm">
+    <div id="qtyTabsTop" class="qty-tabs-top" style="display:none;"></div>
   <div class="topbar">
     <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
@@ -2124,6 +2147,16 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div id="forecastList" style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);gap:14px;align-items:start;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;"></div>
       </div>
+    </div>
+  </div>
+
+  <div id="viewAlerts" style="display:none;">
+    <div class="card">
+      <div class="card-head">
+        <div class="title">🔔 Ειδοποιήσεις</div>
+        <button class="btn" onclick="markAllAlertsSeen()">Τα είδα όλα</button>
+      </div>
+      <div class="card-body"><div id="alertsList"></div></div>
     </div>
   </div>
 
@@ -6484,17 +6517,6 @@ function buildOfferPrintHtml(){
 
   // Only the options ticked in the comparison table reach the customer; the rest
   // stay in the offer for our own use.
-  // Ίδια επικεφαλίδα σε κάθε σελίδα: το λογότυπο και τα στοιχεία της εταιρείας
-  // τυπώνονται και πάνω από κάθε εναλλακτική, όχι μόνο στην πρώτη σελίδα.
-  const headerHtml = `
-      <div class="op-header">
-        <div class="op-company-info">
-          <div class="co-name">${esc(companyName)}</div>
-          <div class="co-tagline">${esc(companyInfo).split('\n').join('<br>')}</div>
-        </div>
-        ${LOGO_BASE64 ? `<img class="op-logo" src="data:image/png;base64,${LOGO_BASE64}">` : ''}
-      </div>`;
-
   const altBlocks = extraQuantities.filter(e => e.inPdf !== false)
     // Γράφεται πάντα ολόκληρο, ακόμα κι αν αλλάζει μόνο η ποσότητα: ο πελάτης
     // διαβάζει την κάθε επιλογή αυτοτελώς, χωρίς να ανατρέχει πιο πάνω.
@@ -6532,8 +6554,6 @@ function buildOfferPrintHtml(){
       const row = (l, val) => `<div class="row"><span class="l">${l}</span><span class="v">${val}</span></div>`;
 
       return `
-    <div class="op-page op-alt-page">
-      ${headerHtml}
       <div class="op-alt">
         <div class="op-alt-head">${esc(String(e.label||'').trim()) || t('Εναλλακτική')} — ${q.toLocaleString('el-GR')} ${t('τεμ.')}</div>
 
@@ -6557,6 +6577,7 @@ function buildOfferPrintHtml(){
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
         ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
+        ${s.paymentTerms ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -6564,10 +6585,7 @@ function buildOfferPrintHtml(){
         <div class="op-total-row"><span>${t('Σύνολο με ΦΠΑ')}</span><span>${(tot.grand+altVat).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ` : ''}
         <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${tot.unit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
-        ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
-        ${(s.paymentTerms || v('fPaymentTerms')) ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${s.paymentTerms ? esc(s.paymentTerms).replace(/\n/g,'<br>') : v('fPaymentTerms')}</div>` : ''}
-      </div>
-    </div>`;
+      </div>`;
     }).join('');
 
   // Quantities that differ only in run length stay in the compact price table;
@@ -6594,12 +6612,21 @@ function buildOfferPrintHtml(){
   // An item made of two papers — a card laminated back to back — is one thing to
   // the customer, so its papers are listed together on one line rather than as
   // two products.
-  // Κάθε γραμμή χαρτιού τυπώνεται χωριστά, με το δικό της χρώμα — όπως και στις
-  // εναλλακτικές. Η συγχώνευση ίδιου ονόματος έμεινε μόνο στα Πολλαπλά Είδη,
-  // όπου δύο χαρτιά κοστολογούνται ως ένα προϊόν με μία τιμή.
-  const materialRows = flatRows.concat(bookRows)
-    .filter(r => r.material || r.paperName)
-    .map(r => `<tr><td>${esc(r.material||'')}</td><td>${esc(r.paperName||'')}</td><td>${esc(r.color||'')}</td></tr>`)
+  const matGroups = [];
+  flatRows.concat(bookRows).filter(r => r.material || r.paperName).forEach(r=>{
+    const key = (r.material || '').trim();
+    const g = key ? matGroups.find(x => x.name === key) : null;
+    if(g){
+      if(r.paperName && !g.papers.includes(r.paperName)) g.papers.push(r.paperName);
+      if(r.color && !g.colors.includes(r.color)) g.colors.push(r.color);
+    } else {
+      matGroups.push({ name: r.material || '', papers: r.paperName ? [r.paperName] : [],
+                       colors: r.color ? [r.color] : [] });
+    }
+  });
+  const materialRows = matGroups
+    .map(g => `<tr><td>${esc(g.name)}</td><td>${esc(g.papers.join(' + '))}</td><td>${
+      esc(g.colors.join(' / '))}</td></tr>`)
     .concat(
       fabricRows.filter(r=>r.material).map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`)
     )
@@ -6659,7 +6686,13 @@ function buildOfferPrintHtml(){
 
   const html = `
     <div class="op-page">
-      ${headerHtml}
+      <div class="op-header">
+        <div class="op-company-info">
+          <div class="co-name">${esc(companyName)}</div>
+          <div class="co-tagline">${esc(companyInfo).split('\n').join('<br>')}</div>
+        </div>
+        ${LOGO_BASE64 ? `<img class="op-logo" src="data:image/png;base64,${LOGO_BASE64}">` : ''}
+      </div>
 
       <div class="op-client">${v('fClient')}</div>
       <div class="op-subtitle">${v('fTitle')}</div>
@@ -6671,7 +6704,6 @@ function buildOfferPrintHtml(){
         ${shippingRow}
       </div>
 
-      ${(altBlocks || extraQtyRows) && v('fMainLabel') ? `<div class="op-alt-head" style="margin:0 0 8px;">${v('fMainLabel')} — ${qty.toLocaleString('el-GR')} ${t('τεμ.')}</div>` : ''}
       <div class="op-infogrid">
         <div>${qtyRow}${schemaRow}${pagesRow}</div>
       </div>
@@ -6701,10 +6733,10 @@ function buildOfferPrintHtml(){
         <thead><tr><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
         <tbody>${extraQtyRows}</tbody>
       </table>` : ''}
+      ${altBlocks}
       ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
       ${v('fPaymentTerms') ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${v('fPaymentTerms')}</div>` : ''}
     </div>
-    ${altBlocks}
   `;
   document.getElementById('ticketPrintView').innerHTML = '';
   document.getElementById('offerPrintView').innerHTML = html;
@@ -6737,18 +6769,9 @@ function warnIfOfferIncomplete(){
     + '\n\nΝα βγει έτσι το PDF;');
 }
 
-// Το λογότυπο είναι μεγάλη base64 εικόνα: αν η εκτύπωση ξεκινήσει πριν προλάβει
-// να αποκωδικοποιηθεί, λείπει από την προεπισκόπηση. Περιμένουμε όλες τις
-// εικόνες της προσφοράς πριν ανοίξει ο διάλογος ή τρέξει το html2pdf.
-async function waitForOfferImages(){
-  const imgs = [...document.querySelectorAll('#offerPrintView img, #ticketPrintView img')];
-  await Promise.all(imgs.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(()=>{})));
-}
-
-async function generatePdfOffer(){
+function generatePdfOffer(){
   if(!warnIfOfferIncomplete()) return;
   buildOfferPrintHtml();
-  await waitForOfferImages();
   const prevTitle = document.title;
   document.title = [document.getElementById('fClient').value.trim(), document.getElementById('fTitle').value.trim()].filter(Boolean).join(' - ') || 'Προσφορά';
   window.print();
@@ -6759,7 +6782,6 @@ async function downloadOfferPdf(){
   if(!warnIfOfferIncomplete()) return;
   const statusEl = document.getElementById('saveStatus');
   buildOfferPrintHtml();
-  await waitForOfferImages();
   const el = document.getElementById('offerPrintView');
   const clientPart = document.getElementById('fClient').value.trim();
   const titlePart = document.getElementById('fTitle').value.trim();
@@ -6771,7 +6793,6 @@ async function downloadOfferPdf(){
       margin: 0,
       filename: filename + '.pdf',
       html2canvas: { scale: 2, useCORS: true },
-      pagebreak: { mode: ['css', 'legacy'] },
       jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
     }).from(el).save();
     statusMsg('Κατέβηκε το PDF ✓');
@@ -7741,12 +7762,16 @@ function renderQtyTabs(){
   // them — the two belong together, and a floating bar at the top of the page
   // gave no clue what it was attached to.
   const bar = document.getElementById('qtyTabsBar');
+  // Δεύτερη μπάρα στην κορυφή: οι εναλλακτικές ζουν στο κάτω μέρος της σελίδας,
+  // και μέχρι να κατέβεις για να αλλάξεις καρτέλα δεν ξέρεις καν σε ποια είσαι.
+  const top = document.getElementById('qtyTabsTop');
   if(!bar) return;
   if(!extraQuantities.length){
     // Cleared, not just hidden — leaving the old tabs in place kept them
     // findable and made stale state look live.
     bar.style.display = 'none';
     bar.innerHTML = '';
+    if(top){ top.innerHTML = ''; top.style.display = 'none'; }
     return;
   }
   const mainQty = (window.__mainOfferBackup && editingExtraQtyId !== null)
@@ -7786,6 +7811,12 @@ function renderQtyTabs(){
           // 1.000 on different paper are not the same offer.
           approvedId === ('alt' + extraQuantities.indexOf(x.e)) ? '✓ εγκεκριμένη' : (String(x.e.label||'').trim() || 'εναλλακτική'),
           `switchQtyTab(${x.e.id})`, x.e.snapEdited, x.e.id)).join('');
+
+  // Η ίδια μπάρα ψηλά, χωρίς τα κουμπιά διαγραφής — εκεί μόνο διαλέγεις.
+  if(top){
+    top.innerHTML = bar.innerHTML.replace(/<span class="qt-close"[\s\S]*?<\/span>/g, '');
+    top.style.display = ordered.length > 1 ? '' : 'none';
+  }
 }
 
 // ===== Μεταφορικά =====
@@ -8899,6 +8930,7 @@ function switchView(view){
   document.getElementById('viewTicketForm').style.display = view==='ticketform' ? 'block' : 'none';
   document.getElementById('viewTicketList').style.display = view==='ticketlist' ? 'block' : 'none';
   document.getElementById('viewOrders').style.display = view==='orders' ? 'block' : 'none';
+  document.getElementById('viewAlerts').style.display = view==='alerts' ? 'block' : 'none';
   document.getElementById('viewForecast').style.display = view==='forecast' ? 'block' : 'none';
   document.getElementById('viewProduction').style.display = view==='production' ? 'block' : 'none';
   document.getElementById('viewInvoicing').style.display = view==='invoicing' ? 'block' : 'none';
@@ -8909,6 +8941,7 @@ function switchView(view){
   document.getElementById('viewSettings').style.display = view==='settings' ? 'block' : 'none';
   refreshStickyTotals();
   document.getElementById('navHome').classList.toggle('solid', view==='home');
+  document.getElementById('navAlerts').classList.toggle('solid', view==='alerts');
   document.getElementById('navList').classList.toggle('solid', view==='form' || view==='list');
   document.getElementById('navTicket').classList.toggle('solid', view==='ticketform' || view==='ticketlist');
   document.getElementById('navOrders').classList.toggle('solid', view==='orders');
@@ -8935,6 +8968,8 @@ function switchView(view){
   if(view==='production') setTimeout(fitBoardToViewport, 90);
   if(view==='invoicing') setTimeout(()=>fitBoardToViewport('invoicing'), 90);
   if(view==='production') refreshForgottenBar();
+  if(view==='alerts') renderAlerts();
+  checkMentions();
   if(view==='orders') refreshPendingMaterialsBar();
   renderChat(true);   // ο μετρητής μένει ενημερωμένος σε κάθε καρτέλα
   if(view==='productiontime'){ refreshRunningTimers();
@@ -9535,7 +9570,7 @@ async function saveOfferInner(){
     const approvedTotal = approvedRows ? approvedItemsTotal() : null;
     const approvedCount = approvedRows ? approvedRows.length : null;
     const itemCount = flatRows.filter(r=>r.material && r.material.trim()).length;
-    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, approvedTotal, approvedCount, itemCount, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false };
+    record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, approvedTotal, approvedCount, itemCount, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false, comments: existing.comments || [], orderedPapers: existing.orderedPapers || [] };
     // Write ONLY this offer, and only touch the client list if it actually changed.
     await jbMergePath(SLICE_OFFERS, ['offers', id], record.offers[id]);
     if(data.client && data.client.trim() && !record.clients.includes(data.client.trim())){
@@ -16235,6 +16270,38 @@ function toggleOfferNotes(){
   }
 }
 
+// Τα σχόλια μιας προσφοράς. Διαβάζονται από μέσα της· το παλιό ξεχωριστό κλειδί
+// μένει ως εφεδρεία για όσα γράφτηκαν πριν.
+// Ποιοι συνάδελφοι υπάρχουν: όσοι έχουν γράψει κάπου. Χωρίς λίστα να συντηρεί
+// κανείς — αν έχει γράψει έστω ένα μήνυμα, μπορείς να τον αναφέρεις.
+function knownColleagues(record){
+  const names = new Set();
+  (record.chat || []).forEach(m => m && m.who && names.add(m.who));
+  Object.values(record.offers || {}).forEach(o => {
+    (o && o.comments || []).forEach(m => m && m.who && names.add(m.who));
+  });
+  names.delete(chatWho());
+  return [...names].sort();
+}
+
+// Τα ονόματα μετά από @, όπως γράφτηκαν.
+function mentionsIn(text, known){
+  const found = [];
+  (String(text).match(/@([\wά-ώΆ-Ώ.\-]+)/gi) || []).forEach(raw => {
+    const name = raw.slice(1).toLocaleLowerCase('el');
+    const hit = known.find(k => k.toLocaleLowerCase('el') === name);
+    if(hit && !found.includes(hit)) found.push(hit);
+  });
+  return found;
+}
+
+function offerCommentsOf(record, offerId){
+  if(!offerId) return [];
+  const offer = (record.offers || {})[offerId];
+  if(offer && Array.isArray(offer.comments)) return offer.comments;
+  return ((record.offerNotes || {})[offerId]) || [];
+}
+
 async function renderOfferNotes(){
   const log = document.getElementById('offerNotesLog');
   const forEl = document.getElementById('offerNotesFor');
@@ -16247,11 +16314,11 @@ async function renderOfferNotes(){
   forEl.textContent = '— ' + (document.getElementById('fClient').value || 'προσφορά');
   try{
     const record = await jbGetRecord();
-    const notes = ((record.offerNotes || {})[currentOfferId]) || [];
+    const notes = offerCommentsOf(record, currentOfferId);
     log.innerHTML = notes.length
       ? notes.map(n => `<div class="chat-msg${n.who === chatWho() ? ' chat-mine' : ''}">
           <div class="chat-meta">${esc(n.who)} · ${esc(chatWhen(n.at))}</div>
-          ${esc(n.text)}</div>`).join('')
+          ${highlightMentions(n.text)}</div>`).join('')
       : '<div class="empty-note">Κανένα σχόλιο ακόμα.</div>';
     log.scrollTop = log.scrollHeight;
     updateOfferNotesBadge(notes.length);
@@ -16265,8 +16332,14 @@ async function refreshOfferNotesCount(){
   if(!currentOfferId){ updateOfferNotesBadge(0); return; }
   try{
     const record = await jbGetRecord();
-    updateOfferNotesBadge((((record.offerNotes || {})[currentOfferId]) || []).length);
+    updateOfferNotesBadge(offerCommentsOf(record, currentOfferId).length);
   }catch(e){ updateOfferNotesBadge(0); }
+}
+
+// Το @όνομα ξεχωρίζει, ώστε να φαίνεται ότι κάποιος ρωτήθηκε.
+function highlightMentions(text){
+  return esc(String(text || '')).replace(/@([\wά-ώΆ-Ώ.\-]+)/gi,
+    '<b style="color:#1f4f9e;">@$1</b>');
 }
 
 function updateOfferNotesBadge(n){
@@ -16274,18 +16347,138 @@ function updateOfferNotesBadge(n){
   if(btn) btn.textContent = n ? `💬 Σχόλια (${n})` : '💬 Σχόλια';
 }
 
+// Προτάσεις ονομάτων μόλις γραφτεί @.
+async function onOfferNoteTyping(value){
+  const box = document.getElementById('mentionList');
+  if(!box) return;
+  const m = String(value).match(/@([\wά-ώΆ-Ώ.\-]*)$/i);
+  if(!m){ box.style.display = 'none'; return; }
+  try{
+    const record = await jbGetRecord();
+    const q = m[1].toLocaleLowerCase('el');
+    const hits = knownColleagues(record)
+      .filter(n => !q || n.toLocaleLowerCase('el').startsWith(q)).slice(0, 6);
+    if(!hits.length){ box.style.display = 'none'; return; }
+    box.style.display = '';
+    box.innerHTML = hits.map(n =>
+      `<div class="mention-opt" onclick="pickMention('${esc(n)}')">@${esc(n)}</div>`).join('');
+  }catch(e){ box.style.display = 'none'; }
+}
+
+function pickMention(name){
+  const input = document.getElementById('offerNotesInput');
+  input.value = input.value.replace(/@[\wά-ώΆ-Ώ.\-]*$/i, '@' + name + ' ');
+  document.getElementById('mentionList').style.display = 'none';
+  input.focus();
+}
+
+// Οι αναφορές σε εμένα, από όλες τις προσφορές.
+async function collectAlerts(){
+  const record = await jbGetRecord();
+  const me = chatWho();
+  const hits = [];
+  Object.entries(record.offers || {}).forEach(([id, o]) => {
+    (o && o.comments || []).forEach(n => {
+      if((n.mentions || []).includes(me)){
+        hits.push({ offerId: id, who: n.who, at: n.at, text: n.text,
+                    label: [(o.data||{}).client, (o.data||{}).title].filter(Boolean).join(' — ') || id });
+      }
+    });
+  });
+  return hits.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+
+function alertsSeenAt(){
+  try{ return localStorage.getItem('ff_mentions_seen') || ''; }catch(e){ return ''; }
+}
+
+// Ο αριθμός στο μενού: μόνο όσα δεν έχω δει.
+async function checkMentions(){
+  const badge = document.getElementById('alertsBadge');
+  if(!badge) return;
+  try{
+    const seen = alertsSeenAt();
+    const unread = (await collectAlerts()).filter(a => String(a.at) > seen).length;
+    badge.textContent = unread > 9 ? '9+' : String(unread);
+    badge.style.display = unread ? '' : 'none';
+  }catch(e){ badge.style.display = 'none'; }
+}
+
+async function renderAlerts(){
+  const list = document.getElementById('alertsList');
+  if(!list) return;
+  list.innerHTML = '<div class="empty-note">Φόρτωση…</div>';
+  try{
+    const alerts = await collectAlerts();
+    const seen = alertsSeenAt();
+    if(!alerts.length){
+      list.innerHTML = '<div class="empty-note">Καμία ειδοποίηση. '
+        + 'Όταν κάποιος σε αναφέρει με @ σε σχόλιο προσφοράς, θα εμφανιστεί εδώ.</div>';
+      return;
+    }
+    list.innerHTML = alerts.map(a => {
+      const isNew = String(a.at) > seen;
+      return `<div class="alert-row${isNew ? ' alert-new' : ''}"
+          onclick="openAlert('${esc(a.offerId)}')">
+        <div class="alert-head">
+          <b>${esc(a.who)}</b> σε ανέφερε στην <b>${esc(a.label)}</b>
+          <span class="jp-none">${esc(chatWhen(a.at))}</span>
+        </div>
+        <div class="alert-text">${highlightMentions(a.text)}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function openAlert(offerId){
+  await loadOffer(offerId);
+  setTimeout(() => {
+    const w = document.getElementById('offerNotesWin');
+    if(w && w.style.display === 'none') toggleOfferNotes();
+  }, 900);
+}
+
+function markAllAlertsSeen(){
+  try{ localStorage.setItem('ff_mentions_seen', new Date().toISOString()); }catch(e){}
+  checkMentions();
+  renderAlerts();
+  statusMsg('Σημειώθηκαν ως διαβασμένες ✓');
+}
+
 async function sendOfferNote(){
   const input = document.getElementById('offerNotesInput');
   const text = (input.value || '').trim();
   if(!text) return;
-  if(!currentOfferId){ statusMsg('Αποθήκευσε πρώτα την προσφορά.'); return; }
+  // Μια προσφορά χωρίς αριθμό δεν έχει πού να κρατήσει σχόλια. Αντί να το πούμε
+  // και να χαθεί ό,τι έγραψε κάποιος, την αποθηκεύουμε και συνεχίζουμε.
+  if(!currentOfferId){
+    statusMsg('Αποθηκεύεται η προσφορά…');
+    await saveOffer();
+    await new Promise(r => setTimeout(r, 300));
+  }
+  if(!currentOfferId){
+    statusMsg('Δεν αποθηκεύτηκε η προσφορά — το σχόλιο δεν μπήκε.');
+    return;   // το κείμενο μένει στο πεδίο
+  }
   input.value = '';
   try{
+    // Φρέσκια ανάγνωση: με την προσωρινή μνήμη, ένα σχόλιο γραμμένο μετά από
+    // άλλη εγγραφή έχανε ό,τι είχε γράψει κάποιος στο μεταξύ.
+    jbInvalidate();
     const record = await jbGetRecord();
-    const all = record.offerNotes || {};
-    const notes = (all[currentOfferId] || []).slice(-40);
-    notes.push({ who: chatWho(), at: new Date().toISOString(), text });
-    await jbMergePath(SLICE_MAIN, ['offerNotes', currentOfferId], notes);
+    const offer = (record.offers || {})[currentOfferId];
+    if(!offer){ statusMsg('Δεν βρέθηκε η προσφορά — δοκίμασε ξανά.'); input.value = text; return; }
+
+    const notes = offerCommentsOf(record, currentOfferId).slice(-40);
+    const mentions = mentionsIn(text, knownColleagues(record));
+    notes.push({ who: chatWho(), at: new Date().toISOString(), text, mentions });
+
+    // Μέσα στην ίδια την προσφορά: ταξιδεύουν μαζί της σε κάθε αποθήκευση και
+    // φόρτωση, αντί να ζουν σε ξεχωριστό κλειδί που μπορεί να μη φτάσει ποτέ.
+    offer.comments = notes;
+    await jbMergePath(SLICE_OFFERS, ['offers', currentOfferId], offer);
     renderOfferNotes();
   }catch(e){
     console.error('Offer note error:', e);
