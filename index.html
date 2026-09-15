@@ -306,7 +306,9 @@
   .op-combined-sec{page-break-after:always;}
   .op-combined-sec:last-of-type{page-break-after:auto;}
   .op-combined-total{display:flex;justify-content:space-between;align-items:baseline;
-    border-top:2px solid #111;margin-top:22px;padding-top:12px;font-size:16px;font-weight:800;}
+    border-top:2px solid #111;margin-top:22px;padding-top:12px;font-size:16px;font-weight:800;
+    /* Μένει μαζί με ό,τι είναι από πάνω — δεν ξεκολλάει σε δική του σελίδα. */
+    page-break-inside:avoid;page-break-before:avoid;}
   .ost{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
     padding:3px 9px;border-radius:20px;cursor:pointer;white-space:nowrap;
     border:1px solid transparent;transition:filter 0.12s;}
@@ -473,9 +475,22 @@
     z-index:70;overflow:hidden;}
   .mention-opt{padding:7px 12px;font-size:12.5px;cursor:pointer;}
   .mention-opt:hover{background:#eaf1fe;color:#1f4f9e;}
-  .qty-tabs-top{position:sticky;top:0;z-index:30;display:flex;gap:4px;flex-wrap:wrap;
-    background:var(--page);padding:8px 0 6px;margin-bottom:6px;
-    border-bottom:1px solid var(--line);}
+  /* Κάθεται πάνω από την πρώτη κάρτα και κολλάει εκεί όταν κυλάς — η ενεργή
+     επιλογή φαίνεται πάντα, χωρίς να κατεβαίνεις ως κάτω. */
+  .qty-tabs-top{position:sticky;top:0;z-index:30;display:flex;gap:6px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:8px 10px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .qty-tabs-top .qty-tab{border-radius:8px;border:1px solid transparent;
+    background:var(--page);padding:7px 15px;margin:0;min-width:118px;}
+  .qty-tabs-top .qty-tab:hover{border-color:var(--line-strong);background:#fff;}
+  .qty-tabs-top .qty-tab.active{background:#eaf1fe;border-color:#9dbdf5;color:#1f4f9e;}
+  .qty-tabs-top .qty-tab.active .qt-main{color:#1f4f9e;}
+  /* Το όνομα της επιλογής είναι αυτό που ξεχωρίζει τις καρτέλες, όχι η ποσότητα
+     — δύο επιλογές έχουν συχνά το ίδιο τιράζ. */
+  .qty-tabs-top .qt-main{font-size:11px;font-weight:600;color:var(--muted);order:2;}
+  .qty-tabs-top .qt-sub{font-size:12.5px;font-weight:700;color:var(--ink);
+    order:1;letter-spacing:0;text-transform:none;opacity:1;}
+  .qty-tabs-top .qty-tab.active .qt-sub{color:#1f4f9e;}
   .qty-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;
     gap:1px;padding:8px 16px 9px;border:1px solid var(--line);border-bottom:none;
     border-radius:9px 9px 0 0;background:var(--page);cursor:pointer;margin-bottom:-2px;
@@ -1061,18 +1076,33 @@
   .chat-ask input{flex:1;font-size:12.5px;}
   /* Ίδιο κόκκινο με τα εκπρόθεσμα: ένα ξεχασμένο χρονόμετρο χαλάει κάθε μέτρηση
      που βγάζουμε από αυτό, και πρέπει να φωνάζει όσο και μια χαμένη προθεσμία. */
-  .pm-offer{padding:10px 0;border-bottom:1px solid var(--line);}
+  /* Μεγάλα ονόματα ειδών δεν χωράνε στη στήλη. Στην εστίαση το πεδίο βγαίνει
+     πάνω από τα διπλανά και δείχνει ολόκληρο το κείμενο. */
+  .cell-peek{position:relative;}
+  .mat-name:focus, .mat-name:hover{
+    position:absolute;left:4px;right:auto;top:50%;transform:translateY(-50%);
+    width:320px;max-width:calc(100vw - 340px);z-index:25;
+    background:#fff;border-color:#1f4f9e;box-shadow:0 2px 10px rgba(0,0,0,0.14);}
+  .pm-offer{padding:11px 0;border-bottom:1px solid var(--line);}
   .pm-offer:last-child{border-bottom:none;}
   .pm-head{display:grid;grid-template-columns:2.4fr 1.1fr 0.8fr auto;align-items:center;gap:10px;}
-  .pm-papers{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;padding-left:2px;}
-  /* Το πλαίσιο μεγαλώνει με το όνομα — ένα σταθερό πλάτος έκοβε τα μεγάλα. */
-  .pm-paper{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;line-height:1.3;
-    padding:4px 12px 4px 8px;white-space:nowrap;width:auto;flex:0 0 auto;
-    border:1px solid var(--line);border-radius:14px;cursor:pointer;background:var(--card);}
+  /* Στοίβα, όχι σειρά: με τέσσερα-πέντε χαρτιά η οριζόντια διάταξη τύλιγε και
+     δεν ξεχώριζες πού τελειώνει η μία δουλειά και πού αρχίζει η άλλη. */
+  .pm-papers{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-left:2px;}
+  .pm-paper{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;
+    gap:9px;font-size:12px;line-height:1.3;padding:4px 10px 4px 7px;
+    border:1px solid transparent;border-radius:7px;cursor:pointer;background:var(--page);}
   .pm-paper input[type=checkbox]{flex:none;margin:0;width:14px;height:14px;}
-  .pm-paper:hover{border-color:var(--line-strong);}
+  .pm-paper:hover{border-color:var(--line-strong);background:var(--card);}
+  /* Τα φύλλα στοιχισμένα δεξιά: συγκρίνεις ποσότητες με μια ματιά. */
+  .pm-sheets{font-size:11.5px;color:var(--ink);font-weight:700;text-align:right;
+    min-width:74px;font-variant-numeric:tabular-nums;}
+  .pm-order{font-size:10.5px;color:#1f4f9e;text-decoration:underline;
+    cursor:pointer;white-space:nowrap;min-width:78px;text-align:right;}
+  .pm-order:hover{color:#17407f;}
   /* Παραγγελμένο: διαγραμμένο, ώστε να φαίνεται με μια ματιά τι λείπει ακόμα. */
   .pm-done{color:var(--muted);text-decoration:line-through;background:var(--page);}
+  .pm-done .pm-sheets{color:var(--muted);}
   .forgotten-bar{background:#fbe0de;border:1px solid #e8a9a2;color:#a53125;
     border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;font-weight:700;}
   .forgotten-link{color:#a53125;text-decoration:underline;cursor:pointer;margin-left:6px;}
@@ -1461,7 +1491,6 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewForm">
-    <div id="qtyTabsTop" class="qty-tabs-top" style="display:none;"></div>
   <div class="topbar">
     <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
@@ -1487,6 +1516,7 @@ function toggleMobileSidebar(forceClose){
       <button class="btn solid" onclick="saveOffer()">Αποθήκευση</button>
     </div>
   </div>
+  <div id="qtyTabsTop" class="qty-tabs-top" style="display:none;"></div>
   <div class="card">
     <div class="card-head"><div class="title">Στοιχεία Προσφοράς</div>
       <div class="offer-type-switch">
@@ -4201,9 +4231,13 @@ function spinesInWaste(s, lay, spineW, spineH){
   return inSide + inBottom;
 }
 
-function boardCalc(t, qty){
+// Το σχήμα μπορεί να δοθεί κατευθείαν: οι εκκρεμείς παραγγελίες υπολογίζουν από
+// αποθηκευμένες προσφορές, όπου η φόρμα δείχνει άλλη δουλειά ή καμία.
+function boardCalc(t, qty, schemaText){
   const cfg = printSettings();
-  const dim = parseDimFromText(document.getElementById('fSchemaClosed').value);
+  const dim = parseDimFromText(schemaText !== undefined
+    ? schemaText
+    : document.getElementById('fSchemaClosed').value);
   if(!dim || !(qty > 0)) return null;
 
   // Set per job, because a thin paperback-sized case and a heavy album are not
@@ -4618,7 +4652,9 @@ function renderFlat(){
       <td class="cb-cell mi-col"><input type="checkbox" class="cb-appr item-approved" data-id="${r.id}"
         ${r.itemApproved ? 'checked' : ''} onchange="onItemApproved(${r.id}, this.checked)"
         title="Εγκρίθηκε από τον πελάτη"></td>
-      <td><input list="flatMaterialOptions" value="${r.material}" placeholder="Εξώφυλλο..." oninput="flatRows.find(x=>x.id===${r.id}).material=this.value"></td>
+      <td class="cell-peek"><input class="mat-name" list="flatMaterialOptions"
+        value="${esc(r.material)}" placeholder="Εξώφυλλο..." title="${esc(r.material)}"
+        oninput="flatRows.find(x=>x.id===${r.id}).material=this.value;this.title=this.value"></td>
       <td data-l="Χαρτί"><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..."
         oninput="onPaperTyping('flat',${r.id},this.value)"
         onchange="onPaperPick('flat',${r.id},this.value)"></td>
@@ -6561,8 +6597,8 @@ function buildOfferPrintHtml(){
           <div>${row(t('Ποσότητα'), q.toLocaleString('el-GR') + ' ' + t('τεμ.'))
             }${s.schemaClosed ? row(t('Σχήμα'), esc(s.schemaClosed)) : ''
             }${s.pages ? row(t('Σελίδες'), esc(s.pages)) : ''
-            }${s.deadline ? row(t('Χρόνος παράδοσης'), esc(s.deadline)) : ''
-            }${s.shipping ? row(t('Τρόπος αποστολής'), esc(s.shipping)) : ''}</div>
+            }${(s.deadline || v('fDeadline')) ? row(t('Χρόνος παράδοσης'), esc(s.deadline || v('fDeadline'))) : ''
+            }${(s.shipping || v('fShipping')) ? row(t('Τρόπος αποστολής'), esc(t(s.shipping || v('fShipping')))) : ''}</div>
         </div>
 
         ${altRows ? (altMulti ? `
@@ -6577,7 +6613,7 @@ function buildOfferPrintHtml(){
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
         ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
-        ${s.paymentTerms ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms).replace(/\n/g,'<br>')}</div>` : ''}
+        ${(s.paymentTerms || v('fPaymentTerms')) ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms || v('fPaymentTerms')).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -10001,15 +10037,19 @@ async function buildCombinedPdf(){
     const showTotal = document.getElementById('combinedShowTotal').checked;
     const grand = sections.reduce((s,x)=>s + x.total, 0);
     const view = document.getElementById('offerPrintView');
+    // Το γενικό σύνολο μπαίνει ΜΕΣΑ στο τελευταίο τμήμα. Ως ξεχωριστό στοιχείο
+    // έπεφτε μόνο του σε νέα σελίδα, μετά την αλλαγή σελίδας του τμήματος.
+    const totalHtml = showTotal ? `<div class="op-combined-total">
+          <span>Γενικό σύνολο (χωρίς ΦΠΑ)</span>
+          <span>${grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        </div>` : '';
+
     view.innerHTML = sections.map((s,i)=>`
       <div class="op-combined-sec">
         <div class="op-alt-head" style="font-size:14px;margin-bottom:10px;">${esc(s.title)}</div>
         ${s.html}
-      </div>`).join('')
-      + (showTotal ? `<div class="op-combined-total">
-          <span>Γενικό σύνολο (χωρίς ΦΠΑ)</span>
-          <span>${grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-        </div>` : '');
+        ${i === sections.length - 1 ? totalHtml : ''}
+      </div>`).join('');
     window.print();
     statusMsg(`Κοινό PDF με ${sections.length} προσφορές ✓`);
   }catch(e){
@@ -16497,12 +16537,13 @@ async function refreshPendingMaterialsBar(){
   try{
     const record = await jbGetRecord();
     const pending = Object.entries(record.offers || {})
-      .filter(([id, o]) => o && o.approved && !o.materialsOrdered)
-      .map(([id, o]) => ({ id, offer: o,
+      .filter(([, o]) => o && o.approved && !o.materialsOrdered)
+      .map(([id, o]) => ({ id,
         client: (o.data||{}).client || o.label || id,
         title: (o.data||{}).title || '',
         when: o.savedAt || '',
         papers: offerPaperList(o.data),
+        needs: offerPaperNeeds(o.data),
         ordered: o.orderedPapers || [] }))
       .sort((a, b) => String(a.when).localeCompare(String(b.when)));
 
@@ -16515,10 +16556,15 @@ async function refreshPendingMaterialsBar(){
       const papers = p.papers.length
         ? p.papers.map(n => {
             const isDone = p.ordered.includes(n);
+            const sheets = p.needs[n];
             return `<label class="pm-paper${isDone ? ' pm-done' : ''}">
               <input type="checkbox" ${isDone ? 'checked' : ''}
                 onchange="togglePaperOrdered('${esc(p.id)}', this.dataset.paper, this.checked)"
-                data-paper="${esc(n)}">${esc(n)}</label>`;
+                data-paper="${esc(n)}">${esc(n)}${
+                sheets ? `<b class="pm-sheets">${sheets.toLocaleString('el-GR')} φ.</b>` : '<b class="pm-sheets">—</b>'}${
+                isDone ? '<span class="pm-order"></span>' : `<span class="pm-order" title="Φτιάξε εκκρεμή παραγγελία"
+                  onclick="event.preventDefault();event.stopPropagation();orderOnePaper('${esc(p.id)}','${esc(n)}')">
+                  📦 παραγγελία</span>`}</label>`;
           }).join('')
         : '<span class="jp-none">καμία γραμμή χαρτιού</span>';
       return `<div class="pm-offer">
@@ -16538,7 +16584,99 @@ async function refreshPendingMaterialsBar(){
   }
 }
 
+// Τικ ανά χαρτί. Όταν συμπληρωθούν όλα, η προσφορά φεύγει από τις εκκρεμότητες.
+async function togglePaperOrdered(offerId, paperName, on){
+  try{
+    const record = await jbGetRecord();
+    const offer = (record.offers || {})[offerId];
+    if(!offer) return;
+    const set = new Set(offer.orderedPapers || []);
+    on ? set.add(paperName) : set.delete(paperName);
+    offer.orderedPapers = [...set];
+    const all = offerPaperList(offer.data);
+    offer.materialsOrdered = all.length > 0 && all.every(n => set.has(n));
+    await jbMergePath(SLICE_OFFERS, ['offers', offerId], offer);
+    if(offer.materialsOrdered) statusMsg('Όλα τα χαρτιά παραγγέλθηκαν ✓');
+    refreshPendingMaterialsBar();
+  }catch(e){
+    console.error('Toggle paper:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+    refreshPendingMaterialsBar();
+  }
+}
+
+// Παραγγελία ενός χαρτιού, χωρίς να ανοίξεις την προσφορά.
+async function orderOnePaper(offerId, paperName){
+  try{
+    jbInvalidate();
+    const record = await jbGetRecord();
+    const offer = (record.offers || {})[offerId];
+    if(!offer) return;
+    const sheets = (offerPaperNeeds(offer.data))[paperName] || 0;
+    const job = [(offer.data||{}).client, (offer.data||{}).title].filter(Boolean).join(' — ');
+
+    if(!confirm(`Εκκρεμής παραγγελία:\n\n${paperName}\n${
+      sheets ? sheets.toLocaleString('el-GR') + ' φύλλα' : 'χωρίς υπολογισμένη ποσότητα'
+    }\nγια «${job}»\n\nΣυνέχεια;`)) return;
+
+    record.orders = record.orders || {};
+    record.orders['o' + Date.now()] = {
+      date: todayISO(), job, material: paperName, sheets, supplier: '',
+      notes: 'Από τις εκκρεμείς παραγγελίες — συμπλήρωσε προμηθευτή',
+      status: 'pending', receivedDate: '', offerId
+    };
+    await jbMergePath(SLICE_MAIN, ['orders'], record.orders);
+    await togglePaperOrdered(offerId, paperName, true);
+    statusMsg(`Παραγγελία για ${paperName} ✓ — συμπλήρωσε προμηθευτή`);
+  }catch(e){
+    console.error('Order one paper:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 // Τα διαφορετικά χαρτιά μιας προσφοράς, μία φορά το καθένα.
+// Πόσα φύλλα θέλει κάθε χαρτί μιας αποθηκευμένης προσφοράς. Ο υπολογισμός της
+// σύνοψης δουλεύει με τη ζωντανή φόρμα· εδώ χρειάζεται από τα δεδομένα.
+function offerPaperNeeds(data){
+  const d = data || {};
+  const baseQty = num(d.qty);
+  const need = {};
+  const add = (name, sheets) => {
+    const key = String(name || '').trim();
+    if(!key || !(sheets > 0)) return;
+    need[key] = (need[key] || 0) + Math.round(sheets);
+  };
+
+  (d.flatRows || []).forEach(r => {
+    const per = num(r.piecesPerSheet);
+    const qty = num(r.qty) || baseQty;
+    if(!(per > 0) || !(qty > 0)) return;
+    const sheets = ceilSafe(qty / per);
+    add(r.paperName, sheets + num(r.xtra));
+  });
+
+  (d.bookRows || []).forEach(r => {
+    const pages = num(r.pages), pps = num(r.pagesPerSheet);
+    if(!(pps > 0) || !(pages > 0) || !(baseQty > 0)) return;
+    const sheets = ceilSafe((baseQty * pages) / pps);
+    add(r.paperName, sheets + Math.round(num(r.xtra) * (pages / pps)));
+  });
+
+  // Το χαρτόνι βιβλιοδεσίας: η ποσότητα βγαίνει από την ίδια τη γραμμή, γιατί
+  // ο υπολογισμός του καλύμματος θέλει τη ζωντανή προσφορά.
+  // Το χαρτόνι δεν έχει αποθηκευμένα φύλλα — υπολογίζονται όπως και στη σύνοψη
+  // υλικών της προσφοράς, αλλιώς η γραμμή έδειχνε «—».
+  (d.procCategories || []).forEach(cat => {
+    (cat.tasks || []).forEach(t => {
+      if(!t || !t.on || taskMaterial(t.name) !== 'board') return;
+      const calc = (typeof boardCalc === 'function')
+        ? boardCalc(t, baseQty, d.schemaClosed || '') : null;
+      if(calc && calc.sheets) add(calc.label || calc.size || t.boardSize, calc.sheets);
+    });
+  });
+  return need;
+}
+
 function offerPaperList(data){
   const d = data || {};
   const rows = [...(d.flatRows||[]), ...(d.bookRows||[])];
@@ -16554,31 +16692,6 @@ function offerPaperList(data){
     });
   });
   return [...new Set(names.filter(Boolean))];
-}
-
-// Τικ ανά χαρτί. Όταν συμπληρωθούν όλα, η προσφορά φεύγει από τις εκκρεμότητες.
-async function togglePaperOrdered(offerId, paperName, on){
-  try{
-    const record = await jbGetRecord();
-    const offer = (record.offers || {})[offerId];
-    if(!offer) return;
-    const set = new Set(offer.orderedPapers || []);
-    on ? set.add(paperName) : set.delete(paperName);
-    offer.orderedPapers = [...set];
-
-    const all = offerPaperList(offer.data);
-    // Χωρίς γραμμές χαρτιού δεν υπάρχει τίποτα να παραγγελθεί, οπότε το τικ
-    // ενός μόνο δεν πρέπει να κλείσει μια προσφορά που έχει κι άλλα.
-    offer.materialsOrdered = all.length > 0 && all.every(n => set.has(n));
-
-    await jbMergePath(SLICE_OFFERS, ['offers', offerId], offer);
-    if(offer.materialsOrdered) statusMsg('Όλα τα χαρτιά παραγγέλθηκαν ✓');
-    refreshPendingMaterialsBar();
-  }catch(e){
-    console.error('Toggle paper:', e);
-    statusMsg('Σφάλμα: ' + e.message);
-    refreshPendingMaterialsBar();
-  }
 }
 
 // ===== Συνεννόηση =====
