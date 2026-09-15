@@ -1096,6 +1096,9 @@
     .op-sheet thead{display:table-header-group;}
     .op-sheet tbody{display:table-row-group;}
     .op-sheet thead .op-header{margin:0;padding-bottom:8px;border-bottom:1px solid #e2e0da;}
+    .op-alt-page .op-sheet thead .op-header{border-bottom:none;padding-bottom:0;}
+    .op-alt-page .op-header{border-bottom:none;}
+    .op-alt-page .op-alt-head{margin-top:10px;}
     .op-page{padding:0 !important;max-width:none;}
     @page{ margin:12mm 14mm 14mm; }
   }
@@ -1122,7 +1125,8 @@
   .op-meta-row td{font-size:11px;color:#444;padding:1px 4px;}
   /* An alternative with a different specification prints as its own block, so
      the customer compares products rather than bare numbers. */
-  .op-alt{margin-top:18px;padding-top:14px;border-top:1px dashed #bbb;page-break-inside:avoid;}
+  .op-alt{margin-top:0;padding-top:0;page-break-inside:avoid;}
+  .op-alt-page{page-break-before:always;break-before:page;}
   .op-optname{color:#6b665c;font-weight:400;font-size:0.92em;}
   .op-alt-head{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;
     margin-bottom:8px;}
@@ -6480,6 +6484,17 @@ function buildOfferPrintHtml(){
 
   // Only the options ticked in the comparison table reach the customer; the rest
   // stay in the offer for our own use.
+  // Ίδια επικεφαλίδα σε κάθε σελίδα: το λογότυπο και τα στοιχεία της εταιρείας
+  // τυπώνονται και πάνω από κάθε εναλλακτική, όχι μόνο στην πρώτη σελίδα.
+  const headerHtml = `
+      <div class="op-header">
+        <div class="op-company-info">
+          <div class="co-name">${esc(companyName)}</div>
+          <div class="co-tagline">${esc(companyInfo).split('\n').join('<br>')}</div>
+        </div>
+        ${LOGO_BASE64 ? `<img class="op-logo" src="data:image/png;base64,${LOGO_BASE64}">` : ''}
+      </div>`;
+
   const altBlocks = extraQuantities.filter(e => e.inPdf !== false)
     // Γράφεται πάντα ολόκληρο, ακόμα κι αν αλλάζει μόνο η ποσότητα: ο πελάτης
     // διαβάζει την κάθε επιλογή αυτοτελώς, χωρίς να ανατρέχει πιο πάνω.
@@ -6517,6 +6532,8 @@ function buildOfferPrintHtml(){
       const row = (l, val) => `<div class="row"><span class="l">${l}</span><span class="v">${val}</span></div>`;
 
       return `
+    <div class="op-page op-alt-page">
+      ${headerHtml}
       <div class="op-alt">
         <div class="op-alt-head">${esc(String(e.label||'').trim()) || t('Εναλλακτική')} — ${q.toLocaleString('el-GR')} ${t('τεμ.')}</div>
 
@@ -6540,7 +6557,6 @@ function buildOfferPrintHtml(){
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
         ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
-        ${s.paymentTerms ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -6548,7 +6564,10 @@ function buildOfferPrintHtml(){
         <div class="op-total-row"><span>${t('Σύνολο με ΦΠΑ')}</span><span>${(tot.grand+altVat).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ` : ''}
         <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${tot.unit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
-      </div>`;
+        ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
+        ${(s.paymentTerms || v('fPaymentTerms')) ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${s.paymentTerms ? esc(s.paymentTerms).replace(/\n/g,'<br>') : v('fPaymentTerms')}</div>` : ''}
+      </div>
+    </div>`;
     }).join('');
 
   // Quantities that differ only in run length stay in the compact price table;
@@ -6575,21 +6594,12 @@ function buildOfferPrintHtml(){
   // An item made of two papers — a card laminated back to back — is one thing to
   // the customer, so its papers are listed together on one line rather than as
   // two products.
-  const matGroups = [];
-  flatRows.concat(bookRows).filter(r => r.material || r.paperName).forEach(r=>{
-    const key = (r.material || '').trim();
-    const g = key ? matGroups.find(x => x.name === key) : null;
-    if(g){
-      if(r.paperName && !g.papers.includes(r.paperName)) g.papers.push(r.paperName);
-      if(r.color && !g.colors.includes(r.color)) g.colors.push(r.color);
-    } else {
-      matGroups.push({ name: r.material || '', papers: r.paperName ? [r.paperName] : [],
-                       colors: r.color ? [r.color] : [] });
-    }
-  });
-  const materialRows = matGroups
-    .map(g => `<tr><td>${esc(g.name)}</td><td>${esc(g.papers.join(' + '))}</td><td>${
-      esc(g.colors.join(' / '))}</td></tr>`)
+  // Κάθε γραμμή χαρτιού τυπώνεται χωριστά, με το δικό της χρώμα — όπως και στις
+  // εναλλακτικές. Η συγχώνευση ίδιου ονόματος έμεινε μόνο στα Πολλαπλά Είδη,
+  // όπου δύο χαρτιά κοστολογούνται ως ένα προϊόν με μία τιμή.
+  const materialRows = flatRows.concat(bookRows)
+    .filter(r => r.material || r.paperName)
+    .map(r => `<tr><td>${esc(r.material||'')}</td><td>${esc(r.paperName||'')}</td><td>${esc(r.color||'')}</td></tr>`)
     .concat(
       fabricRows.filter(r=>r.material).map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`)
     )
@@ -6649,13 +6659,7 @@ function buildOfferPrintHtml(){
 
   const html = `
     <div class="op-page">
-      <div class="op-header">
-        <div class="op-company-info">
-          <div class="co-name">${esc(companyName)}</div>
-          <div class="co-tagline">${esc(companyInfo).split('\n').join('<br>')}</div>
-        </div>
-        ${LOGO_BASE64 ? `<img class="op-logo" src="data:image/png;base64,${LOGO_BASE64}">` : ''}
-      </div>
+      ${headerHtml}
 
       <div class="op-client">${v('fClient')}</div>
       <div class="op-subtitle">${v('fTitle')}</div>
@@ -6667,6 +6671,7 @@ function buildOfferPrintHtml(){
         ${shippingRow}
       </div>
 
+      ${(altBlocks || extraQtyRows) && v('fMainLabel') ? `<div class="op-alt-head" style="margin:0 0 8px;">${v('fMainLabel')} — ${qty.toLocaleString('el-GR')} ${t('τεμ.')}</div>` : ''}
       <div class="op-infogrid">
         <div>${qtyRow}${schemaRow}${pagesRow}</div>
       </div>
@@ -6696,10 +6701,10 @@ function buildOfferPrintHtml(){
         <thead><tr><th>${t('Ποσότητα')}</th><th>${t('Καθαρή αξία')}</th><th>${t('Τιμή τεμαχίου')}</th></tr></thead>
         <tbody>${extraQtyRows}</tbody>
       </table>` : ''}
-      ${altBlocks}
       ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
       ${v('fPaymentTerms') ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${v('fPaymentTerms')}</div>` : ''}
     </div>
+    ${altBlocks}
   `;
   document.getElementById('ticketPrintView').innerHTML = '';
   document.getElementById('offerPrintView').innerHTML = html;
@@ -6732,9 +6737,18 @@ function warnIfOfferIncomplete(){
     + '\n\nΝα βγει έτσι το PDF;');
 }
 
-function generatePdfOffer(){
+// Το λογότυπο είναι μεγάλη base64 εικόνα: αν η εκτύπωση ξεκινήσει πριν προλάβει
+// να αποκωδικοποιηθεί, λείπει από την προεπισκόπηση. Περιμένουμε όλες τις
+// εικόνες της προσφοράς πριν ανοίξει ο διάλογος ή τρέξει το html2pdf.
+async function waitForOfferImages(){
+  const imgs = [...document.querySelectorAll('#offerPrintView img, #ticketPrintView img')];
+  await Promise.all(imgs.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(()=>{})));
+}
+
+async function generatePdfOffer(){
   if(!warnIfOfferIncomplete()) return;
   buildOfferPrintHtml();
+  await waitForOfferImages();
   const prevTitle = document.title;
   document.title = [document.getElementById('fClient').value.trim(), document.getElementById('fTitle').value.trim()].filter(Boolean).join(' - ') || 'Προσφορά';
   window.print();
@@ -6745,6 +6759,7 @@ async function downloadOfferPdf(){
   if(!warnIfOfferIncomplete()) return;
   const statusEl = document.getElementById('saveStatus');
   buildOfferPrintHtml();
+  await waitForOfferImages();
   const el = document.getElementById('offerPrintView');
   const clientPart = document.getElementById('fClient').value.trim();
   const titlePart = document.getElementById('fTitle').value.trim();
@@ -6756,6 +6771,7 @@ async function downloadOfferPdf(){
       margin: 0,
       filename: filename + '.pdf',
       html2canvas: { scale: 2, useCORS: true },
+      pagebreak: { mode: ['css', 'legacy'] },
       jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
     }).from(el).save();
     statusMsg('Κατέβηκε το PDF ✓');
