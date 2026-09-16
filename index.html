@@ -2294,6 +2294,9 @@ function toggleMobileSidebar(forceClose){
         <div style="display:flex;gap:8px;">
           <button class="btn" onclick="toggleStockNewPaperPanel()">+ Νέο χαρτί</button>
           <button class="btn" onclick="toggleStockBulkImportPanel()">Μαζική Εισαγωγή</button>
+          <button class="btn" onclick="togglePaperPriceBulkPanel()">Νέες Τιμές</button>
+          <button class="btn" onclick="exportPapersTsv()">Εξαγωγή Χαρτιών</button>
+          <button class="btn" onclick="togglePapersImportPanel()">Εισαγωγή Χαρτιών</button>
           <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">Μηδενισμός Αποθήκης</button>
         </div>
       </div>
@@ -2306,6 +2309,35 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="toggleStockBulkImportPanel()">Κλείσιμο</button>
         </div>
         <div class="empty-note" id="stockBulkImportStatus" style="margin-top:8px;"></div>
+      </div>
+      <div id="papersImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div class="empty-note" style="margin-bottom:8px;">Επικόλληση της λίστας από την «Εξαγωγή Χαρτιών» (μέσω Excel αν θες), με τις ίδιες στήλες. Το ταίριασμα γίνεται <b>μόνο με ακριβές όνομα</b>: όνομα που υπάρχει → ενημερώνονται όσα πεδία άλλαξαν· όνομα που δεν υπάρχει → προστίθεται ως νέο χαρτί· χαρτιά της βάσης που λείπουν από τη λίστα <b>δεν πειράζονται ποτέ</b>. Άδειο κελί σημαίνει «δεν αλλάζει». Το απόθεμα και η μονάδα δεν αλλάζουν από εδώ (έχουν τη Μαζική Εισαγωγή). Προσοχή στη μετονομασία: αλλαγμένο όνομα = νέο χαρτί, το παλιό μένει όπως ήταν — οι προσφορές και τα tickets δείχνουν στα χαρτιά με το όνομά τους.</div>
+        <textarea id="fpiText" rows="7" style="width:100%;font-family:monospace;font-size:11.5px;" placeholder="Όνομα&#9;Πλάτος&#9;Μήκος&#9;Γραμμάρια&#9;Τιμή/κιλό&#9;Τιμή/φύλλο"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+          <button class="btn" onclick="previewPapersImport()">Προεπισκόπηση</button>
+          <button class="btn solid" id="fpiConfirmBtn" style="display:none;" onclick="confirmPapersImport()">Εφαρμογή</button>
+          <button class="btn" onclick="togglePapersImportPanel()">Κλείσιμο</button>
+        </div>
+        <div class="empty-note" id="fpiStatus" style="margin-top:8px;"></div>
+        <div id="fpiPreview" style="margin-top:8px;max-height:320px;overflow:auto;"></div>
+      </div>
+      <div id="paperPriceBulkPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div class="empty-note" style="margin-bottom:8px;">Μία γραμμή ανά χαρτί: <b>Όνομα [Tab] Τιμή</b> — επικόλληση κατευθείαν από Excel ή τιμοκατάλογο (δουλεύει και με σκέτο κενό πριν την τιμή). Το όνομα δεν χρειάζεται να είναι γραμμένο ακριβώς ίδια: ταιριάζει χωρίς τόνους/κεφαλαία και με τις λέξεις σε όποια σειρά, αρκεί να αντιστοιχεί σε <b>ένα</b> χαρτί της βάσης — αλλιώς σημειώνεται και δεν αλλάζει τίποτα.</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <label style="font-size:12px;color:var(--muted);">Οι τιμές της λίστας είναι:</label>
+          <select id="ppbField" style="max-width:150px;">
+            <option value="priceKg">€/κιλό</option>
+            <option value="priceSheet">€/φύλλο</option>
+          </select>
+        </div>
+        <textarea id="ppbText" rows="6" style="width:100%;font-family:monospace;font-size:11.5px;" placeholder="π.χ.&#10;Velvet 350gr 70x100&#9;1,28&#10;ΧΑΡΤΟΝΙ 2mm 75x105&#9;0,95&#10;Colorplan Mist 135gr  2,10"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+          <button class="btn" onclick="previewPaperPriceBulk()">Προεπισκόπηση</button>
+          <button class="btn solid" id="ppbConfirmBtn" style="display:none;" onclick="confirmPaperPriceBulk()">Ενημέρωση Τιμών</button>
+          <button class="btn" onclick="togglePaperPriceBulkPanel()">Κλείσιμο</button>
+        </div>
+        <div class="empty-note" id="ppbStatus" style="margin-top:8px;"></div>
+        <div id="ppbPreview" style="margin-top:8px;max-height:320px;overflow:auto;"></div>
       </div>
       <div id="stockNewPaperPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
         <div class="empty-note" style="margin-bottom:8px;">Καταχώρηση χαρτιού στη βάση — μετά θα το βρίσκεις παντού (προσφορές, tickets, αποθήκη). Μόνο το όνομα είναι υποχρεωτικό.</div>
@@ -18568,6 +18600,284 @@ async function deletePaper(name){
 // by every offer that uses it.
 // Χαρτί που προστέθηκε βιαστικά μένει χωρίς γραμμάριο, και τότε η κόλλα και το
 // βάρος βγάζουν μηδέν. Εδώ συμπληρώνεται χωρίς να ξαναφτιαχτεί το χαρτί.
+// ===== Εξαγωγή / Πλήρης Εισαγωγή Χαρτιών =====
+// Η εξαγωγή δίνει όλη τη βάση σε TSV που ανοίγει καθαρά στο Excel (BOM για τα
+// ελληνικά, δεκαδικά με κόμμα). Η εισαγωγή ταιριάζει ΜΟΝΟ με ακριβές όνομα —
+// εδώ δεν χωράει μάντεμα: οι προσφορές και τα job tickets κρατούν το χαρτί με
+// το όνομά του, οπότε το όνομα είναι το κλειδί και μένει σταθερό. Ό,τι λείπει
+// από τη λίστα δεν διαγράφεται ποτέ.
+const FPI_COLS = ['Όνομα','Πλάτος (cm)','Μήκος (cm)','Γραμμάρια','Τιμή/κιλό','Τιμή/φύλλο','Απόθεμα','Μονάδα'];
+
+function fmtCell(v){
+  if(v == null || v === '') return '';
+  return typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+}
+
+function buildPapersExportTsv(){
+  const rows = Object.values(paperByName)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'el'));
+  return '\ufeff' + FPI_COLS.join('\t') + '\n' +
+    rows.map(p => [p.name, fmtCell(p.w), fmtCell(p.l), fmtCell(p.g),
+                   fmtCell(p.priceKg), fmtCell(p.priceSheet),
+                   fmtCell(p.qty), p.unit || ''].join('\t')).join('\n') + '\n';
+}
+
+function exportPapersTsv(){
+  const blob = new Blob([buildPapersExportTsv()], { type:'text/tab-separated-values;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'xartia_' + new Date().toISOString().slice(0,10) + '.tsv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  statusMsg('Εξήχθησαν ' + Object.keys(paperByName).length + ' χαρτιά ✓');
+}
+
+let papersImportParsed = [];
+
+function togglePapersImportPanel(){
+  const panel = document.getElementById('papersImportPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('fpiStatus').textContent = '';
+  document.getElementById('fpiPreview').innerHTML = '';
+  document.getElementById('fpiConfirmBtn').style.display = 'none';
+  papersImportParsed = [];
+}
+
+function fpiNum(s){
+  const t = String(s == null ? '' : s).trim();
+  if(t === '') return undefined;              // άδειο κελί = δεν αλλάζει
+  const n = parseFloat(t.replace(',', '.'));
+  return isFinite(n) ? n : undefined;
+}
+
+function previewPapersImport(){
+  const lines = document.getElementById('fpiText').value
+    .replace(/^\ufeff/, '').split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
+  const rows = [];
+  for(const line of lines){
+    const c = line.split('\t');
+    const name = (c[0] || '').trim();
+    if(!name || name === 'Όνομα') continue;   // κεφαλίδα ή άδεια
+    const vals = { w: fpiNum(c[1]), l: fpiNum(c[2]), g: fpiNum(c[3]),
+                   priceKg: fpiNum(c[4]), priceSheet: fpiNum(c[5]) };
+    const p = paperByName[name];
+    if(!p){
+      rows.push({ name, vals, state: 'new' });
+      continue;
+    }
+    const changes = [];
+    const labels = { w:'πλάτος', l:'μήκος', g:'γραμμάρια', priceKg:'€/κιλό', priceSheet:'€/φύλλο' };
+    for(const k of Object.keys(vals)){
+      if(vals[k] === undefined) continue;
+      const oldV = p[k] == null || p[k] === '' ? null : num(p[k]);
+      if(oldV === null || Math.abs(oldV - vals[k]) > 1e-9)
+        changes.push(labels[k] + ': ' + (oldV == null ? '—' : fmtCell(oldV)) + ' → ' + fmtCell(vals[k]));
+    }
+    rows.push({ name, vals, state: changes.length ? 'update' : 'same', changes });
+  }
+  const inFile = new Set(rows.map(r => r.name));
+  const untouched = Object.keys(paperByName).filter(n => !inFile.has(n)).length;
+  papersImportParsed = rows.filter(r => r.state !== 'same');
+
+  const order = { update:0, new:1, same:2 };
+  rows.sort((a, b) => order[a.state] - order[b.state]);
+  const color = { update:'#1e7e34', new:'#2f6fed', same:'var(--muted)' };
+  const label = { update:'', new:'θα προστεθεί ως νέο', same:'καμία αλλαγή' };
+  document.getElementById('fpiPreview').innerHTML = rows.length ? `
+    <table style="width:100%;font-size:11.5px;border-collapse:collapse;">
+      <tr style="text-align:left;color:var(--muted);"><th style="padding:3px 6px;">Χαρτί</th><th style="padding:3px 6px;">Αλλαγές</th></tr>
+      ${rows.map(r => `<tr style="border-top:1px solid var(--line);">
+        <td style="padding:3px 6px;">${esc(r.name)}</td>
+        <td style="padding:3px 6px;color:${color[r.state]};">${r.state === 'update' ? esc(r.changes.join(' · ')) : label[r.state]}</td>
+      </tr>`).join('')}
+    </table>` : '';
+  const updates = rows.filter(r => r.state === 'update').length;
+  const news = rows.filter(r => r.state === 'new').length;
+  document.getElementById('fpiStatus').textContent = rows.length
+    ? `${updates} ενημερώσεις · ${news} νέα` + (untouched ? ` · ${untouched} χαρτιά της βάσης δεν είναι στη λίστα και μένουν ως έχουν` : '')
+    : 'Δεν βρέθηκαν γραμμές.';
+  document.getElementById('fpiConfirmBtn').style.display = papersImportParsed.length ? '' : 'none';
+}
+
+async function confirmPapersImport(){
+  const btn = document.getElementById('fpiConfirmBtn');
+  btn.disabled = true;
+  let done = 0;
+  for(const r of papersImportParsed){
+    const base = paperByName[r.name] || { name: r.name };
+    const next = Object.assign({}, base, { name: r.name });
+    for(const k of ['w','l','g','priceKg','priceSheet'])
+      if(r.vals[k] !== undefined) next[k] = r.vals[k];
+    delete next.qty; delete next.unit;   // τα κρατά το upsertPaper από τα υπάρχοντα
+    await upsertPaper(next);
+    done++;
+    document.getElementById('fpiStatus').textContent = `Εφαρμογή… ${done}/${papersImportParsed.length}`;
+  }
+  document.getElementById('fpiStatus').textContent = `Εφαρμόστηκαν ${done} αλλαγές ✓`;
+  btn.style.display = 'none';
+  btn.disabled = false;
+  papersImportParsed = [];
+  refreshStockList();
+  if(typeof recalcAll === 'function' && (flatRows.length || bookRows.length)) recalcAll();
+}
+
+// ===== Μαζική Ενημέρωση Τιμών Χαρτιών =====
+// Ο τιμοκατάλογος του προμηθευτή σπάνια γράφει τα ονόματα όπως η βάση, οπότε το
+// ταίριασμα γίνεται με τον ίδιο χαλαρό κανόνα της αναζήτησης (χωρίς τόνους,
+// κεφαλαία, με τις λέξεις σε όποια σειρά) — αλλά μια τιμή γράφεται ΜΟΝΟ όταν το
+// ταίριασμα είναι μονοσήμαντο: ό,τι ταιριάζει σε δύο χαρτιά ή σε κανένα απλώς
+// επισημαίνεται, γιατί μια λάθος τιμή χαρτιού περνάει αθόρυβα σε κάθε προσφορά.
+let paperPriceBulkParsed = [];
+let paperPriceBulkRows = [];
+
+// Από την περιγραφή του καταλόγου βγαίνουν γραμμάρια και διαστάσεις, ώστε ένα
+// νέο χαρτί να κοστολογεί σωστά αμέσως: «COLORPLAN MIST 135gr 64X97» → g 135,
+// 64×97. Δεκαδικά με κόμμα («11,5Χ23») διαβάζονται κανονικά.
+function parsePaperSpecs(name){
+  const g = (name.match(/(\d+)\s*gr?\b/i) || [])[1];
+  const d = name.match(/(\d+(?:[.,]\d+)?)\s*[xXχΧ×]\s*(\d+(?:[.,]\d+)?)/);
+  const n = s => s == null ? null : parseFloat(String(s).replace(',', '.'));
+  return { g: g ? parseFloat(g) : null, w: d ? n(d[1]) : null, l: d ? n(d[2]) : null };
+}
+
+function togglePaperPriceBulkPanel(){
+  const panel = document.getElementById('paperPriceBulkPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('ppbStatus').textContent = '';
+  document.getElementById('ppbPreview').innerHTML = '';
+  document.getElementById('ppbConfirmBtn').style.display = 'none';
+  paperPriceBulkParsed = [];
+}
+
+function parsePriceToken(s){
+  let t = String(s).replace(/€/g,'').trim();
+  // «1.234,56» → 1234.56 · «1,28» → 1.28 · «1.28» μένει ως έχει
+  if(t.includes(',')) t = t.replace(/\./g,'').replace(',', '.');
+  const n = parseFloat(t);
+  return isFinite(n) ? n : NaN;
+}
+
+function parsePaperPriceLine(line){
+  const tabs = line.split('\t').map(s => s.trim()).filter(Boolean);
+  if(tabs.length >= 2){
+    return { name: tabs.slice(0, -1).join(' '), price: parsePriceToken(tabs[tabs.length - 1]) };
+  }
+  // Χωρίς tab: ο τελευταίος αριθμός της γραμμής είναι η τιμή, τα υπόλοιπα όνομα.
+  const m = line.match(/^(.*?)\s+([\d.,]+)\s*€?\s*$/);
+  if(m) return { name: m[1].trim(), price: parsePriceToken(m[2]) };
+  return { name: line.trim(), price: NaN };
+}
+
+function previewPaperPriceBulk(){
+  const field = document.getElementById('ppbField').value;
+  const lines = document.getElementById('ppbText').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const names = Object.keys(paperByName);
+  const rows = lines.map(line => {
+    const { name, price } = parsePaperPriceLine(line);
+    if(!name || !isFinite(price) || price <= 0) return { written: line, state: 'invalid' };
+    let matches = names.filter(n => strip(n) === strip(name));
+    if(!matches.length) matches = names.filter(n => searchMatch(n, name));
+    // Ο κατάλογος του προμηθευτή γράφει την πλήρη περιγραφή, ενώ στη βάση το
+    // όνομα είναι συχνά συντομότερο («Munken Polar 300gr»). Αντίστροφη
+    // κατεύθυνση: όλες οι λέξεις του ονόματος της βάσης μέσα στη γραμμή.
+    if(!matches.length) matches = names.filter(n => searchMatch(name, n));
+    if(matches.length === 1){
+      const old = paperByName[matches[0]][field];
+      const oldNum = old == null || old === '' ? null : num(old);
+      const state = oldNum != null && Math.abs(oldNum - price) < 1e-9 ? 'same' : 'ok';
+      return { written: name, paper: matches[0], old: oldNum, price, state };
+    }
+    return { written: name, price, state: matches.length ? 'ambiguous' : 'notfound', count: matches.length };
+  });
+  // Ίδιο χαρτί από περισσότερες γραμμές: με διαφορετικές τιμές καμία δεν
+  // εφαρμόζεται (συνήθως το όνομα της βάσης δεν ξεχωρίζει μέγεθος ή γραμμάρια
+  // και ταιριάζει σε πολλά είδη του καταλόγου) — με ίδια τιμή κρατιέται μία.
+  const byPaper = {};
+  rows.forEach(r => { if(r.state === 'ok' || r.state === 'same'){ (byPaper[r.paper] = byPaper[r.paper] || []).push(r); } });
+  Object.values(byPaper).forEach(group => {
+    if(new Set(group.map(g => g.price)).size > 1) group.forEach(g => { g.state = 'conflict'; });
+    else group.filter(g => g.state === 'ok').slice(1).forEach(g => { g.state = 'same'; });
+  });
+  paperPriceBulkParsed = rows.filter(r => r.state === 'ok');
+
+  // Με μεγάλο τιμοκατάλογο οι περισσότερες γραμμές δεν αφορούν τη βάση —
+  // ό,τι μετράει (ενημερώσεις, συγκρούσεις) ανεβαίνει πάνω-πάνω.
+  const order = { ok:0, conflict:1, ambiguous:2, notfound:3, same:4, invalid:5 };
+  rows.sort((a, b) => order[a.state] - order[b.state]);
+  paperPriceBulkRows = rows;
+
+  const label = { ok:'θα ενημερωθεί', same:'ίδια τιμή — παραλείπεται', ambiguous:'', notfound:'δεν βρέθηκε στη βάση', invalid:'δεν διαβάστηκε τιμή', conflict:'πολλές γραμμές με άλλη τιμή για το ίδιο χαρτί — δεν αλλάζει' };
+  const color = { ok:'#1e7e34', same:'var(--muted)', ambiguous:'#c0392b', notfound:'#c0392b', invalid:'#c0392b', conflict:'#c0392b' };
+  const unit = field === 'priceKg' ? '€/κιλό' : '€/φύλλο';
+  document.getElementById('ppbPreview').innerHTML = rows.length ? `
+    <table style="width:100%;font-size:11.5px;border-collapse:collapse;">
+      <tr style="text-align:left;color:var(--muted);"><th style="padding:3px 6px;">Από τη λίστα</th><th style="padding:3px 6px;">Χαρτί βάσης</th><th style="padding:3px 6px;">Παλιά (${unit})</th><th style="padding:3px 6px;">Νέα</th><th style="padding:3px 6px;"></th></tr>
+      ${rows.map((r, i) => `<tr style="border-top:1px solid var(--line);">
+        <td style="padding:3px 6px;">${esc(r.written)}</td>
+        <td style="padding:3px 6px;">${esc(r.paper || '—')}</td>
+        <td style="padding:3px 6px;">${r.old != null ? r.old.toLocaleString('el-GR',{maximumFractionDigits:4}) : (r.state==='ok'||r.state==='same' ? '—' : '')}</td>
+        <td style="padding:3px 6px;font-weight:600;">${isFinite(r.price) && r.state !== 'invalid' ? r.price.toLocaleString('el-GR',{maximumFractionDigits:4}) : ''}</td>
+        <td style="padding:3px 6px;color:${color[r.state]};">${r.state === 'ambiguous' ? 'διφορούμενο — ταιριάζει σε ' + r.count + ' χαρτιά'
+          : r.state === 'notfound' ? `<label style="cursor:pointer;"><input type="checkbox" class="ppb-new" data-i="${i}" onchange="updatePpbStatus()"> προσθήκη ως νέο</label>`
+          : label[r.state]}</td>
+      </tr>`).join('')}
+    </table>` : '';
+  const anyNew = rows.some(r => r.state === 'notfound');
+  if(anyNew){
+    document.getElementById('ppbPreview').insertAdjacentHTML('afterbegin',
+      `<label style="font-size:11.5px;cursor:pointer;display:inline-block;margin-bottom:6px;"><input type="checkbox" onchange="document.querySelectorAll('.ppb-new').forEach(c=>c.checked=this.checked);updatePpbStatus()"> Επιλογή όλων των «δεν βρέθηκε» για προσθήκη</label>`);
+  }
+  updatePpbStatus();
+}
+
+function updatePpbStatus(){
+  const rows = paperPriceBulkRows;
+  const news = document.querySelectorAll('.ppb-new:checked').length;
+  const skipped = rows.length - paperPriceBulkParsed.length - news;
+  document.getElementById('ppbStatus').textContent = rows.length
+    ? `${paperPriceBulkParsed.length} τιμές για ενημέρωση` +
+      (news ? ` · ${news} νέα χαρτιά για προσθήκη` : '') +
+      (skipped ? ` · ${skipped} γραμμές δεν θα αγγιχτούν` : '')
+    : 'Δεν βρέθηκαν γραμμές.';
+  document.getElementById('ppbConfirmBtn').style.display = (paperPriceBulkParsed.length || news) ? '' : 'none';
+}
+
+async function confirmPaperPriceBulk(){
+  const field = document.getElementById('ppbField').value;
+  const btn = document.getElementById('ppbConfirmBtn');
+  btn.disabled = true;
+  let done = 0;
+  for(const r of paperPriceBulkParsed){
+    const next = Object.assign({}, paperByName[r.paper]);
+    next[field] = r.price;
+    await upsertPaper(next);
+    done++;
+    document.getElementById('ppbStatus').textContent = `Ενημέρωση… ${done}/${paperPriceBulkParsed.length}`;
+  }
+  // Τσεκαρισμένα «δεν βρέθηκε»: δημιουργούνται ως νέα χαρτιά με τιμή,
+  // γραμμάρια και διαστάσεις από την περιγραφή του καταλόγου.
+  let added = 0;
+  for(const cb of document.querySelectorAll('.ppb-new:checked')){
+    const r = paperPriceBulkRows[Number(cb.dataset.i)];
+    if(!r || !isFinite(r.price)) continue;
+    const specs = parsePaperSpecs(r.written);
+    const paper = { name: r.written, w: specs.w, l: specs.l, g: specs.g, qty: 0 };
+    paper[field] = r.price;
+    await upsertPaper(paper);
+    added++;
+    document.getElementById('ppbStatus').textContent = `Προσθήκη νέων… ${added}`;
+  }
+  document.getElementById('ppbStatus').textContent =
+    `Ενημερώθηκαν ${done} τιμές${added ? ` · προστέθηκαν ${added} νέα χαρτιά` : ''} ✓`;
+  btn.style.display = 'none';
+  btn.disabled = false;
+  paperPriceBulkParsed = [];
+  refreshStockList();
+  // Ανοιχτή προσφορά κοστολογήθηκε με τις παλιές τιμές.
+  if(typeof recalcAll === 'function' && (flatRows.length || bookRows.length)) recalcAll();
+  statusMsg(`Νέες τιμές σε ${done} χαρτιά${added ? `, ${added} νέα` : ''} ✓`);
+}
+
 async function savePaperDims(name, value){
   const t = String(value || '').trim();
   // Δέχεται «70x100 130», «70×100», «70 100 130» — ό,τι γράφει ο καθένας.
