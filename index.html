@@ -1134,6 +1134,9 @@
   .cal-chip:active{cursor:grabbing;}
 
   .offer-print{display:none;}
+  /* Το κατέβασμα δουλεύει σε αντίγραφο εκτός .offer-print, ώστε να μην το πιάνει
+     ο κανόνας απόκρυψης. Η τυπογραφία όμως πρέπει να είναι η ίδια. */
+  .pdf-out{font-family:Helvetica, Arial, sans-serif;color:#111;}
   /* The timers are a shop-floor control, not part of the printed document. */
   .tk-timer-col{}
   @media print{
@@ -1141,7 +1144,7 @@
     body{padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
     .app-shell{display:none !important;}
     .offer-print{display:block !important;}
-    .offer-print *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
+    .offer-print *, .pdf-out * {-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
 
     /* The head repeats on every sheet; the space it needs is its own, so nothing
        runs underneath it. */
@@ -1280,7 +1283,7 @@
     .fieldgrid.c3{grid-template-columns:repeat(2,1fr);}
     .totals{grid-template-columns:repeat(2,1fr) !important;}
     table{font-size:11.5px;}
-    .offer-print table{font-size:inherit;}
+    .offer-print table, .pdf-out table {font-size:inherit;}
   }
 
   @media (max-width: 768px){
@@ -1315,7 +1318,7 @@
     .actions{flex-wrap:wrap;gap:6px;}
     .actions .btn{font-size:11px;padding:6px 9px;}
     table{display:block;overflow-x:auto;white-space:nowrap;}
-    .offer-print table{display:table;overflow-x:visible;white-space:normal;}
+    .offer-print table, .pdf-out table {display:table;overflow-x:visible;white-space:normal;}
     .kanban-col{min-width:210px;}
     #productionBoard{gap:10px;}
     .board-scroll-btn{width:32px;height:32px;font-size:16px;}
@@ -1326,6 +1329,29 @@
     .card-body{padding:12px;}
     .sidebar-brand .label{font-size:14px;}
   }
+
+  /* Προεπισκόπηση PDF: δείχνει το ίδιο DOM που συλλαμβάνεται για το κατέβασμα,
+     ώστε ό,τι φαίνεται εδώ να είναι ακριβώς ό,τι μπαίνει στο αρχείο. */
+  .pdfpv-overlay{display:none;position:fixed;inset:0;background:rgba(20,22,30,0.55);z-index:2000;flex-direction:column;}
+  .pdfpv-overlay.open{display:flex;}
+  .pdfpv-bar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#1c1f2e;color:#e7e8f0;padding:10px 16px;}
+  .pdfpv-bar .ttl{font-weight:700;font-size:14px;}
+  .pdfpv-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .pdfpv-btn{border:none;border-radius:7px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .pdfpv-btn.primary{background:var(--blue);color:#fff;}
+  .pdfpv-btn.ghost{background:rgba(255,255,255,0.12);color:#e7e8f0;}
+  .pdfpv-btn[disabled]{opacity:0.6;cursor:default;}
+  .pdfpv-scroll{flex:1;overflow:auto;padding:24px 12px;}
+  /* Φύλλο 720px αντί 800: τα ίδια μεγέθη γραμματοσειράς απλώνονται σε
+     στενότερο πλάτος, οπότε πάνω στο Α4 τα γράμματα βγαίνουν ~11% μεγαλύτερα. */
+  .pdfpv-sheet{width:720px;max-width:100%;margin:0 auto;background:#fff;
+    box-shadow:0 8px 30px rgba(0,0,0,0.35);}
+  .pdfpv-sheet + .pdfpv-sheet{margin-top:24px;}
+  /* Στα ~182mm ωφέλιμου πλάτους Α4 αντιστοιχούν ~690px οθόνης, οπότε το φύλλο
+     των 720px εμφανίζεται σε κλίμακα 0.95 για να δείχνει όσο θα τυπωθεί. Η
+     σύλληψη για το PDF γίνεται πάντα σε zoom 1. */
+  #pdfPreviewPages{zoom:0.95;}
 </style>
 <script>
 function toggleMobileSidebar(forceClose){
@@ -1336,8 +1362,9 @@ function toggleMobileSidebar(forceClose){
   backdrop.classList.toggle('mobile-open', opening);
 }
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--page);">
@@ -1495,10 +1522,9 @@ function toggleMobileSidebar(forceClose){
     <h1>Νέα Προσφορά <span id="offerDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:3px 9px;border-radius:10px;vertical-align:middle;">● Αποθήκευση...</span></h1>
     <div class="actions">
       <div style="position:relative;display:inline-block;">
-        <button class="btn" id="pdfDropdownBtn" onclick="togglePdfDropdown(event)">PDF Προσφοράς ▾</button>
+        <button class="btn" id="pdfDropdownBtn" onclick="togglePdfDropdown(event)">Προβολή Προσφοράς ▾</button>
         <div id="pdfDropdownMenu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:100;min-width:210px;margin-top:4px;overflow:hidden;">
-          <div class="pdf-dropdown-item" onclick="generatePdfOffer();closePdfDropdown();">PDF Προσφοράς</div>
-          <div class="pdf-dropdown-item" onclick="downloadOfferPdf();closePdfDropdown();">Κατέβασμα PDF</div>
+          <div class="pdf-dropdown-item" onclick="downloadOfferPdf();closePdfDropdown();">Προβολή προσφοράς</div>
           <div class="pdf-dropdown-item" onclick="toggleEnglishPdfBtn();closePdfDropdown();"><span id="englishPdfCheck">☐</span> Αγγλικά PDF</div>
           <div class="pdf-dropdown-item" onclick="toggleProcInOfferBtn();closePdfDropdown();" title="Αν οι επεξεργασίες θα αναφέρονται στο PDF της προσφοράς"><span id="procInOfferCheck">☐</span> Επεξεργασίες</div>
         </div>
@@ -2741,6 +2767,20 @@ function toggleMobileSidebar(forceClose){
 </div>
 
 <div id="offerPrintView" class="offer-print"></div>
+
+<div id="pdfPreviewOverlay" class="pdfpv-overlay">
+  <div class="pdfpv-bar">
+    <span class="ttl">Προβολή προσφοράς</span>
+    <div class="pdfpv-actions">
+      <button id="pdfPreviewDlBtn" class="pdfpv-btn primary" onclick="downloadOfferPdfNow()">⬇ Κατέβασμα PDF</button>
+      <button class="pdfpv-btn ghost" onclick="generatePdfOffer()">Εκτύπωση</button>
+      <button class="pdfpv-btn ghost" onclick="closeOfferPdfPreview()">Κλείσιμο</button>
+    </div>
+  </div>
+  <div class="pdfpv-scroll" onclick="if(event.target===this)closeOfferPdfPreview()">
+    <div id="pdfPreviewPages"></div>
+  </div>
+</div>
 
 
 <script>
@@ -6613,7 +6653,6 @@ function buildOfferPrintHtml(){
 
         ${tasks ? `<div class="op-notes"><b>${t('Επεξεργασίες')}:</b> ${tasks}</div>` : ''}
         ${s.notes ? `<div class="op-notes"><b>${t('Περιγραφή')}:</b><br>${esc(s.notes).replace(/\n/g,'<br>')}</div>` : ''}
-        ${(s.paymentTerms || v('fPaymentTerms')) ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}:</b><br>${esc(s.paymentTerms || v('fPaymentTerms')).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div class="op-total-row"><span>${t('Καθαρή αξία')}${vatPercent ? '' : ' (' + t('χωρίς ΦΠΑ') + ')'}</span><span>${tot.grand.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ${vatPercent ? `
@@ -6621,6 +6660,8 @@ function buildOfferPrintHtml(){
         <div class="op-total-row"><span>${t('Σύνολο με ΦΠΑ')}</span><span>${(tot.grand+altVat).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
         ` : ''}
         <div class="op-unitprice">${t('Τιμή τεμαχίου')}: ${tot.unit.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
+        ${vatPercent ? '' : `<div class="op-vatnote">${t('Οι ανωτέρω τιμές δεν περιλαμβάνουν ΦΠΑ.')}</div>`}
+        ${(s.paymentTerms || v('fPaymentTerms')) ? `<div class="op-notes"><b>${t('Τρόπος πληρωμής')}</b><br>${esc(s.paymentTerms || v('fPaymentTerms')).replace(/\n/g,'<br>')}</div>` : ''}
       </div>`;
     }).join('');
 
@@ -6740,6 +6781,8 @@ function buildOfferPrintHtml(){
         ${shippingRow}
       </div>
 
+      ${v('fMainLabel').trim() ? `<div class="op-alt-head">${v('fMainLabel')} — ${qty.toLocaleString('el-GR')} ${t('τεμ.')}</div>` : ''}
+
       <div class="op-infogrid">
         <div>${qtyRow}${schemaRow}${pagesRow}</div>
       </div>
@@ -6814,29 +6857,157 @@ function generatePdfOffer(){
   setTimeout(()=>{ document.title = prevTitle; }, 1000);
 }
 
-async function downloadOfferPdf(){
+// Το κουμπί κατεβάσματος ανοίγει πρώτα την προεπισκόπηση: το PDF παράγεται από
+// το ίδιο ορατό στοιχείο, οπότε ό,τι βλέπεις είναι ό,τι κατεβαίνει.
+function downloadOfferPdf(){ openOfferPdfPreview(); }
+
+function openOfferPdfPreview(){
   if(!warnIfOfferIncomplete()) return;
-  const statusEl = document.getElementById('saveStatus');
   buildOfferPrintHtml();
-  const el = document.getElementById('offerPrintView');
+  const wrap = document.getElementById('pdfPreviewPages');
+  wrap.innerHTML = '';
+  // Κύριο φύλλο: η προσφορά χωρίς τις εναλλακτικές.
+  const main = document.createElement('div');
+  main.className = 'pdfpv-sheet pdf-out';
+  main.innerHTML = document.getElementById('offerPrintView').innerHTML;
+  const headerEl = main.querySelector('.op-header');
+  const headerHtml = headerEl ? headerEl.outerHTML : '';
+  const alts = Array.from(main.querySelectorAll('.op-alt'));
+  alts.forEach(a => a.remove());
+  wrap.appendChild(main);
+  // Κάθε εναλλακτική προσφορά σε δικό της φύλλο, με την ίδια κεφαλίδα
+  // (λογότυπο + στοιχεία εταιρείας) στην κορυφή. Η προεπισκόπηση δείχνει
+  // ακριβώς τις σελίδες που θα γραφτούν στο PDF, μία προς μία.
+  alts.forEach(a => {
+    a.style.borderTop = 'none';
+    a.style.marginTop = '0';
+    a.style.paddingTop = '0';
+    const sh = document.createElement('div');
+    sh.className = 'pdfpv-sheet pdf-out';
+    const page = document.createElement('div');
+    page.className = 'op-page';
+    page.innerHTML = headerHtml;
+    page.appendChild(a);
+    sh.appendChild(page);
+    wrap.appendChild(sh);
+  });
+  document.getElementById('pdfPreviewOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeOfferPdfPreview(){
+  document.getElementById('pdfPreviewOverlay').classList.remove('open');
+  document.getElementById('pdfPreviewPages').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.getElementById('pdfPreviewOverlay').classList.contains('open'))
+    closeOfferPdfPreview();
+});
+
+async function downloadOfferPdfNow(){
+  const sheets = Array.from(document.querySelectorAll('#pdfPreviewPages .pdfpv-sheet'));
+  if(!sheets.length) return;
+  const btn = document.getElementById('pdfPreviewDlBtn');
   const clientPart = document.getElementById('fClient').value.trim();
   const titlePart = document.getElementById('fTitle').value.trim();
   const rawFilename = [clientPart, titlePart].filter(Boolean).join(' - ') || 'Προσφορά';
   const filename = rawFilename.replace(/[^\p{L}\p{N}\-_ ]/gu,'').trim() || 'Προσφορά';
-  el.style.display = 'block'; // html2canvas needs the element actually rendered, not display:none
+  btn.disabled = true;
+  const prevLabel = btn.textContent;
+  btn.textContent = 'Δημιουργία…';
+  // Η προεπισκόπηση εμφανίζεται σε σμίκρυνση (zoom 0.75)· η σύλληψη όμως
+  // γίνεται στο φυσικό μέγεθος, αλλιώς το PDF θα έβγαινε θολό.
+  const wrap = document.getElementById('pdfPreviewPages');
+  wrap.style.zoom = '1';
   try{
-    await html2pdf().set({
-      margin: 0,
-      filename: filename + '.pdf',
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
-    }).from(el).save();
-    statusMsg('Κατέβηκε το PDF ✓');
+    const pdf = new jspdf.jsPDF({ unit:'mm', format:'a4' });
+    // Ίδια περιθώρια με το @page της εκτύπωσης: 12mm πάνω, 14mm πλάι/κάτω.
+    const pageW = 210, pageH = 297, mSide = 14, mTop = 12, mBottom = 14;
+    const imgW = pageW - mSide*2;
+    const usable = pageH - mTop - mBottom;
+    let docFirst = true;
+
+    // Κάθε φύλλο της προεπισκόπησης ξεκινά τη δική του σελίδα στο PDF: η κύρια
+    // προσφορά πρώτη, μετά μία σελίδα ανά εναλλακτική.
+    for(const sheet of sheets){
+      const canvas = await html2canvas(sheet, { scale:2, backgroundColor:'#ffffff' });
+      const headerEl = sheet.querySelector('.op-header');
+      const headerCanvas = headerEl
+        ? await html2canvas(headerEl, { scale:2, backgroundColor:'#ffffff' })
+        : null;
+      const imgH = canvas.height * imgW / canvas.width;
+      const img = canvas.toDataURL('image/jpeg', 0.92);
+      if(!docFirst) pdf.addPage();
+      docFirst = false;
+
+      if(imgH <= usable){
+        // Το φύλλο χωράει όπως είναι σε μία σελίδα.
+        pdf.addImage(img, 'JPEG', mSide, mTop, imgW, imgH);
+      } else if(usable / imgH >= 0.55){
+        // Σμίκρυνση ώστε να χωρέσει σε μία σελίδα, κεντραρισμένη οριζόντια.
+        // Κάτω από ~55% το κείμενο γίνεται δυσανάγνωστο, οπότε τότε προτιμάται
+        // η σελιδοποίηση παρακάτω.
+        const s = usable / imgH;
+        const w = imgW * s;
+        pdf.addImage(img, 'JPEG', (pageW - w)/2, mTop, w, usable);
+      } else {
+        // Το φύλλο είναι μακρύτερο: συνεχίζει σε επόμενες σελίδες, με την
+        // κεφαλίδα να επαναλαμβάνεται στην κορυφή καθεμιάς.
+        const hW = headerCanvas ? imgW * headerCanvas.width / canvas.width : 0;
+        const hH = headerCanvas ? headerCanvas.height * hW / headerCanvas.width : 0;
+        const hImg = headerCanvas ? headerCanvas.toDataURL('image/jpeg', 0.92) : null;
+        const hGap = hImg ? 6 : 0; // αναπνοή κάτω από την κεφαλίδα
+        // Η κοπή κάθε σελίδας μετακινείται στο κοντινότερο λευκό διάκενο πάνω
+        // από το θεωρητικό όριο, ώστε να μην κόβεται γραμμή κειμένου στη μέση.
+        const ctx2 = canvas.getContext('2d');
+        const px = ctx2.getImageData(0, 0, canvas.width, canvas.height).data;
+        const rowIsBlank = yPx => {
+          const off = yPx * canvas.width * 4;
+          for(let x = 0; x < canvas.width; x += 4){
+            const i = off + x*4;
+            if(px[i] < 250 || px[i+1] < 250 || px[i+2] < 250) return false;
+          }
+          return true;
+        };
+        const pxPerMm = canvas.width / imgW;
+        let consumed = 0, first = true;
+        while(consumed < imgH - 0.5){
+          if(!first) pdf.addPage();
+          const headBlock = first ? 0 : hH + hGap;
+          const targetEnd = Math.min(canvas.height, Math.round((consumed + usable - headBlock) * pxPerMm));
+          let cut = targetEnd;
+          if(targetEnd < canvas.height){
+            const minCut = Math.max(Math.round(consumed * pxPerMm) + 1, targetEnd - Math.round(15 * pxPerMm));
+            for(let yPx = targetEnd; yPx >= minCut; yPx--){
+              if(rowIsBlank(yPx)){ cut = yPx; break; }
+            }
+          }
+          const bodyMm = cut / pxPerMm - consumed;
+          pdf.addImage(img, 'JPEG', mSide, mTop + headBlock - consumed, imgW, imgH);
+          // Λευκή κάλυψη πάνω από το σώμα (ζώνη κεφαλίδας/περιθώριο) και κάτω
+          // από το σημείο κοπής, ώστε να μη φαίνεται περιεχόμενο άλλης σελίδας.
+          pdf.setFillColor(255,255,255);
+          pdf.rect(0, 0, pageW, mTop + headBlock, 'F');
+          pdf.rect(0, mTop + headBlock + bodyMm, pageW, pageH - (mTop + headBlock + bodyMm), 'F');
+          if(!first && hImg) pdf.addImage(hImg, 'JPEG', mSide, mTop, hW, hH);
+          consumed = cut / pxPerMm;
+          first = false;
+        }
+      }
+    }
+    pdf.save(filename + '.pdf');
+    statusMsg('Το PDF αποθηκεύτηκε');
   }catch(e){
-    console.error('Download PDF error:', e);
-    statusMsg('Σφάλμα PDF: ' + e.message);
+    // Αν κάτι πάει στραβά (π.χ. δεν φόρτωσαν οι βιβλιοθήκες), μένει διαθέσιμη
+    // η διαδρομή της εκτύπωσης.
+    statusMsg('Σφάλμα PDF — δοκίμασε «Εκτύπωση» και «Αποθήκευση ως PDF»');
+    console.error('downloadOfferPdfNow:', e);
   }finally{
-    el.style.display = 'none';
+    wrap.style.zoom = '';
+    btn.disabled = false;
+    btn.textContent = prevLabel;
   }
 }
 
