@@ -10312,8 +10312,7 @@ function renderOfferTable(){
   let list = offersCache.filter(o=>{
     if(!offerMatchesStageFilter(o)) return false;
     if(!search) return true;
-    const hay = [o.label, o.number, (o.data||{}).title].join(' ').toLowerCase();
-    return hay.includes(search);
+    return searchMatch([o.label, o.number, (o.data||{}).title].join(' '), search);
   });
 
   const getVal = (o, col) => {
@@ -11937,7 +11936,7 @@ async function refreshTicketList(){
     const isFinished = t => t.archived || !!t.invoiceStage;
     const finishedCount = list.filter(isFinished).length;
     if(search){
-      list = list.filter(t => (t.label||'').toLowerCase().includes(search) || ((t.data||{}).info||'').toLowerCase().includes(search) || ((t.data||{}).client||'').toLowerCase().includes(search));
+      list = list.filter(t => searchMatch([t.label, (t.data||{}).info, (t.data||{}).client].join(' '), search));
     } else {
       list = list.filter(t => !isFinished(t));
     }
@@ -13497,7 +13496,7 @@ async function refreshOrdersList(){
     }
     const search = document.getElementById('ordSearch').value.trim().toLowerCase();
     if(search){
-      list = list.filter(o => (o.job||'').toLowerCase().includes(search) || (o.material||'').toLowerCase().includes(search));
+      list = list.filter(o => searchMatch([o.job, o.material, o.supplier].join(' '), search));
     }
 
     el.innerHTML = '';
@@ -14752,7 +14751,7 @@ function closeBoardSettings(){
 // Ίδια συμπεριφορά για τους δύο πίνακες, γραμμένη μία φορά.
 function filterBoardCards(board, term, inputId){
   if(!board) return;
-  const q = String(term||'').trim().toLocaleLowerCase('el');
+  const q = String(term||'').trim();
   const cards = board.querySelectorAll('.kanban-card');
   if(!q){
     board.classList.remove('board-searching');
@@ -14763,7 +14762,7 @@ function filterBoardCards(board, term, inputId){
   board.classList.add('board-searching');
   let hits = 0;
   cards.forEach(card => {
-    const match = card.textContent.toLocaleLowerCase('el').includes(q);
+    const match = searchMatch(card.textContent, q);
     card.classList.toggle('search-hit', match);
     if(match) hits++;
   });
@@ -17488,14 +17487,14 @@ async function runGlobalSearch(){
     const record = await jbGetRecord();
 
     const offerMatches = Object.entries(record.offers||{})
-      .filter(([id,o]) => [o.label, o.number, (o.data||{}).title].join(' ').toLowerCase().includes(q))
+      .filter(([id,o]) => searchMatch([o.label, o.number, (o.data||{}).title].join(' '), q))
       .slice(0,6);
     const ticketMatches = Object.entries(record.tickets||{})
-      .filter(([id,t]) => [(t.data||{}).info, t.label].join(' ').toLowerCase().includes(q))
+      .filter(([id,t]) => searchMatch([(t.data||{}).info, t.label].join(' '), q))
       .slice(0,6);
-    const clientMatches = (record.clients||[]).filter(c=>c.toLowerCase().includes(q)).slice(0,6);
+    const clientMatches = (record.clients||[]).filter(c=>searchMatch(c, q)).slice(0,6);
     const orderMatches = Object.entries(record.orders||{})
-      .filter(([id,o]) => [o.job, o.material, o.supplier].join(' ').toLowerCase().includes(q))
+      .filter(([id,o]) => searchMatch([o.job, o.material, o.supplier].join(' '), q))
       .slice(0,6);
 
     const totalMatches = offerMatches.length + ticketMatches.length + clientMatches.length + orderMatches.length;
@@ -17875,6 +17874,30 @@ function strip(s){
     .replace(/[άΆ]/g,'α').replace(/[έΈ]/g,'ε').replace(/[ήΉ]/g,'η')
     .replace(/[ίΊϊΐ]/g,'ι').replace(/[όΌ]/g,'ο').replace(/[ύΎϋΰ]/g,'υ').replace(/[ώΏ]/g,'ω')
     .replace(/\s+/g,' ');
+}
+
+// Κοινό ταίριασμα για όλες τις αναζητήσεις: χωρίς τόνους και κεφαλαία (μέσω
+// strip), χωρίς διάκριση τελικού ς/σ, και με κάθε λέξη του ερωτήματος να
+// αρκεί να βρίσκεται οπουδήποτε — «φυλλαδιο πρωτοκλητος» βρίσκει την κάρτα
+// «Πρωτόκλητος — Φυλλάδιο» παρότι η σειρά και οι τόνοι διαφέρουν. Αυτός ο
+// κανόνας είναι που έλειπε από τον πίνακα Παραγωγής: η σύγκριση γινόταν με
+// τους τόνους, οπότε το άτονο γράψιμο δεν έβρισκε τίποτα.
+function searchMatch(hay, query){
+  // Πέρα από τόνους/κεφαλαία (strip), το δίπλωμα εξομοιώνει και τα δύο
+  // αλφάβητα: τα κεφαλαία Ε/Α/Ν/Η/Ι/Κ/Μ/Ο/Ρ/Τ/Υ/Χ/Β/Ζ είναι οπτικά ίδια με
+  // λατινικά, οπότε ένα «EASN» γραμμένο μισό ελληνικά (ΕΑΣΝ ή ΕΑSΝ) φαίνεται
+  // ίδιο στην οθόνη αλλά δεν βρισκόταν ποτέ. Αφού διπλώνονται ΚΑΙ οι δύο
+  // πλευρές με τον ίδιο πίνακα, οι ελληνικές αναζητήσεις συνεχίζουν να
+  // ταιριάζουν ελληνικό κείμενο όπως πριν. Τελείες/παύλες/απόστροφοι
+  // αγνοούνται, ώστε το «easn» να βρίσκει και το «E.A.S.N.».
+  const GR2LAT = {'α':'a','β':'b','ε':'e','ζ':'z','η':'h','ι':'i','κ':'k','μ':'m',
+                  'ν':'n','ο':'o','ρ':'p','σ':'s','ς':'s','τ':'t','υ':'y','χ':'x'};
+  const fold = s => strip(s)
+    .replace(/[αβεζηικμνορσςτυχ]/g, c => GR2LAT[c])
+    .replace(/[.\-'’·]/g,'');
+  const h = fold(hay);
+  const tokens = fold(query).split(' ').filter(Boolean);
+  return tokens.every(t => h.includes(t));
 }
 
 // Replaces the old name inside a title while leaving the rest of it alone.
@@ -18315,7 +18338,7 @@ async function refreshStockList(){
       return;
     }
     let entries = Object.keys(paperByName)
-      .filter(paper => !search || paper.toLowerCase().includes(search))
+      .filter(paper => !search || searchMatch(paper, search))
       .map(paper => [paper, stockOf(paper)]);
     entries.sort((a,b)=>a[0].localeCompare(b[0],'el'));
     if(entries.length===0){
@@ -19030,7 +19053,7 @@ async function refreshClientsList(){
     });
 
     const search = (document.getElementById('clientsSearch').value||'').toLowerCase().trim();
-    let clients = Object.keys(byClient).filter(c=>!search || c.toLowerCase().includes(search));
+    let clients = Object.keys(byClient).filter(c=>!search || searchMatch(c, search));
     clients.sort((a,b)=>byClient[b].total-byClient[a].total);
 
     if(clients.length===0){
