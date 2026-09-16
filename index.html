@@ -18391,6 +18391,7 @@ async function refreshStockList(){
       const p = paperByName[paper] || null;   // may be stock-only, with no paper record
       let rows = `
         <tr>
+          <td style="width:24px;"><input type="checkbox" ${selectedStockPapers.has(paper)?'checked ':''}onclick="event.stopPropagation();toggleStockSel('${escPaper}', this.checked)"></td>
           <td style="white-space:nowrap;">
             <a href="javascript:void(0)" onclick="toggleStockPaperExpand('${escPaper}')"
                class="stock-caret" title="Ιστορικό κινήσεων">${isExpanded?'▾':'▸'}</a>
@@ -18431,7 +18432,7 @@ async function refreshStockList(){
                 <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':''}">${l.type==='add'?'+':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
               </div>
             `).join('');
-        rows += `<tr><td colspan="3" style="background:var(--page);padding:0;"><div style="padding:6px 14px;">${movesHtml}</div></td></tr>`;
+        rows += `<tr><td colspan="7" style="background:var(--page);padding:0;"><div style="padding:6px 14px;">${movesHtml}</div></td></tr>`;
       }
       return rows;
     }).join('');
@@ -18439,10 +18440,20 @@ async function refreshStockList(){
     const startIdx = entries.length ? stockPage*STOCK_PAGE_SIZE+1 : 0;
     const endIdx = Math.min(entries.length, stockPage*STOCK_PAGE_SIZE+STOCK_PAGE_SIZE);
 
+    stockPagePapers = pageEntries.map(([paper]) => paper);
+    const selCount = selectedStockPapers.size;
     el.innerHTML = `
-      <div class="empty-note" style="margin-bottom:6px;">${entries.length} χαρτιά${search?' (φιλτραρισμένα)':' — όλη η βάση'} — κλικ σε ένα χαρτί για το ιστορικό του</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+        <span class="empty-note" style="margin:0;">${entries.length} χαρτιά${search?' (φιλτραρισμένα)':' — όλη η βάση'} — κλικ σε ένα χαρτί για το ιστορικό του</span>
+        ${selCount ? `<span style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b;" onclick="deleteSelectedPapers()">Διαγραφή επιλεγμένων (${selCount})</button>
+          <a href="javascript:void(0)" style="font-size:12px;" onclick="selectedStockPapers.clear();refreshStockList();">καθαρισμός</a>
+        </span>` : ''}
+      </div>
       <table class="stock-table">
-        <thead><tr><th>Χαρτί</th><th style="text-align:center;">Διάσταση</th>
+        <thead><tr><th style="width:24px;"><input type="checkbox" title="Επιλογή όλης της σελίδας"
+            ${stockPagePapers.length && stockPagePapers.every(p => selectedStockPapers.has(p)) ? 'checked ' : ''}onclick="toggleStockSelPage(this.checked)"></th>
+          <th>Χαρτί</th><th style="text-align:center;">Διάσταση</th>
           <th style="text-align:right;">€ / κιλό</th><th style="text-align:right;">€ / φύλλο</th>
           <th style="text-align:right;">Απόθεμα</th><th></th></tr></thead>
         <tbody>${rowsHtml}</tbody>
@@ -18570,6 +18581,63 @@ async function deletePaperRow(name){
     headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+// ===== Πολλαπλή επιλογή για διαγραφή στην αποθήκη =====
+// Η επιλογή ζει σε Set με ονόματα, οπότε επιβιώνει από αλλαγές σελίδας και
+// φίλτρου: μπορείς να ψάξεις «velvet», να τσεκάρεις δύο, να ψάξεις «χαρτόνι»,
+// να τσεκάρεις άλλα τρία, και να τα διαγράψεις όλα μαζί με μία επιβεβαίωση.
+let selectedStockPapers = new Set();
+let stockPagePapers = [];
+
+function toggleStockSel(name, on){
+  if(on) selectedStockPapers.add(name); else selectedStockPapers.delete(name);
+  refreshStockList();
+}
+
+function toggleStockSelPage(on){
+  stockPagePapers.forEach(p => { if(on) selectedStockPapers.add(p); else selectedStockPapers.delete(p); });
+  refreshStockList();
+}
+
+async function deleteSelectedPapers(){
+  const names = [...selectedStockPapers];
+  if(!names.length) return;
+  const used = names.filter(n => [...flatRows, ...bookRows, ...fabricRows].some(r => r.paperName === n));
+  const preview = names.slice(0, 8).map(n => '• ' + n).join('\n') + (names.length > 8 ? `\n… και ${names.length - 8} ακόμα` : '');
+  if(!confirm(`Διαγραφή ${names.length} υλικών;\n\n${preview}\n\n`
+    + (used.length ? `ΠΡΟΣΟΧΗ: ${used.length} από αυτά χρησιμοποιούνται στην ανοιχτή προσφορά.\n` : '')
+    + 'Θα αφαιρεθούν και από την αποθήκη. Οι παλιές προσφορές δεν αλλάζουν.')) return;
+  let done = 0, failed = [];
+  for(const name of names){
+    try{
+      if(paperByName[name]){
+        await deletePaperRow(name);
+        delete paperByName[name];
+      }
+      if(customPapers[name]){ delete customPapers[name]; saveCustomPapers(customPapers); }
+      done++;
+      statusMsg(`Διαγραφή… ${done}/${names.length}`);
+    }catch(e){
+      console.error('Bulk delete error:', name, e);
+      failed.push(name);
+    }
+  }
+  // Μία ενημέρωση του κοινού αρχείου για όλα τα stock entries μαζί.
+  try{
+    const record = await jbGetRecord();
+    if(record.stock){
+      let touched = false;
+      names.forEach(n => { if(record.stock[n]){ delete record.stock[n]; touched = true; } });
+      if(touched) await jbPutRecord(record);
+    }
+  }catch(e){ console.error('Bulk stock cleanup:', e); }
+  selectedStockPapers.clear();
+  refreshPaperOptions();
+  refreshStockList();
+  statusMsg(failed.length
+    ? `Διαγράφηκαν ${done} — απέτυχαν ${failed.length}: ${failed.slice(0,3).join(', ')}${failed.length>3?'…':''}`
+    : `Διαγράφηκαν ${done} υλικά ✓`);
 }
 
 // Deleting removes the paper and its stock line. Offers already written keep the
