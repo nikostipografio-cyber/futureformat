@@ -3639,6 +3639,9 @@ function submitStockNewPaper(){
   // drop it straight into the stock field, since that's why you're here
   document.getElementById('stockPaperName').value = name;
   document.getElementById('stockQty').focus();
+  // Ο πίνακας από κάτω πρέπει να δείξει το νέο χαρτί αμέσως — αλλιώς μοιάζει
+  // να μην αποθηκεύτηκε, ενώ απλώς η λίστα δεν είχε ξαναχτιστεί.
+  refreshStockList();
 }
 
 function submitNewPaper(){
