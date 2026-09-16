@@ -2297,6 +2297,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="togglePaperPriceBulkPanel()">Νέες Τιμές</button>
           <button class="btn" onclick="exportPapersTsv()">Εξαγωγή Χαρτιών</button>
           <button class="btn" onclick="togglePapersImportPanel()">Εισαγωγή Χαρτιών</button>
+          <button class="btn" onclick="toggleDupCheckPanel()">Έλεγχος Διπλοτύπων</button>
           <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">Μηδενισμός Αποθήκης</button>
         </div>
       </div>
@@ -2309,6 +2310,16 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="toggleStockBulkImportPanel()">Κλείσιμο</button>
         </div>
         <div class="empty-note" id="stockBulkImportStatus" style="margin-top:8px;"></div>
+      </div>
+      <div id="dupCheckPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <span class="empty-note" style="margin:0;" id="dupStatus"></span>
+          <span style="display:flex;gap:8px;align-items:center;">
+            <button class="btn" id="dupDeleteBtn" style="display:none;background:#c0392b;color:#fff;border-color:#c0392b;" onclick="dupDeleteSelected()"></button>
+            <button class="btn" onclick="toggleDupCheckPanel()">Κλείσιμο</button>
+          </span>
+        </div>
+        <div id="dupResults" style="max-height:420px;overflow:auto;"></div>
       </div>
       <div id="papersImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
         <div class="empty-note" style="margin-bottom:8px;">Επικόλληση της λίστας από την «Εξαγωγή Χαρτιών» (μέσω Excel αν θες), με τις ίδιες στήλες. Το ταίριασμα γίνεται <b>μόνο με ακριβές όνομα</b>: όνομα που υπάρχει → ενημερώνονται όσα πεδία άλλαξαν· όνομα που δεν υπάρχει → προστίθεται ως νέο χαρτί· χαρτιά της βάσης που λείπουν από τη λίστα <b>δεν πειράζονται ποτέ</b>. Άδειο κελί σημαίνει «δεν αλλάζει». Το απόθεμα και η μονάδα δεν αλλάζουν από εδώ (έχουν τη Μαζική Εισαγωγή). Προσοχή στη μετονομασία: αλλαγμένο όνομα = νέο χαρτί, το παλιό μένει όπως ήταν — οι προσφορές και τα tickets δείχνουν στα χαρτιά με το όνομά τους.</div>
@@ -18638,6 +18649,126 @@ async function deleteSelectedPapers(){
   statusMsg(failed.length
     ? `Διαγράφηκαν ${done} — απέτυχαν ${failed.length}: ${failed.slice(0,3).join(', ')}${failed.length>3?'…':''}`
     : `Διαγράφηκαν ${done} υλικά ✓`);
+}
+
+// ===== Έλεγχος Διπλοτύπων μέσα στο πρόγραμμα =====
+// Δύο επίπεδα. «Σίγουρα»: ίδιο όνομα με άλλη γραφή — τόνοι, κεφαλαία, τα
+// ελληνικά κεφαλαία που μοιάζουν λατινικά, «γρ/gsm» αντί «gr», «*» αντί «x».
+// «Πιθανά»: το ένα όνομα υποσύνολο του άλλου με ίδια γραμμάρια και συμβατές
+// διαστάσεις — εκεί εμφανίζονται και νόμιμες παραλλαγές (Rough, Insize,
+// χρώματα), γι' αυτό δείχνεται η λέξη που διαφέρει και αποφασίζει ο άνθρωπος.
+function dupFold(s){
+  return strip(String(s))
+    // «100γρ», «100 gsm», «100g» → «100gr» — το \b της JS αγνοεί τα ελληνικά,
+    // γι' αυτό lookahead αντί για όριο λέξης.
+    .replace(/(\d+)\s*(?:γρ|gsm|gr\.?|g)(?![a-zα-ω])/g, '$1gr')
+    // «61*86», «61 Χ 86», «61×86» → «61x86», ώστε η γραφή του διαχωριστικού
+    // να μη χωρίζει ολόιδια χαρτιά.
+    .replace(/(\d)\s*(?:cm)?\s*[xχ×*]\s*(?=\d)/g, '$1x')
+    .replace(/[αβεζηικμνορσςτυχ]/g, c => ({'α':'a','β':'b','ε':'e','ζ':'z','η':'h','ι':'i','κ':'k','μ':'m','ν':'n','ο':'o','ρ':'p','σ':'s','ς':'s','τ':'t','υ':'y','χ':'x'}[c]))
+    .replace(/[.,·'’"\/()#*-]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function dupDims(s){
+  const m = String(s).match(/(\d+(?:[.,]\d+)?)\s*(?:cm|m)?\s*[xχΧ×X*]\s*(\d+(?:[.,]\d+)?)\s*(?:cm|m)?/i);
+  if(!m) return null;
+  const a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
+  return a <= b ? [a, b] : [b, a];
+}
+function dupGram(s){
+  const m = String(s).match(/(\d+)\s*(?:gr|γρ|gsm|g)(?![a-zα-ωA-ZΑ-Ω])/i);
+  return m ? parseInt(m[1]) : null;
+}
+function dupWords(s){
+  let t = String(s).replace(/\d+(?:[.,]\d+)?\s*(?:cm|m)?\s*[xχΧ×X*]\s*\d+(?:[.,]\d+)?\s*(?:cm|m)?/gi, ' ');
+  t = dupFold(t).replace(/\d+\s*(?:gr|γp|gsm|g)\b/gi, ' ').replace(/\b(cm|gr|g)\b/g, ' ');
+  const w = new Set();
+  t.split(/\s+/).forEach(x => { if(x.length > 1 || /\d/.test(x)) w.add(x); });
+  return w;
+}
+function dupPaperInfo(p){
+  const bits = [];
+  if(p.w && p.l) bits.push(p.w + '×' + p.l);
+  if(p.g) bits.push(num(p.g) + 'γρ');
+  if(p.priceKg) bits.push(num(p.priceKg).toLocaleString('el-GR') + ' €/κιλό');
+  if(p.priceSheet) bits.push(num(p.priceSheet).toLocaleString('el-GR') + ' €/φύλλο');
+  bits.push((num(p.qty) || 0).toLocaleString('el-GR') + ' ' + (p.unit || 'φύλλα'));
+  return bits.join(' · ');
+}
+
+function toggleDupCheckPanel(){
+  const panel = document.getElementById('dupCheckPanel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if(open) runDupCheck();
+}
+
+function runDupCheck(){
+  const names = Object.keys(paperByName);
+  const meta = names.map(n => ({ n, fold: dupFold(n), d: dupDims(n), g: dupGram(n), w: dupWords(n) }));
+
+  // Επίπεδο 1: ίδιο δίπλωμα
+  const byFold = {};
+  meta.forEach(m => { (byFold[m.fold] = byFold[m.fold] || []).push(m); });
+  const sure = Object.values(byFold).filter(g => g.length > 1);
+  const inSure = new Set(sure.flat().map(m => m.n));
+
+  // Επίπεδο 2: υποσύνολο λέξεων, ίδια γραμμάρια, συμβατές διαστάσεις
+  const dimsOk = (a, b) => (a === null || b === null) ? true : (Math.abs(a[0]-b[0]) <= 1.2 && Math.abs(a[1]-b[1]) <= 1.2);
+  const subset = (a, b) => [...a].every(x => b.has(x));
+  const maybe = [];
+  for(let i = 0; i < meta.length; i++){
+    for(let j = i + 1; j < meta.length; j++){
+      const a = meta[i], b = meta[j];
+      if(inSure.has(a.n) && inSure.has(b.n)) continue;
+      if(a.g !== null && b.g !== null && a.g !== b.g) continue;
+      if(!dimsOk(a.d, b.d)) continue;
+      if(!a.w.size || !b.w.size) continue;
+      if(a.fold === b.fold) continue;
+      if(subset(a.w, b.w) || subset(b.w, a.w)){
+        const diff = [...new Set([...a.w, ...b.w])].filter(x => !(a.w.has(x) && b.w.has(x)));
+        maybe.push({ pair: [a.n, b.n], diff: diff.join(', ') || 'διάσταση/γραμμάρια' });
+      }
+    }
+  }
+
+  const row = name => {
+    const p = paperByName[name] || {};
+    const escName = esc(name).replace(/'/g, "\\'");
+    return `<div style="display:flex;gap:8px;align-items:baseline;padding:2px 0;">
+      <input type="checkbox" ${selectedStockPapers.has(name)?'checked ':''}onclick="toggleStockSel('${escName}', this.checked);runDupCheckHeader();">
+      <div><div>${esc(name)}</div><div class="empty-note" style="margin:0;">${dupPaperInfo(p)}</div></div>
+    </div>`;
+  };
+  let html = '';
+  if(sure.length){
+    html += '<div style="font-weight:700;font-size:12.5px;margin:4px 0;">Σχεδόν σίγουρα διπλότυπα — ίδιο όνομα με άλλη γραφή</div>';
+    sure.forEach(g => { html += '<div style="border:1px solid #c0392b;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#fff;">' + g.map(m => row(m.n)).join('') + '</div>'; });
+  }
+  if(maybe.length){
+    html += '<div style="font-weight:700;font-size:12.5px;margin:10px 0 4px;">Πιθανά ζευγάρια — μπορεί και να είναι νόμιμες παραλλαγές, κρίνε εσύ</div>';
+    maybe.forEach(m => {
+      html += '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#fff;">'
+        + row(m.pair[0]) + row(m.pair[1])
+        + `<div class="empty-note" style="margin:4px 0 0;">διαφέρουν σε: ${esc(m.diff)}</div></div>`;
+    });
+  }
+  document.getElementById('dupResults').innerHTML = html || '<div class="empty-note">Κανένα ύποπτο ζευγάρι — η βάση είναι καθαρή ✓</div>';
+  document.getElementById('dupStatus').textContent =
+    `${names.length} χαρτιά · ${sure.length} σίγουρες ομάδες · ${maybe.length} πιθανά ζευγάρια`;
+  runDupCheckHeader();
+}
+
+function runDupCheckHeader(){
+  const btn = document.getElementById('dupDeleteBtn');
+  const n = selectedStockPapers.size;
+  btn.style.display = n ? '' : 'none';
+  btn.textContent = 'Διαγραφή επιλεγμένων (' + n + ')';
+}
+
+async function dupDeleteSelected(){
+  await deleteSelectedPapers();
+  runDupCheck();
 }
 
 // Deleting removes the paper and its stock line. Offers already written keep the
