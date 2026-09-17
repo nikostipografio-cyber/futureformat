@@ -5275,18 +5275,24 @@ function showImpositionModal(layout, opts){
   // (matching how a roll physically looks), and its LENGTH runs horizontally.
   // For everything else, force landscape (wider than tall) as before.
   let drawSheetW = sheetW, drawSheetH = sheetH, drawCols = cols, drawRows = rows, drawPieceW = pieceW, drawPieceH = pieceH;
-  const dm = m;
+  let dm = m;
   const isFabric = !!opts.isFabric;
+  // Γύρισμα 90° για την οθόνη: μαζί με το φύλλο γυρίζουν και τα περιθώρια
+  // (πάνω→αριστερά κ.ο.κ.) και τα διάκενα κοπής, αλλιώς η γραμμοσκίαση
+  // ζωγραφιζόταν σε λάθος πλευρές.
+  const turned = () => { dm = { top: m.left, right: m.top, bottom: m.right, left: m.bottom, cutH: m.cutV, cutV: m.cutH }; };
   if(isFabric){
     // Fabric: sheetW is the roll WIDTH, sheetH is the (100cm) length reference —
     // always draw width vertically and length horizontally, like a real roll.
     drawSheetW = sheetH; drawSheetH = sheetW;
     drawCols = rows; drawRows = cols;
     drawPieceW = pieceH; drawPieceH = pieceW;
+    turned();
   } else if(sheetH > sheetW){
     drawSheetW = sheetH; drawSheetH = sheetW;
     drawCols = rows; drawRows = cols;
     drawPieceW = pieceH; drawPieceH = pieceW;
+    turned();
   }
 
   const maxDim = 380;
@@ -5400,7 +5406,7 @@ function showImpositionModal(layout, opts){
   </svg>`;
 
   document.getElementById('impoTitle').textContent = opts.title || 'Προσομοίωση Μοντάζ';
-  document.getElementById('impoSub').textContent = `Φύλλο ${sheetW}×${sheetH}cm — Σχήμα ${drawPieceW}×${drawPieceH}cm${rotated?' (περιστροφή 90°)':''} — Εκτυπώσιμη περιοχή ${usableW.toFixed(1)}×${usableH.toFixed(1)}cm`;
+  document.getElementById('impoSub').textContent = `Φύλλο ${sheetW}×${sheetH}cm — Σχήμα ${pieceW}×${pieceH}cm${rotated?' (περιστροφή 90°)':''} — Εκτυπώσιμη περιοχή ${usableW.toFixed(1)}×${usableH.toFixed(1)}cm`;
   document.getElementById('impoSvgWrap').innerHTML = svg;
   document.getElementById('impoStats').innerHTML = isFabric ? `
     <div class="row"><span class="l">${esc(opts.countLabel||'Τεμάχια/φύλλο')}</span><span class="v">${count}</span></div>
@@ -5732,22 +5738,27 @@ function gridForTarget(usableW, usableH, pieceW, pieceH, cutH, cutV, targetPerSi
       const neededW = c*pw + colGaps*cutH;
       const neededH = r*ph + rowGaps*cutV;
       const fits = neededW <= usableW + 0.01 && neededH <= usableH + 0.01;
-      candidates.push({ cols:c, rows:r, pieceW:pw, pieceH:ph, fits, squareness: Math.abs(c-r) });
+      const overflow = Math.max(0, neededW - usableW) + Math.max(0, neededH - usableH);
+      candidates.push({ cols:c, rows:r, pieceW:pw, pieceH:ph, fits, overflow, squareness: Math.abs(c-r) });
     });
   });
   const fitting = candidates.filter(x=>x.fits);
   const pool = fitting.length ? fitting : candidates;
-  pool.sort((a,b)=> a.squareness - b.squareness);
+  // Όταν τίποτα δεν χωράει αυστηρά, το σχέδιο πρέπει να δείξει τη διάταξη που
+  // ξεφεύγει ελάχιστα (την πραγματική του πιεστηρίου), όχι την πιο «τετράγωνη».
+  pool.sort((a,b)=> fitting.length ? (a.squareness - b.squareness) : (a.overflow - b.overflow || a.squareness - b.squareness));
   return { best: pool[0], anyFits: fitting.length>0 };
 }
 
 function fitsReferenceMax(dimW, dimH, maxW, maxH, orientation){
+  // Τα μέγιστα του εγχειριδίου είναι ανά σχέδιο δίπλωσης, με τη σελίδα στον
+  // προσανατολισμό του σχεδίου — δεν γυρίζει «για να χωρέσει»: αλλιώς ένα
+  // 17×24 φαινόταν να βγάζει 24σέλιδο (μέγ. ύψος 22cm) από το πλάι, μοντάζ
+  // που δεν διπλώνει. Μόνο η ρητή επιλογή «περιστροφή» συγκρίνει ανάποδα.
   const ori = orientation || 'auto';
   const normalFits = dimW<=maxW+0.05 && dimH<=maxH+0.05;
   const rotatedFits = dimH<=maxW+0.05 && dimW<=maxH+0.05;
-  if(ori==='normal') return normalFits;
-  if(ori==='rotated') return rotatedFits;
-  return normalFits || rotatedFits;
+  return ori==='rotated' ? rotatedFits : normalFits;
 }
 
 // The press can run the sheet either way round; when the signature only fits on
@@ -5813,19 +5824,35 @@ function checkSignatureFit(target, p, dim, rawLayout, margins, orientation){
   const rotUsableH = p.w - margins.top - margins.bottom;
   const gB = gridForTarget(rotUsableW, rotUsableH, dim.w, dim.h, margins.cutH, margins.cutV, targetPerSide, orientation, true);
   let g = gA, sheetRotated = false;
-  if(!gA.anyFits && gB.anyFits){ g = gB; sheetRotated = true; }
+  if(gA.anyFits !== gB.anyFits){
+    if(gB.anyFits){ g = gB; sheetRotated = true; }
+  } else if(!gA.anyFits && gB.best && gA.best && gB.best.overflow < gA.best.overflow){
+    // Καμία φορά του φύλλου δεν χωράει αυστηρά: κράτα αυτή που ξεφεύγει
+    // λιγότερο — είναι η διάταξη που όντως τρέχει στο πιεστήριο.
+    g = gB; sheetRotated = true;
+  }
 
   const ref = findReferenceSheet(p.w, p.l);
   let fits, sourceNote;
   if(ref && ref.sizes[target]){
     const maxDim = ref.sizes[target];
     const tableFits = fitsReferenceMax(dim.w, dim.h, maxDim.w, maxDim.h, orientation);
-    // The manual's table assumes standard margins. If bigger margins are set,
-    // the pages genuinely stop fitting — the table can't override geometry.
-    fits = tableFits && g.anyFits;
-    sourceNote = tableFits && !g.anyFits
-      ? `δεν χωράει με αυτά τα περιθώρια (ο πίνακας επιτρέπει μέχρι ${maxDim.w}×${maxDim.h}cm)`
-      : `βάσει πίνακα εγχειριδίου (μέγ. ${maxDim.w}×${maxDim.h}cm)`;
+    // Ο πίνακας του εγχειριδίου είναι μετρημένος στο πιεστήριο, με τα
+    // πραγματικά περιθώρια και τα ξακρίσματά του ήδη μέσα. Η δική μας
+    // γεωμετρία με τα προεπιλεγμένα mm αστοχεί κατά χιλιοστά ακριβώς στις
+    // οριακές γραμμές του πίνακα (π.χ. 21×29 σε 61×86 = 16σέλιδο) — εκεί
+    // κερδίζει ο πίνακας. Αν όμως τα δηλωμένα περιθώρια είναι πραγματικά
+    // μεγαλύτερα (η γεωμετρία αστοχεί πάνω από τα ξακρίσματα), δεν χωράει.
+    const slack = (margins.cutH + margins.cutV) + 0.5;
+    const marginalOnly = g.best && g.best.overflow <= slack;
+    fits = tableFits && (g.anyFits || marginalOnly);
+    sourceNote = !tableFits
+      ? `βάσει πίνακα εγχειριδίου (μέγ. ${maxDim.w}×${maxDim.h}cm)`
+      : !fits
+        ? `δεν χωράει με αυτά τα περιθώρια (ο πίνακας επιτρέπει μέχρι ${maxDim.w}×${maxDim.h}cm)`
+        : g.anyFits
+          ? `βάσει πίνακα εγχειριδίου (μέγ. ${maxDim.w}×${maxDim.h}cm)`
+          : `βάσει πίνακα εγχειριδίου (μέγ. ${maxDim.w}×${maxDim.h}cm) — οριακό με αυτά τα περιθώρια`;
   } else {
     fits = g.anyFits;
     sourceNote = 'εκτίμηση βάσει περιθωρίων (όχι επιβεβαιωμένο μέγεθος φύλλου)';
@@ -5908,7 +5935,7 @@ function simulateBookFit(id, keepModalOpen){
     }
     if(picked){
       const g = picked.check.grid;
-      layout = Object.assign({}, rawLayout, { cols: g.cols, rows: g.rows, count: g.cols*g.rows, pieceW: g.pieceW, pieceH: g.pieceH, rotated:false });
+      layout = Object.assign({}, rawLayout, { cols: g.cols, rows: g.rows, count: g.cols*g.rows, pieceW: g.pieceW, pieceH: g.pieceH, rotated: Math.abs(g.pieceW - dim.w) > 0.01 });
       if(picked.check.sheetRotated) layout = swapSheetOrientation(layout);
       pagesPerSheet = picked.target;
       modeLabel = 'Κομμάτια ανά όψη';
@@ -5972,7 +5999,7 @@ function simulateBookFit(id, keepModalOpen){
     }
 
     const g = check.grid;
-    layout = Object.assign({}, rawLayout, { cols: g.cols, rows: g.rows, count: g.cols*g.rows, pieceW: g.pieceW, pieceH: g.pieceH, rotated:false });
+    layout = Object.assign({}, rawLayout, { cols: g.cols, rows: g.rows, count: g.cols*g.rows, pieceW: g.pieceW, pieceH: g.pieceH, rotated: Math.abs(g.pieceW - dim.w) > 0.01 });
     if(check.sheetRotated) layout = swapSheetOrientation(layout);
     pagesPerSheet = target;
     modeLabel = 'Κομμάτια ανά όψη';
@@ -6489,7 +6516,10 @@ function renderProc(){
 }
 
 function esc(s){
-  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Και τα διπλά εισαγωγικά: ένα όνομα σαν «Γαλλίας "STAR"» μέσα σε
+  // value="..." ή onclick="..." έκοβε το attribute στη μέση, οπότε το κουμπί
+  // διαγραφής και η μετονομασία εκείνης της γραμμής απλώς δεν δούλευαν.
+  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 let companyName = 'Future Format - Fine Printing Since 1980';
@@ -18587,7 +18617,11 @@ async function renamePaper(oldName, newName){
 async function deletePaperRow(name){
   const key = getJbKey(), url = getJbBin();
   const token = await getAuthToken();
-  const res = await fetch(`${url}/rest/v1/papers?name=eq.${encodeURIComponent(name)}`, {
+  // Το όνομα μπαίνει σε εισαγωγικά κατά PostgREST: αλλιώς ονόματα που περιέχουν
+  // κόμμα ή εισαγωγικά (π.χ. «ΔΕΡΜΑ, ΡΟΛ.» ή «"STAR"») δεν ταίριαζαν ποτέ, η
+  // διαγραφή «πετύχαινε» χωρίς να σβήσει τίποτα, και το χαρτί ξαναγύριζε.
+  const quoted = 'eq."' + String(name).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  const res = await fetch(`${url}/rest/v1/papers?name=${encodeURIComponent(quoted)}`, {
     method: 'DELETE',
     headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }
   });
