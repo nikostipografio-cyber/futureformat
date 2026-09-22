@@ -9376,7 +9376,12 @@ let readableSlices = { offers:false, forecast:false };
 // just happened is reused instead of repeated. Any write clears it at once, so a
 // stale copy is never served.
 let jbCache = null, jbCacheAt = 0, jbCachePromise = null;
-const JB_CACHE_MS = 1500;
+// 8s αντί 1.5s: κάθε αστοχία της cache κατεβάζει ΟΛΟΚΛΗΡΟ το record, οπότε οι
+// απανωτές ενέργειες μιας ροής μοιράζονται ένα κατέβασμα. Οι γραφές ακυρώνουν
+// την cache (jbInvalidate), άρα ο χρήστης βλέπει πάντα ό,τι μόλις έκανε· το
+// Realtime την ακυρώνει επίσης όταν γράψει συνάδελφος, οπότε τα 8s αφορούν
+// μόνο το σπάνιο σενάριο χωρίς Realtime — αποδεκτό παράθυρο.
+const JB_CACHE_MS = 8000;
 
 function jbInvalidate(){ jbCache = null; jbCacheAt = 0; jbCachePromise = null; }
 
@@ -9602,6 +9607,10 @@ function orderToastBody(o){
 // Polling rather than a live channel: the record is small, the shop is a handful
 // of people, and this needs no extra infrastructure to keep working.
 async function pollReceivedOrders(){
+  // Κρυμμένη καρτέλα δεν κατεβάζει τίποτα: οι ειδοποιήσεις μπορούν να
+  // περιμένουν μέχρι να την ξανακοιτάξει κάποιος — αυτό ήταν και ο μεγάλος
+  // καταναλωτής egress, με καρτέλες ανοιχτές όλη μέρα στο φόντο.
+  if(document.hidden) return;
   try{
     const record = await jbGetRecord();
 
@@ -9667,9 +9676,18 @@ function setPollInterval(ms){
 }
 
 function currentPollDelay(){
-  if(document.hidden) return 60000;          // nobody's looking
-  return realtimeConnected ? 30000 : 10000;  // safety net vs. main channel
+  if(document.hidden) return 300000;          // δεν κοιτάει κανείς — και το poll ούτως ή άλλως επιστρέφει αμέσως
+  // Κάθε poll κατεβάζει ολόκληρο το record, οπότε η συχνότητα ΕΙΝΑΙ το κόστος
+  // (αυτή γέμισε το όριο egress του Supabase). Με Realtime ενεργό οι αλλαγές
+  // έρχονται ζωντανά και το poll είναι μόνο δίχτυ ασφαλείας κάθε 5 λεπτά·
+  // χωρίς Realtime, το λεπτό αρκεί για «ήρθε το χαρτί» ειδοποιήσεις.
+  return realtimeConnected ? 300000 : 60000;
 }
+// Με την επιστροφή στην καρτέλα, ένα άμεσο poll ώστε ό,τι έγινε όσο έλειπες
+// να εμφανιστεί αμέσως αντί να περιμένει τον επόμενο κύκλο.
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden){ try{ pollReceivedOrders(); }catch(e){} }
+});
 
 function tryRealtimeWatch(){
   try{
@@ -9677,7 +9695,9 @@ function tryRealtimeWatch(){
     supabaseAuthClient
       .channel('ff_app_data')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_data' }, ()=>{
-        // A write landed — read it back and see what's new.
+        // A write landed — read it back and see what's new. Η cache πρέπει
+        // να αδειάσει πρώτα, αλλιώς το poll θα σερβίρει την προ-αλλαγής εικόνα.
+        jbInvalidate();
         pollReceivedOrders();
       })
       .subscribe(status=>{
@@ -9838,7 +9858,13 @@ async function saveOfferInner(){
     // If an alternative quantity is the one the customer approved, that's the
     // figure that matters for revenue and forecasting — not the main quantity.
     const approvedQty = num(document.getElementById('fApprovedQty').value);
-    const chosenExtra = approvedQty ? extraQuantities.find(e=>num(e.qty)===approvedQty) : null;
+    const approvedOptionKey = String(document.getElementById('fApprovedOption').value || '');
+    // Πρώτα το ρητό κλειδί της επιλογής (θέση στη λίστα)· η ποσότητα μένει ως
+    // εφεδρεία για παλιές προσφορές που εγκρίθηκαν πριν αποθηκεύεται το κλειδί.
+    let chosenExtra = null;
+    if(/^alt\d+$/.test(approvedOptionKey)) chosenExtra = extraQuantities[Number(approvedOptionKey.slice(3))] || null;
+    if(!chosenExtra && approvedQty && approvedOptionKey !== 'main')
+      chosenExtra = extraQuantities.find(e=>num(e.qty)===approvedQty) || null;
     const manualTotal = chosenExtra
       ? num(chosenExtra.manualTotal)
       : num(document.getElementById('fManualTotal').value);
@@ -9856,6 +9882,20 @@ async function saveOfferInner(){
     record.offers[id] = { label, date: data.offerDate || '', savedAt, data, approved: existing.approved || false, number, total, computedTotal, approvedTotal, approvedCount, itemCount, forecastId: existing.forecastId || null, materialsOrdered: existing.materialsOrdered || false, comments: existing.comments || [], orderedPapers: existing.orderedPapers || [] };
     // Write ONLY this offer, and only touch the client list if it actually changed.
     await jbMergePath(SLICE_OFFERS, ['offers', id], record.offers[id]);
+    // Διόρθωσες την τιμή ΜΕΤΑ την έγκριση; Η δεμένη καταχώρηση του Forecasting
+    // ακολουθεί — αλλά μόνο όσο εκκρεμεί: ό,τι έχει ήδη τιμολογηθεί είναι
+    // ιστορικό και δεν ξαναγράφεται.
+    if(existing.approved && existing.forecastId && record.forecast && record.forecast[existing.forecastId]){
+      const fc = record.forecast[existing.forecastId];
+      const fcAmount = num(approvedTotal) || num(total) || num(computedTotal) || 0;
+      if(fc.status !== 'invoiced' && Math.abs(num(fc.amount) - fcAmount) > 0.005){
+        fc.amount = fcAmount;
+        fc.client = label || data.client || fc.client;
+        fc.job = data.title || fc.job;
+        await jbMergePath(SLICE_FORECAST, ['forecast', existing.forecastId], fc);
+        statusMsg('Ενημερώθηκε και το ποσό στο Forecasting → ' + fmt(fcAmount));
+      }
+    }
     if(data.client && data.client.trim() && !record.clients.includes(data.client.trim())){
       record.clients.push(data.client.trim());
       record.clients.sort((a,b)=>a.localeCompare(b,'el'));
@@ -13262,7 +13302,11 @@ async function toggleOfferApprovedInForm(){
     setApprovedQty('', '');
   }
 
-  if(!currentOfferId) await saveOffer();
+  // Πάντα αποθήκευση πριν την έγκριση: το setOfferApproved διαβάζει την
+  // προσφορά από τη βάση, κι αν το save έλειπε, το Forecasting έπαιρνε τα
+  // ποσά του ΠΡΟΗΓΟΥΜΕΝΟΥ σωσίματος — παλιά τιμή, ή την κύρια αντί για την
+  // εναλλακτική που μόλις διάλεξες, ή τίποτα σε νέα προσφορά.
+  await saveOffer();
   if(!currentOfferId) return;
   const newState = await setOfferApproved(currentOfferId, !currentlyApproved);
   if(newState!=null) updateApproveButton(newState);
