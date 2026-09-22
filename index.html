@@ -1348,6 +1348,15 @@
   .pdfpv-sheet{width:720px;max-width:100%;margin:0 auto;background:#fff;
     box-shadow:0 8px 30px rgba(0,0,0,0.35);}
   .pdfpv-sheet + .pdfpv-sheet{margin-top:24px;}
+
+  /* Πεδία που ήρθαν από πρότυπο και θέλουν επιβεβαίωση: κόκκινο πλαίσιο μέχρι
+     να τα αγγίξει ο χρήστης — μετά το πρώτο πάτημα, το μαρκάρισμα φεύγει. */
+  .tmpl-review{outline:2px solid #d64545 !important;outline-offset:1px;background:#fff5f5 !important;}
+  .tmpl-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fdf1ec;
+    border:1px solid #f0c8b4;color:#a24a1d;padding:9px 14px;border-radius:8px;
+    margin-bottom:14px;font-size:12.5px;}
+  .tmpl-banner b{font-weight:700;}
+  .tmpl-banner .close{margin-left:auto;cursor:pointer;font-weight:700;padding:0 4px;}
   /* Στα ~182mm ωφέλιμου πλάτους Α4 αντιστοιχούν ~690px οθόνης, οπότε το φύλλο
      των 720px εμφανίζεται σε κλίμακα 0.95 για να δείχνει όσο θα τυπωθεί. Η
      σύλληψη για το PDF γίνεται πάντα σε zoom 1. */
@@ -1880,6 +1889,7 @@ function toggleMobileSidebar(forceClose){
       <span>🔒 Το ticket είναι κλειδωμένο (μόνο οι Παρατηρήσεις είναι επεξεργάσιμες).</span>
       <button class="btn" onclick="unlockTicketForm()">Ξεκλείδωμα</button>
     </div>
+    <div id="tmplReviewBanner" style="display:none;"></div>
     <div id="linkedTicketsIndicator" style="display:none;"></div>
     <div class="card">
       <div class="card-head"><div class="title">Στοιχεία Job Ticket</div></div>
@@ -8850,13 +8860,64 @@ async function saveOfferAsTemplate(){
     const record = await jbGetRecord();
     record.offerTemplates = record.offerTemplates || {};
     if(record.offerTemplates[key] && !confirm(`Υπάρχει ήδη πρότυπο «${key}». Να αντικατασταθεί;`)) return;
-    record.offerTemplates[key] = { savedAt: new Date().toISOString(), data: offerDataAsTemplate(collectOffer()) };
+    // Η σημείωση εμφανίζεται σε όποιον φορτώσει το πρότυπο — εκεί γράφεις τα
+    // «μην ξεχάσεις» (π.χ. «άλλαξε σελίδες & διάσταση ανά έργο»).
+    const prevNote = (record.offerTemplates[key] || {}).note || '';
+    const note = prompt('Σημείωση για όποιον χρησιμοποιήσει το πρότυπο (προαιρετική):', prevNote);
+    record.offerTemplates[key] = { savedAt: new Date().toISOString(), note: note === null ? prevNote : note.trim(), data: offerDataAsTemplate(collectOffer()) };
     await jbMergePath(SLICE_MAIN, ['offerTemplates'], record.offerTemplates);
     showToast(`📋 Αποθηκεύτηκε το πρότυπο «${key}»`, 'Θα το βρίσκεις στο κουμπί Πρότυπα');
   }catch(e){
     console.error('Save offer template error:', e);
     statusMsg('Σφάλμα: ' + e.message);
   }
+}
+
+// ===== «Μην ξεχάσεις» στα πρότυπα =====
+// Τα πεδία που κληρονομούνται από το πρότυπο αλλά αλλάζουν σχεδόν σε κάθε
+// έργο (σελίδες, κλειστό σχήμα, ποσότητα) βάφονται κόκκινα μέχρι να τα
+// αγγίξει ο χρήστης — το άγγιγμα, όχι ο χρόνος, σβήνει το μαρκάρισμα, ώστε
+// ένα ξεχασμένο πεδίο να μένει κόκκινο όσο κι αν αργήσεις. Μαζί εμφανίζεται
+// και η σημείωση που γράφτηκε στο σώσιμο του προτύπου.
+const TMPL_REVIEW_FIELDS = ['fPages', 'fSchemaClosed', 'hdrQty'];
+
+function markTemplateReviewFields(tplName, note){
+  const marked = [];
+  TMPL_REVIEW_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el || el.getClientRects().length === 0) return;   // κρυφά πεδία (π.χ. flat χωρίς βιβλίο) δεν μαρκάρονται
+    el.classList.add('tmpl-review');
+    marked.push(el);
+    el.addEventListener('input', function clearMark(){
+      el.classList.remove('tmpl-review');
+      el.removeEventListener('input', clearMark);
+      updateTmplBannerCount();
+    });
+  });
+  const banner = document.getElementById('tmplReviewBanner');
+  banner.className = 'tmpl-banner';
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>📋 Πρότυπο <b>${esc(tplName)}</b>`
+    + (note ? ` — <b>${esc(note)}</b>` : '')
+    + `</span><span id="tmplReviewCount"></span>`
+    + `<span class="close" onclick="clearTemplateReview()" title="Κλείσιμο">×</span>`;
+  updateTmplBannerCount();
+}
+
+function updateTmplBannerCount(){
+  const el = document.getElementById('tmplReviewCount');
+  if(!el) return;
+  const left = document.querySelectorAll('.tmpl-review').length;
+  el.textContent = left
+    ? `— ${left} κόκκινα πεδία θέλουν επιβεβαίωση`
+    : '— όλα τα πεδία επιβεβαιώθηκαν ✓';
+}
+
+function clearTemplateReview(){
+  document.querySelectorAll('.tmpl-review').forEach(el => el.classList.remove('tmpl-review'));
+  const banner = document.getElementById('tmplReviewBanner');
+  banner.style.display = 'none';
+  banner.innerHTML = '';
 }
 
 async function applyOfferTemplate(name){
@@ -8882,6 +8943,7 @@ async function applyOfferTemplate(name){
     document.getElementById('fOfferDate').value = keep.offerDate || todayISO();
     recalcAll();
     updateGrand();
+    markTemplateReviewFields(name, tpl.note || '');
     statusMsg(`Εφαρμόστηκε το πρότυπο «${name}» ✓ — συμπλήρωσε ποσότητες και τιμές.`);
   }catch(e){
     console.error('Apply offer template error:', e);
@@ -8995,6 +9057,7 @@ function collectOffer(){
 }
 
 function applyOfferData(d){
+  if(typeof clearTemplateReview === 'function') clearTemplateReview();
   // A price typed by hand is the agreed figure; the markup beside it is only a
   // rounded description of it. On load we must follow the price, or recomputing
   // from that rounded percentage silently shifts the quote by a few euro.
