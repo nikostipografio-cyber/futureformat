@@ -1718,8 +1718,9 @@ function toggleMobileSidebar(forceClose){
       <table>
         <thead>
           <tr>
-            <th style="width:17%">Υλικό</th>
-            <th style="width:9%">Πλάτος Ρολού (cm)</th>
+            <th style="width:9%">Τμήμα</th>
+            <th style="width:14%">Υλικό</th>
+            <th style="width:8%">Πλάτος Ρολού (cm)</th>
             <th style="width:9%">Πλάτος Αναπτ. (cm)</th>
             <th style="width:9%">Μήκος Αναπτ. (cm)</th>
             <th style="width:8%">Ποσότητα</th>
@@ -1733,7 +1734,7 @@ function toggleMobileSidebar(forceClose){
           </tr>
         </thead>
         <tbody id="fabricBody"></tbody>
-        <tfoot><tr><td colspan="10" style="text-align:right;">Σύνολο Υφασμάτων</td><td class="auto" id="fabricTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="11" style="text-align:right;">Σύνολο Υφασμάτων</td><td class="auto" id="fabricTotal" style="text-align:center;">0,00 €</td><td></td></tr></tfoot>
       </table>
     </div>
     </div>
@@ -4922,7 +4923,7 @@ function renderBiblio(){
       <td><input list="paperOptions" value="${r.paperName}" placeholder="Αναζήτηση χαρτιού..."
         oninput="onPaperTyping('book',${r.id},this.value)"
         onchange="onPaperPick('book',${r.id},this.value)"></td>
-      <td><input type="number" value="${r.pages}" oninput="bookRows.find(x=>x.id===${r.id}).pages=this.value;recalcBookRow(${r.id})"></td>
+      <td><input type="number" class="bk-pages${window.__tmplReviewBookPages && window.__tmplReviewBookPages.has(r.id) ? ' tmpl-review' : ''}" value="${r.pages}" oninput="bookRows.find(x=>x.id===${r.id}).pages=this.value;if(window.__tmplReviewBookPages){window.__tmplReviewBookPages.delete(${r.id});this.classList.remove('tmpl-review');if(typeof updateTmplBannerCount==='function')updateTmplBannerCount();}recalcBookRow(${r.id})"></td>
       <td style="display:flex;gap:2px;align-items:center;"><input type="number" class="c-pagesPerSheet" value="${r.pagesPerSheet}" oninput="bookRows.find(x=>x.id===${r.id}).pagesPerSheet=this.value;recalcBookRow(${r.id})" style="min-width:0;"><button title="Προσομοίωση χωρητικότητας φύλλου βάσει Σχήματος" onclick="simulateBookFit(${r.id})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px 3px;flex:none;">📐</button></td>
       <td><div class="auto c-sheets">0</div></td>
       <td><input type="number" value="${r.xtra}" oninput="bookRows.find(x=>x.id===${r.id}).xtra=this.value;recalcBookRow(${r.id})"></td>
@@ -5225,7 +5226,7 @@ function recalcBookTotal(){
 
 function addFabricRow(vals){
   const id = fabricSeq++;
-  fabricRows.push(Object.assign({id, material:'', rollWidth:'', patternW:'', patternL:'', qty:'', xtraMeters:'', pricePerMeter:'', orientation:'auto'}, vals||{}));
+  fabricRows.push(Object.assign({id, label:'', material:'', rollWidth:'', patternW:'', patternL:'', qty:'', xtraMeters:'', pricePerMeter:'', orientation:'auto'}, vals||{}));
   renderFabric();
 }
 function removeFabricRow(id){ fabricRows = fabricRows.filter(r=>r.id!==id); renderFabric(); }
@@ -6098,6 +6099,7 @@ function renderFabric(){
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', r.id);
     tr.innerHTML = `
+      <td><input value="${esc(r.label||'')}" placeholder="Ύφασμα" title="Πώς θα γραφτεί στην προσφορά — άφησέ το κενό για «Ύφασμα»" oninput="fabricRows.find(x=>x.id===${r.id}).label=this.value"></td>
       <td><input list="paperOptions" value="${r.material}" placeholder="Αναζήτηση υλικού..." oninput="fabricRows.find(x=>x.id===${r.id}).material=this.value"></td>
       <td><input type="number" value="${r.rollWidth}" oninput="fabricRows.find(x=>x.id===${r.id}).rollWidth=this.value;recalcFabricRow(${r.id})"></td>
       <td><input type="number" value="${r.patternW}" oninput="fabricRows.find(x=>x.id===${r.id}).patternW=this.value;recalcFabricRow(${r.id})"></td>
@@ -6703,7 +6705,7 @@ function buildOfferPrintHtml(){
             .filter(r => r.material || r.paperName)
             .map(r => `<tr><td>${esc(r.material||'')}</td><td>${esc(r.paperName||'')}</td><td>${esc(r.color||'')}</td></tr>`)
             .concat((s.fabricRows||[]).filter(r=>r.material)
-              .map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`))
+              .map(r => `<tr><td>${(r.label||'').trim() ? esc(r.label.trim()) : t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`))
             .join('');
 
       // Same setting as the main block: if processing is hidden in the offer,
@@ -6791,7 +6793,7 @@ function buildOfferPrintHtml(){
     .map(g => `<tr><td>${esc(g.name)}</td><td>${esc(g.papers.join(' + '))}</td><td>${
       esc(g.colors.join(' / '))}</td></tr>`)
     .concat(
-      fabricRows.filter(r=>r.material).map(r => `<tr><td>${t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`)
+      fabricRows.filter(r=>r.material).map(r => `<tr><td>${(r.label||'').trim() ? esc(r.label.trim()) : t('Ύφασμα')}</td><td>${esc(r.material)}</td><td></td></tr>`)
     )
     .join('');
 
@@ -8879,7 +8881,7 @@ async function saveOfferAsTemplate(){
 // αγγίξει ο χρήστης — το άγγιγμα, όχι ο χρόνος, σβήνει το μαρκάρισμα, ώστε
 // ένα ξεχασμένο πεδίο να μένει κόκκινο όσο κι αν αργήσεις. Μαζί εμφανίζεται
 // και η σημείωση που γράφτηκε στο σώσιμο του προτύπου.
-const TMPL_REVIEW_FIELDS = ['fPages', 'fSchemaClosed', 'hdrQty'];
+const TMPL_REVIEW_FIELDS = ['fPages', 'hdrQty'];
 
 function markTemplateReviewFields(tplName, note){
   const marked = [];
@@ -8894,6 +8896,9 @@ function markTemplateReviewFields(tplName, note){
       updateTmplBannerCount();
     });
   });
+  window.__tmplReviewBookPages = new Set(
+    bookRows.filter(r => (r.material || '').trim()).map(r => r.id));
+  if(window.__tmplReviewBookPages.size && typeof renderBiblio === 'function') renderBiblio();
   const banner = document.getElementById('tmplReviewBanner');
   banner.className = 'tmpl-banner';
   banner.style.display = 'flex';
@@ -8914,6 +8919,7 @@ function updateTmplBannerCount(){
 }
 
 function clearTemplateReview(){
+  window.__tmplReviewBookPages = null;
   document.querySelectorAll('.tmpl-review').forEach(el => el.classList.remove('tmpl-review'));
   const banner = document.getElementById('tmplReviewBanner');
   banner.style.display = 'none';
