@@ -319,6 +319,12 @@
   .ost-draft{background:#f0eeea;color:#6b665c;border-color:#e2ded6;}
   .ost-sent{background:#eaf1fe;color:#1f4f9e;border-color:#cfe0fb;}
   .ost-approved{background:#e6f4ec;color:#0e6b3a;border-color:#c9e6d6;}
+  .ost-rejected{background:#fdecea;color:#a12622;border-color:#f2c9c5;}
+  .ost-menu{position:fixed;z-index:3000;background:#fff;border:1px solid var(--line);
+    border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,0.18);min-width:230px;overflow:hidden;font-size:13px;}
+  .ost-menu .item{padding:9px 14px;cursor:pointer;}
+  .ost-menu .item:hover{background:var(--page);}
+  .ost-menu .note{padding:8px 14px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);}
   /* Fixed widths: the workings under each figure are wider than the figure, so
      an auto table let them stretch their column and the sums looked adrift. */
   .pa-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;
@@ -1003,6 +1009,9 @@
   .fc-month-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--page);font-weight:700;font-size:13px;}
   .fc-month-head .total{font-variant-numeric:tabular-nums;}
   .fc-job-row{padding:8px 12px;border-top:1px solid var(--line);font-size:12px;}
+  .fc-job-row.fc-manual{background:#f7f3fc;box-shadow:inset 3px 0 0 #8e6cc8;}
+  .fc-manual-tag{font-size:10px;font-weight:700;color:#6b4fa3;background:#ece3f8;
+    border:1px solid #d9c9f0;border-radius:5px;padding:1px 6px;vertical-align:1px;}
   .fc-job-row .name{color:var(--muted);font-weight:400;}
   .fc-job-row .client{color:var(--ink);font-weight:700;}
   .fc-job-row .amount{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -1472,6 +1481,7 @@ function toggleMobileSidebar(forceClose){
               <option value="draft">📝 Προς υπολογισμό</option>
               <option value="sent">📤 Στάλθηκε / Αναμονή απάντησης</option>
               <option value="approved">✓ Εγκρίθηκε</option>
+              <option value="rejected">✗ Απορρίφθηκε</option>
             </select>
           </div>
         </div>
@@ -1544,7 +1554,8 @@ function toggleMobileSidebar(forceClose){
       </span>
       <button class="btn" id="convertOneBtn" onclick="convertOfferToTicket()">Μετατροπή σε Job Ticket</button>
       <button class="btn" id="stageBtn" onclick="toggleOfferSentInForm()"
-        title="Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη">📝 Προς υπολογισμό</button>
+        oncontextmenu="if(currentOfferId){openOfferStageMenu(event, currentOfferId);}else{event.preventDefault();}"
+        title="Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη — δεξί κλικ για όλες τις καταστάσεις">📝 Προς υπολογισμό</button>
       <button class="btn" id="approveBtn" onclick="toggleOfferApprovedInForm()">Εκκρεμεί</button>
       <button class="btn" onclick="toggleOfferNotes()" id="offerNotesBtn"
         title="Εσωτερικά σχόλια — δεν φαίνονται στον πελάτη">💬 Σχόλια</button>
@@ -2075,9 +2086,22 @@ function toggleMobileSidebar(forceClose){
     <div class="card" id="pendingMaterialsCard" style="display:none;">
       <div class="card-head">
         <div class="title">📦 Εκκρεμείς Παραγγελίες Χαρτιού</div>
-        <span class="empty-note" id="pendingMaterialsCount"></span>
+        <span style="display:flex;gap:10px;align-items:center;">
+          <span class="empty-note" id="pendingMaterialsCount"></span>
+          <button class="btn" onclick="togglePmEmailPanel()">📧 Email Παραγγελίας</button>
+        </span>
       </div>
-      <div class="card-body"><div id="pendingMaterialsList"></div></div>
+      <div class="card-body">
+        <div id="pmEmailPanel" style="display:none;margin-bottom:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--page);">
+          <div class="empty-note" style="margin-bottom:8px;">Διάλεξε ποια από τα εκκρεμή υλικά θα μπουν στο email — όλα προεπιλεγμένα, ξετσέκαρε ό,τι δεν θες. (Δεν αλλάζει το «παραγγέλθηκε» — μόνο το email φτιάχνει.)</div>
+          <div id="pmEmailItems" style="max-height:260px;overflow:auto;"></div>
+          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+            <button class="btn solid" id="pmEmailGoBtn" onclick="emailPendingMaterials()">📧 Άνοιγμα Email (<span id="pmEmailCount">0</span>)</button>
+            <button class="btn" onclick="togglePmEmailPanel()">Κλείσιμο</button>
+          </div>
+        </div>
+        <div id="pendingMaterialsList"></div>
+      </div>
     </div>
     <div class="card">
       <div class="card-head"><div class="title">Παραγγελίες Υλικών</div>
@@ -2143,6 +2167,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn ord-filter-btn" data-filter="received" onclick="setOrdersFilter('received')">Παραλήφθηκαν</button>
           <button class="btn solid" id="ordGroupBtn" onclick="toggleOrdersGrouping()" title="Ομαδοποίηση ανά προμηθευτή — τι περιμένουμε από τον καθένα">🏢 Ανά Προμηθευτή</button>
           <input id="ordSearch" placeholder="Αναζήτηση δουλειάς / υλικού..." style="flex:1;min-width:200px;" oninput="refreshOrdersList()">
+          <button class="btn" style="display:none;" id="ordersEmailBtn" onclick="emailSelectedOrders()">📧 Email Παραγγελίας (<span id="ordersEmailCount">0</span>)</button>
           <button class="btn" style="color:#c0392b;border-color:#c0392b;display:none;" id="ordersBulkDeleteBtn" onclick="deleteSelectedOrders()">🗑 Διαγραφή Επιλεγμένων (<span id="ordersSelectedCount">0</span>)</button>
         </div>
         <div id="ordersList"></div>
@@ -2717,6 +2742,14 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div class="empty-note" style="margin-top:8px;">Κατέβασε τακτικά ένα αντίγραφο (π.χ. μία φορά τη βδομάδα) και κράτησέ το κάπου ασφαλές. Η "Επαναφορά" <b>αντικαθιστά εντελώς</b> όλα τα τρέχοντα δεδομένα — χρησιμοποίησέ την μόνο αν κάτι χάθηκε ή χάλασε.</div>
         <div class="empty-note" id="backupStatus" style="margin-top:4px;"></div>
+        <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:12px;">
+          <label style="font-size:12.5px;display:flex;gap:8px;align-items:center;cursor:pointer;">
+            <input type="checkbox" id="autoBackupDownload" onchange="localStorage.setItem('ff_auto_backup_dl', this.checked ? '1' : '0')">
+            Αυτόματη λήψη αντιγράφου στις Λήψεις, μία φορά την ημέρα (από αυτόν τον υπολογιστή)
+          </label>
+          <div class="empty-note" style="margin:6px 0 4px;">Ανεξάρτητα από τη λήψη, το πρόγραμμα κρατά αυτόματα καθημερινό στιγμιότυπο ΚΑΙ μέσα στον browser (τα τελευταία 10) — για γρήγορη επαναφορά ακόμα κι αν χαθεί ό,τι υπάρχει στη βάση:</div>
+          <div id="autoSnapshotsList" class="empty-note">—</div>
+        </div>
       </div>
     </div>
   </div>
@@ -9021,6 +9054,7 @@ function collectOffer(){
     // Set by the status badge, not by the form — carried through so saving the
     // offer doesn't undo "sent".
     sentAt: (window.__currentOfferSentAt || ''),
+    rejectedAt: (window.__currentOfferRejectedAt || ''),
     showProcInOffer: document.getElementById('fShowProcInOffer').checked,
     multiItem: document.getElementById('fMultiItem').checked,
     englishPdf: document.getElementById('fEnglishPdf').checked,
@@ -9081,6 +9115,7 @@ function applyOfferData(d){
   document.getElementById('fVat').value = d.vat||'';
   document.getElementById('fValidityDays').value = d.validityDays||15;
   window.__currentOfferSentAt = d.sentAt || '';
+  window.__currentOfferRejectedAt = d.rejectedAt || '';
   updateStageButton();
   // Off unless the offer was saved with it on. It used to default to on, so an
   // offer saved before this change has no flag — and must not switch itself on.
@@ -9310,6 +9345,11 @@ function switchView(view){
   if(view==='ticketlist') refreshTicketList();
   if(view==='orders') refreshOrdersList();
   if(view==='forecast') refreshForecastList();
+  if(view==='settings'){
+    const cb = document.getElementById('autoBackupDownload');
+    if(cb) cb.checked = localStorage.getItem('ff_auto_backup_dl') === '1';
+    renderAutoSnapshots();
+  }
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
   if(view==='invoicing') refreshInvoicingBoard();
   if(view==='production' || view==='invoicing'){
@@ -9369,6 +9409,159 @@ async function testSupabaseConnection(){
   }
 }
 
+// ===== Αυτόματο ημερήσιο αντίγραφο ασφαλείας =====
+// Δύο στρώματα, γιατί το περιστατικό της 17-25/9 έδειξε ότι ένα δεν αρκεί:
+// (α) σιωπηλό στιγμιότυπο στο IndexedDB του browser κάθε μέρα (τα τελευταία
+// 10), που επιβιώνει ακόμα κι αν τα δεδομένα της βάσης πατηθούν — επαναφορά
+// με δύο κλικ από την κάρτα Αντίγραφο Ασφαλείας· (β) προαιρετική αυτόματη
+// λήψη .json στις Λήψεις μία φορά τη μέρα, για αντίγραφο εκτός browser.
+// Όλα δένονται στο πρώτο επιτυχημένο κατέβασμα δεδομένων της ημέρας.
+const SNAP_DB = 'ff_backups', SNAP_STORE = 'daily';
+
+function snapDb(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(SNAP_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(SNAP_STORE, { keyPath: 'key' });
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function snapPut(key, json, meta){
+  const db = await snapDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(SNAP_STORE, 'readwrite');
+    tx.objectStore(SNAP_STORE).put({ key, ts: Date.now(), size: json.length, meta: meta || null, json });
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+
+async function snapList(){
+  const db = await snapDb();
+  const rows = await new Promise((res, rej) => {
+    const out = [];
+    const tx = db.transaction(SNAP_STORE, 'readonly');
+    tx.objectStore(SNAP_STORE).openCursor().onsuccess = e => {
+      const c = e.target.result;
+      if(c){ out.push({ key: c.value.key, ts: c.value.ts, size: c.value.size, meta: c.value.meta }); c.continue(); }
+      else res(out);
+    };
+    tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+  return rows.sort((a, b) => b.ts - a.ts);
+}
+
+async function snapGet(key){
+  const db = await snapDb();
+  const row = await new Promise((res, rej) => {
+    const tx = db.transaction(SNAP_STORE, 'readonly');
+    const rq = tx.objectStore(SNAP_STORE).get(key);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+  db.close();
+  return row;
+}
+
+async function snapDelete(key){
+  const db = await snapDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(SNAP_STORE, 'readwrite');
+    tx.objectStore(SNAP_STORE).delete(key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+
+let dailyBackupRan = false;
+async function maybeDailyBackup(record){
+  if(dailyBackupRan) return;
+  dailyBackupRan = true;   // μία προσπάθεια ανά άνοιγμα σελίδας αρκεί
+  try{
+    // Μισό record δεν γίνεται ποτέ στιγμιότυπο — ένα «δηλητηριασμένο»
+    // αντίγραφο είναι χειρότερο από κανένα.
+    const looksWhole = record && !record.__mainMissing &&
+      ((record.tickets && Object.keys(record.tickets).length) ||
+       (record.offers && Object.keys(record.offers).length));
+    if(!looksWhole){ dailyBackupRan = false; return; }
+    const today = todayISO();
+    if(localStorage.getItem('ff_last_snap_day') === today) return;
+    const json = JSON.stringify(record);
+    await snapPut('day_' + today, json, {
+      offers: Object.keys(record.offers || {}).length,
+      tickets: Object.keys(record.tickets || {}).length,
+      orders: Object.keys(record.orders || {}).length });
+    // Κράτα μόνο τα 10 πιο πρόσφατα ημερήσια
+    const all = (await snapList()).filter(s => s.key.startsWith('day_'));
+    for(const s of all.slice(10)) await snapDelete(s.key);
+    localStorage.setItem('ff_last_snap_day', today);
+    if(localStorage.getItem('ff_auto_backup_dl') === '1'){
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `future_format_backup_${today}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+    renderAutoSnapshots();
+  }catch(e){ console.warn('Ημερήσιο αντίγραφο:', e.message); }
+}
+
+async function renderAutoSnapshots(){
+  const el = document.getElementById('autoSnapshotsList');
+  if(!el) return;
+  try{
+    const list = await snapList();
+    el.innerHTML = list.length ? list.map(s => {
+      const d = new Date(s.ts);
+      const label = s.key.startsWith('pre_restore') ? 'πριν από επαναφορά' : s.key.replace('day_', '');
+      return `<div style="display:flex;gap:10px;align-items:center;padding:2px 0;">
+        <span style="min-width:150px;">${esc(label)} — ${d.toLocaleTimeString('el-GR', { hour:'2-digit', minute:'2-digit' })}</span>
+        <span style="min-width:70px;">${(s.size / 1048576).toFixed(2)} MB</span>
+        <span style="min-width:190px;">${s.meta ? `${s.meta.offers} προσφ. · ${s.meta.tickets} tickets · ${s.meta.orders} παραγγ.` : ''}</span>
+        <a href="javascript:void(0)" onclick="downloadSnapshot('${esc(s.key)}')">Λήψη</a>
+        <a href="javascript:void(0)" style="color:#c0392b;" onclick="restoreSnapshot('${esc(s.key)}')">Επαναφορά</a>
+      </div>`;
+    }).join('') : 'Κανένα στιγμιότυπο ακόμα — θα δημιουργηθεί στο επόμενο άνοιγμα.';
+  }catch(e){ el.textContent = 'Τα στιγμιότυπα δεν είναι διαθέσιμα σε αυτόν τον browser.'; }
+}
+
+async function downloadSnapshot(key){
+  const row = await snapGet(key);
+  if(!row) return;
+  const blob = new Blob([row.json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `future_format_backup_${key.replace('day_', '')}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function restoreSnapshot(key){
+  const statusEl = document.getElementById('backupStatus');
+  const row = await snapGet(key);
+  if(!row) return;
+  const when = new Date(row.ts).toLocaleString('el-GR');
+  if(!confirm(`ΠΡΟΣΟΧΗ: Θα αντικατασταθούν ΟΛΑ τα τρέχοντα δεδομένα με το στιγμιότυπο της ${when}.\n\nΣυνέχεια;`)) return;
+  if(!confirm('Τελευταία επιβεβαίωση — η ενέργεια δεν αναιρείται. Συνέχεια;')) return;
+  try{
+    // Πριν πατήσουμε οτιδήποτε, φωτογραφίζεται η ΤΩΡΙΝΗ κατάσταση — δίχτυ
+    // κάτω από το δίχτυ, για την περίπτωση λάθους επιλογής στιγμιοτύπου.
+    try{
+      const current = await jbGetRecord();
+      await snapPut('pre_restore_' + Date.now(), JSON.stringify(current));
+    }catch(e){}
+    statusEl.textContent = 'Επαναφορά σε εξέλιξη...';
+    await jbPutRecord(JSON.parse(row.json), { force: true });
+    jbInvalidate();
+    statusEl.textContent = 'Η επαναφορά ολοκληρώθηκε ✓ — φόρτωσε ξανά τη σελίδα (F5).';
+  }catch(e){
+    statusEl.textContent = 'Σφάλμα επαναφοράς: ' + e.message;
+  }
+}
+
 async function exportFullBackup(){
   const statusEl = document.getElementById('backupStatus');
   try{
@@ -9404,8 +9597,13 @@ async function restoreFromBackup(){
     if(!sure) return;
     const sureAgain = confirm('Τελευταία επιβεβαίωση — θα χαθούν όλα τα τρέχοντα δεδομένα και θα αντικατασταθούν. Συνέχεια;');
     if(!sureAgain) return;
+    try{
+      const current = await jbGetRecord();
+      await snapPut('pre_restore_' + Date.now(), JSON.stringify(current));
+    }catch(e){}
     statusEl.textContent = 'Επαναφορά σε εξέλιξη...';
-    await jbPutRecord(data);
+    await jbPutRecord(data, { force: true });
+    jbInvalidate();
     statusEl.textContent = 'Η επαναφορά ολοκληρώθηκε ✓ — φόρτωσε ξανά τη σελίδα.';
     switchView('home');
   }catch(e){
@@ -9462,6 +9660,7 @@ async function jbGetRecord(){
   if(jbCachePromise) return jbCachePromise;
   jbCachePromise = jbFetchRecord().then(rec=>{
     jbCache = rec; jbCacheAt = Date.now(); jbCachePromise = null;
+    maybeDailyBackup(rec);
     return rec;
   }).catch(e=>{ jbCachePromise = null; throw e; });
   return jbCachePromise;
@@ -9488,6 +9687,14 @@ async function jbFetchRecord(){
     if(Object.prototype.hasOwnProperty.call(row.record, 'forecast')) readableSlices.forecast = true;
     record = Object.assign({}, record, row.record);
   });
+  // Αν η κύρια φέτα (tickets/orders/stock/clients) δεν ήρθε καθόλου —
+  // μισο-σύνδεση, RLS, στιγμιαίο 403 — το record σημαδεύεται ως ελλιπές με
+  // αόρατη ιδιότητα (δεν σώζεται πουθενά), ώστε η jbPutRecord να αρνηθεί να
+  // γράψει «άδειο» πάνω σε γεμάτη βάση. Αυτή η τρύπα έσβησε στις 25/9 όλα
+  // τα δεδομένα εκτός των προσφορών.
+  const mainSeen = rows.some(r => r && r.record &&
+    ['tickets','orders','stock','clients','offerTemplates'].some(k => Object.prototype.hasOwnProperty.call(r.record, k)));
+  Object.defineProperty(record, '__mainMissing', { value: !mainSeen, enumerable: false, configurable: true });
   if(!record.offers) record.offers = {};
   if(!record.tickets) record.tickets = {};
   if(!record.clients) record.clients = [];
@@ -9580,13 +9787,53 @@ async function jbFallbackWrite(sliceId, path, value, isDelete){
 
 const SLICE_MAIN = 1, SLICE_OFFERS = 2, SLICE_FORECAST = 3;
 
-async function jbPutRecord(record){
+// Συναγερμός που μένει στην οθόνη μέχρι να τον κλείσεις — για γεγονότα που
+// ΔΕΝ επιτρέπεται να περάσουν σαν ψιλό μήνυμα κάτω δεξιά.
+function bigRedAlert(msg){
+  let el = document.getElementById('bigRedAlert');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'bigRedAlert';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:5000;background:#b71c1c;color:#fff;padding:14px 48px 14px 18px;font-size:14px;font-weight:600;box-shadow:0 3px 14px rgba(0,0,0,0.35);line-height:1.45;';
+    el.innerHTML = '<span id="bigRedAlertMsg"></span><span onclick="this.parentNode.remove()" style="position:absolute;right:14px;top:10px;cursor:pointer;font-size:20px;font-weight:700;">×</span>';
+    document.body.appendChild(el);
+  }
+  document.getElementById('bigRedAlertMsg').textContent = msg;
+}
+
+async function jbPutRecord(record, opts){
   jbInvalidate();   // the copy in hand is about to be out of date
   const key = getJbKey(), url = getJbBin();
   if(!key || !url) throw new Error('Λείπει το Supabase URL ή το API Key');
   const token = await getAuthToken();
   const headers = { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
   const now = new Date().toISOString();
+
+  // ΠΡΟΣΤΑΣΙΑ ΔΕΔΟΜΕΝΩΝ: αν αυτό που πάμε να γράψουμε δεν έχει καθόλου
+  // tickets/παραγγελίες/αποθήκη/πελάτες (ή προήλθε από ελλιπές διάβασμα),
+  // ελέγχεται πρώτα τι έχει η βάση — και αν η βάση έχει δεδομένα, η εγγραφή
+  // ΜΠΛΟΚΑΡΕΤΑΙ με συναγερμό αντί να τα σβήσει. Οι συνειδητές επαναφορές
+  // (με τις διπλές επιβεβαιώσεις τους) περνούν με ρητό force.
+  const force = !!(opts && opts.force);
+  const hollow = ['tickets','orders','stock','offerTemplates'].every(k => !record[k] || Object.keys(record[k]).length === 0)
+                 && (!record.clients || record.clients.length === 0);
+  if(!force && (hollow || record.__mainMissing)){
+    let dbHasData = true;   // σε αμφιβολία, μπλόκο — ποτέ σβήσιμο στα τυφλά
+    try{
+      const cur = await fetch(`${url}/rest/v1/app_data?select=record&id=eq.1`, {
+        headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` }, cache: 'no-store' });
+      if(cur.ok){
+        const rows = await cur.json();
+        const r0 = (rows[0] || {}).record || {};
+        dbHasData = ['tickets','orders','stock','offerTemplates'].some(k => r0[k] && Object.keys(r0[k]).length)
+                    || (r0.clients && r0.clients.length > 0);
+      }
+    }catch(e){}
+    if(dbHasData){
+      bigRedAlert('Η ΑΠΟΘΗΚΕΥΣΗ ΜΠΛΟΚΑΡΙΣΤΗΚΕ για προστασία: αυτή η καρτέλα πήγε να γράψει κενά δεδομένα (χωρίς tickets/παραγγελίες/αποθήκη) πάνω σε γεμάτη βάση — πιθανό ελλιπές φόρτωμα. Κάνε ανανέωση (F5) και ξαναδοκίμασε. Τίποτα δεν σβήστηκε.');
+      throw new Error('Μπλοκαρίστηκε εγγραφή κενών δεδομένων πάνω σε γεμάτη βάση');
+    }
+  }
 
   const mainSlice = Object.assign({}, record);
   delete mainSlice.offers;
@@ -10435,6 +10682,7 @@ function updateCombinedBar(){
 
 function offerStage(o){
   if(o.approved) return 'approved';
+  if(o.data && o.data.rejectedAt) return 'rejected';
   return (o.data && o.data.sentAt) ? 'sent' : 'draft';
 }
 
@@ -10462,8 +10710,15 @@ function offerStatusBadge(o){
       title="Στάλθηκε ${esc(when)}. Η κατάσταση αλλάζει μέσα από την προσφορά.">📤 Στάλθηκε / Αναμονή απάντησης</span>`;
   }
 
+  if(stage === 'rejected'){
+    const days = daysSince(d.rejectedAt);
+    const when = days === null ? '' : (days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`);
+    return `<span class="ost ost-rejected ost-static"
+      title="Απορρίφθηκε ${esc(when)}. Δεξί κλικ για αλλαγή κατάστασης.">✗ Απορρίφθηκε</span>`;
+  }
+
   return `<span class="ost ost-draft ost-static"
-    title="Δεν έχει σταλεί ακόμα. Η κατάσταση αλλάζει μέσα από την προσφορά.">📝 Προς υπολογισμό</span>`;
+    title="Δεν έχει σταλεί ακόμα. Δεξί κλικ για αλλαγή κατάστασης.">📝 Προς υπολογισμό</span>`;
 }
 
 function offerListQty(o){
@@ -10539,7 +10794,7 @@ function renderOfferTable(){
         <td style="font-weight:600;">${esc(o.label)}</td>
         <td>${esc(d.title||'')}</td>
         <td style="text-align:right;" title="${esc(offerListQty(o).title)}">${esc(offerListQty(o).text)}</td>
-        <td onclick="event.stopPropagation()">${offerStatusBadge(o)}</td>
+        <td onclick="event.stopPropagation()" oncontextmenu="openOfferStageMenu(event, '${o.id}')">${offerStatusBadge(o)}</td>
         <td style="text-align:right;">${totalStr}</td>
         <td style="white-space:nowrap;" onclick="event.stopPropagation()">
           <button class="btn" title="Αντιγραφή (νέα προσφορά με ίδια στοιχεία)" onclick="duplicateOffer('${o.id}')" style="padding:5px 8px;">⧉</button>
@@ -11858,6 +12113,10 @@ async function saveTicketInner(){
       ticketObj.labels = [...(ticketObj.labels||[]), ...rulesAdd];
     }
     await jbMergePath(SLICE_MAIN, ['tickets', id], ticketObj);
+
+    // Το deadline του κύριου ticket καθορίζει τον μήνα τιμολόγησης της
+    // δεμένης εγκεκριμένης προσφοράς στο Forecasting.
+    await syncForecastMonthFromTicket(data, record);
 
     // A client typed straight into a ticket has to join the list too, otherwise
     // it never appears in the Πελάτες tab or in any client dropdown.
@@ -13253,7 +13512,14 @@ async function setOfferApproved(id, approved){
       const data = offer.data || {};
       const amount = num(offer.approvedTotal) || num(offer.total) || num(offer.computedTotal) || 0;
       const fcId = 'fc' + Date.now();
-      record.forecast[fcId] = { client: offer.label || data.client || '', job: data.title || '', amount, month: '', notes: 'Αυτόματα από έγκριση προσφοράς', status: 'pending', invoicedDate: '' };
+      // Αν έχει ήδη ανοίξει το κύριο ticket της δουλειάς με deadline, ο μήνας
+      // τιμολόγησης έρχεται από εκεί από την πρώτη στιγμή.
+      let month = '', monthAuto = false;
+      const mainTicket = Object.values(record.tickets || {}).find(t =>
+        t && !t.archived && t.data && t.data.offerId === id && !t.data.isLinkChild
+        && /^\d{4}-\d{2}/.test(String(t.data.deadline || '')));
+      if(mainTicket){ month = String(mainTicket.data.deadline).slice(0, 7); monthAuto = true; }
+      record.forecast[fcId] = { client: offer.label || data.client || '', job: data.title || '', amount, month, monthAuto, notes: 'Αυτόματα από έγκριση προσφοράς', status: 'pending', invoicedDate: '' };
       offer.forecastId = fcId;
       await jbPutRecord(record);
       statusMsg('Εγκρίθηκε και προστέθηκε στο Forecasting ✓' + (amount>0 ? '' : ' — πρόσεξε, το ποσό ήταν 0€.'));
@@ -13278,24 +13544,113 @@ async function setOfferApproved(id, approved){
   }
 }
 
+// ===== Αλλαγή σταδίου από παντού =====
+// Το αριστερό κλικ στη λίστα παραμένει αβλαβές (άνοιγμα προσφοράς)· το δεξί
+// κλικ πάνω στην κατάσταση — στη λίστα ή στο κουμπί μέσα στη φόρμα — ανοίγει
+// μενού με τα τρία στάδια. Η έγκριση μένει επίτηδες εκτός μενού: περνά από
+// τη δική της ροή (επιλογή ποσότητας, Forecasting) μέσα στην προσφορά.
+async function setOfferStage(id, stage){
+  try{
+    const record = await jbGetRecord();
+    const o = record.offers[id];
+    if(!o) return;
+    if(o.approved){
+      statusMsg('Η προσφορά είναι εγκεκριμένη — αναίρεσε πρώτα την έγκριση μέσα από την προσφορά.');
+      return;
+    }
+    o.data = o.data || {};
+    if(stage === 'rejected'){
+      o.data.rejectedAt = new Date().toISOString();
+    } else if(stage === 'sent'){
+      o.data.rejectedAt = '';
+      o.data.sentAt = o.data.sentAt || new Date().toISOString();
+    } else {
+      o.data.rejectedAt = '';
+      o.data.sentAt = '';
+    }
+    await jbMergePath(SLICE_OFFERS, ['offers', id], o);
+    const cached = offersCache.find(x => x.id === id);
+    if(cached){ cached.data = cached.data || {}; cached.data.sentAt = o.data.sentAt; cached.data.rejectedAt = o.data.rejectedAt; }
+    if(typeof renderOfferTable === 'function') renderOfferTable();
+    if(currentOfferId === id){
+      window.__currentOfferSentAt = o.data.sentAt || '';
+      window.__currentOfferRejectedAt = o.data.rejectedAt || '';
+      updateStageButton();
+    }
+    statusMsg(stage === 'rejected' ? 'Σημειώθηκε ως απορριφθείσα.'
+            : stage === 'sent' ? 'Σημειώθηκε ως σταλμένη ✓'
+            : 'Επέστρεψε σε Προς υπολογισμό.');
+  }catch(e){
+    console.error('Offer stage error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
+function closeOfferStageMenu(){
+  const m = document.getElementById('ostMenu');
+  if(m) m.remove();
+}
+
+function openOfferStageMenu(ev, id){
+  ev.preventDefault();
+  ev.stopPropagation();
+  closeOfferStageMenu();
+  const o = offersCache.find(x => x.id === id) || (currentOfferId === id ? { approved: document.getElementById('approveBtn').textContent.includes('Εγκρίθηκε') } : null);
+  const approved = !!(o && o.approved);
+  const m = document.createElement('div');
+  m.id = 'ostMenu';
+  m.className = 'ost-menu';
+  m.innerHTML = approved
+    ? `<div class="note">Εγκεκριμένη προσφορά — η κατάσταση αλλάζει μέσα από την προσφορά (κουμπί έγκρισης), ώστε να ενημερωθεί και το Forecasting.</div>`
+    : `<div class="item" onclick="setOfferStage('${id}','draft');closeOfferStageMenu();">📝 Προς υπολογισμό</div>
+       <div class="item" onclick="setOfferStage('${id}','sent');closeOfferStageMenu();">📤 Στάλθηκε / Αναμονή απάντησης</div>
+       <div class="item" onclick="setOfferStage('${id}','rejected');closeOfferStageMenu();">✗ Απορρίφθηκε</div>
+       <div class="note">Η έγκριση γίνεται μέσα από την προσφορά.</div>`;
+  document.body.appendChild(m);
+  const x = Math.min(ev.clientX, window.innerWidth - m.offsetWidth - 8);
+  const y = Math.min(ev.clientY, window.innerHeight - m.offsetHeight - 8);
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+}
+
+document.addEventListener('click', closeOfferStageMenu);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeOfferStageMenu(); });
+
 // The stage is set from inside the offer, where the person who sent it is
 // working — not from the list, where a stray click would rewrite history.
 function updateStageButton(){
   const btn = document.getElementById('stageBtn');
   if(!btn) return;
+  const rejected = !!window.__currentOfferRejectedAt;
   const sent = !!window.__currentOfferSentAt;
+  if(rejected){
+    const days = daysSince(window.__currentOfferRejectedAt);
+    btn.textContent = '✗ Απορρίφθηκε';
+    btn.classList.remove('solid');
+    btn.style.color = '#a12622';
+    btn.title = `Απορρίφθηκε ${days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`}`
+      + ' — κλικ για επαναφορά σε Προς υπολογισμό, δεξί κλικ για όλες τις καταστάσεις';
+    return;
+  }
+  btn.style.color = '';
   const days = sent ? daysSince(window.__currentOfferSentAt) : null;
   btn.textContent = sent ? '📤 Στάλθηκε' : '📝 Προς υπολογισμό';
   btn.classList.toggle('solid', sent);
-  btn.title = sent
+  btn.title = (sent
     ? `Στάλθηκε ${days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`}`
       + ' — κλικ για επαναφορά σε Προς υπολογισμό'
-    : 'Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη';
+    : 'Σημείωσε πότε στάλθηκε η προσφορά στον πελάτη')
+    + ' — δεξί κλικ για όλες τις καταστάσεις';
 }
 
 async function toggleOfferSentInForm(){
   if(!currentOfferId){
     statusMsg('Αποθήκευσε πρώτα την προσφορά.');
+    return;
+  }
+  // Από «Απορρίφθηκε», το αριστερό κλικ γυρίζει σε Προς υπολογισμό.
+  if(window.__currentOfferRejectedAt){
+    await setOfferStage(currentOfferId, 'draft');
     return;
   }
   const sending = !window.__currentOfferSentAt;
@@ -13563,6 +13918,57 @@ function onOrderSelectChange(){
   const btn = document.getElementById('ordersBulkDeleteBtn');
   document.getElementById('ordersSelectedCount').textContent = checked.length;
   btn.style.display = checked.length>0 ? 'inline-flex' : 'none';
+  const eBtn = document.getElementById('ordersEmailBtn');
+  document.getElementById('ordersEmailCount').textContent = checked.length;
+  eBtn.style.display = checked.length>0 ? 'inline-flex' : 'none';
+}
+
+// ===== Email παραγγελίας από τα επιλεγμένα υλικά =====
+// Το κείμενο χτίζεται έτοιμο για προμηθευτή: υλικό με διαστάσεις/γραμμάρια
+// από τη βάση χαρτιών, ποσότητα, και για ποια δουλειά — ομαδοποιημένο ανά
+// προμηθευτή όταν τα επιλεγμένα μοιράζονται σε περισσότερους. Επειδή τα
+// mailto έχουν όριο μήκους σε κάποια προγράμματα, το κείμενο αντιγράφεται
+// ΚΑΙ στο πρόχειρο — αν το email ανοίξει μισό, το επικολλάς.
+function buildOrdersEmail(orders){
+  const today = new Date().toLocaleDateString('el-GR');
+  const subject = `Παραγγελία χαρτιού — ${today}`;
+  const bySupplier = {};
+  orders.forEach(o => {
+    const key = (o.supplier || '').trim() || 'Χωρίς προμηθευτή';
+    (bySupplier[key] = bySupplier[key] || []).push(o);
+  });
+  const lines = ['Καλημέρα,', '', 'Θα θέλαμε να παραγγείλουμε τα παρακάτω:', ''];
+  const suppliers = Object.keys(bySupplier);
+  suppliers.forEach(sup => {
+    if(suppliers.length > 1) lines.push(`— ${sup} —`);
+    bySupplier[sup].forEach(o => {
+      const p = paperByName[o.material];
+      const specs = p ? [' (', [p.w && p.l ? `${p.w}x${p.l}` : '', p.g ? `${num(p.g)}γρ.` : ''].filter(Boolean).join(', '), ')'].join('') : '';
+      const qty = o.sheets ? `${Number(o.sheets).toLocaleString('el-GR')} φύλλα` : '';
+      lines.push(`• ${o.material}${specs}${qty ? ' — ' + qty : ''}`);
+    });
+    lines.push('');
+  });
+  lines.push('Παρακαλούμε επιβεβαιώστε διαθεσιμότητα και χρόνο παράδοσης.', '', 'Ευχαριστούμε');
+  return { subject, body: lines.join('\r\n') };
+}
+
+async function emailSelectedOrders(){
+  const checked = Array.from(document.querySelectorAll('.order-select-check:checked'));
+  if(!checked.length) return;
+  const ids = checked.map(cb => cb.getAttribute('data-order-id'));
+  try{
+    const record = await jbGetRecord();
+    const orders = ids.map(id => record.orders[id]).filter(Boolean);
+    if(!orders.length) return;
+    const { subject, body } = buildOrdersEmail(orders);
+    try{ await navigator.clipboard.writeText(body); }catch(e){}
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    statusMsg('Άνοιξε το email — το κείμενο αντιγράφηκε και στο πρόχειρο ✓');
+  }catch(e){
+    console.error('Email order error:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 async function deleteSelectedOrders(){
@@ -13879,10 +14285,36 @@ function toggleForecastMonthEditPopover(id, anchorEl, currentMonth){
   setTimeout(()=>{ document.addEventListener('click', closeForecastMonthEditPopoverOnClickOutside); }, 0);
 }
 
+// ===== Μήνας τιμολόγησης από το deadline του κύριου ticket =====
+// Το deadline της παράδοσης είναι η καλύτερη πρόβλεψη για το πότε θα κοπεί
+// το τιμολόγιο, οπότε ο μήνας στο Forecasting συμπληρώνεται από εκεί. Ο
+// αυτοματισμός όμως υποχωρεί μπροστά στον άνθρωπο: μήνας που ορίστηκε με το
+// χέρι δεν πατιέται ποτέ (μόνο κενός ή προηγουμένως αυτόματος ενημερώνεται),
+// και ό,τι έχει τιμολογηθεί δεν αγγίζεται.
+async function syncForecastMonthFromTicket(data, record){
+  try{
+    if(!data || !data.offerId || data.isLinkChild) return;
+    const deadline = String(data.deadline || '');
+    if(!/^\d{4}-\d{2}/.test(deadline)) return;
+    const month = deadline.slice(0, 7);
+    const offer = record.offers && record.offers[data.offerId];
+    if(!offer || !offer.forecastId) return;
+    const fc = record.forecast && record.forecast[offer.forecastId];
+    if(!fc || fc.status === 'invoiced') return;
+    if(fc.month && !fc.monthAuto) return;
+    if(fc.month === month) return;
+    fc.month = month;
+    fc.monthAuto = true;
+    await jbMergePath(SLICE_FORECAST, ['forecast', offer.forecastId], fc);
+    if(typeof refreshForecastList === 'function' && document.getElementById('viewForecast').style.display !== 'none') refreshForecastList();
+    statusMsg('Μήνας τιμολόγησης στο Forecasting: ' + month + ' (από το deadline του ticket) ✓');
+  }catch(e){ console.error('Forecast month sync:', e); }
+}
+
 async function setForecastMonth(id, value){
   try{
     const record = await jbGetRecord();
-    if(record.forecast[id]) record.forecast[id].month = value;
+    if(record.forecast[id]){ record.forecast[id].month = value; record.forecast[id].monthAuto = false; }
     await jbPutRecord(record);
     refreshForecastList();
   }catch(e){
@@ -14149,7 +14581,53 @@ async function refreshForecastList(){
   }
   try{
     const record = await jbGetRecord();
-    const fullList = Object.entries(record.forecast).map(([id, o]) => ({ id, ...o }));
+    // Αναδρομικό γέμισμα: οι δουλειές που εγκρίθηκαν ΠΡΙΝ στηθεί η σύνδεση
+    // deadline→μήνας δεν θα περνούσαν ποτέ από το σώσιμο ticket που την
+    // ενεργοποιεί. Κάθε άνοιγμα της οθόνης σαρώνει ό,τι εκκρεμεί χωρίς μήνα
+    // (ή με αυτόματο μήνα) και το συμπληρώνει από το deadline του κύριου
+    // ticket — με τους ίδιους κανόνες: χειροκίνητοι μήνες και τιμολογημένα
+    // δεν αγγίζονται.
+    try{
+      const mainTicketByOffer = {};
+      Object.values(record.tickets || {}).forEach(t => {
+        if(t && !t.archived && t.data && t.data.offerId && !t.data.isLinkChild
+           && /^\d{4}-\d{2}/.test(String(t.data.deadline || '')))
+          mainTicketByOffer[t.data.offerId] = t;
+      });
+      for(const [oid, o] of Object.entries(record.offers || {})){
+        if(!o || !o.forecastId) continue;
+        const fc = record.forecast[o.forecastId];
+        if(!fc || fc.status === 'invoiced') continue;
+        if(fc.month && !fc.monthAuto) continue;
+        const t = mainTicketByOffer[oid];
+        if(!t) continue;
+        const month = String(t.data.deadline).slice(0, 7);
+        if(fc.month === month) continue;
+        fc.month = month;
+        fc.monthAuto = true;
+        await jbMergePath(SLICE_FORECAST, ['forecast', o.forecastId], fc);
+      }
+    }catch(e){ console.error('Forecast month backfill:', e); }
+
+    // Διάγνωση: κάθε εκκρεμής χωρίς μήνα εξηγεί ΓΙΑΤΙ δεν συμπληρώθηκε
+    // αυτόματα — φαίνεται στο πέρασμα του ποντικιού πάνω στο 📅 της.
+    const offerByFc = {};
+    Object.entries(record.offers || {}).forEach(([oid, o]) => { if(o && o.forecastId) offerByFc[o.forecastId] = oid; });
+    const anyMainTicketByOffer = {};
+    Object.values(record.tickets || {}).forEach(t => {
+      if(t && !t.archived && t.data && t.data.offerId && !t.data.isLinkChild) anyMainTicketByOffer[t.data.offerId] = t;
+    });
+    const whyNoMonth = fcId => {
+      const oid = offerByFc[fcId];
+      if(!oid) return 'χειροκίνητη καταχώρηση, δεν δένεται με προσφορά — όρισε μήνα εδώ';
+      const t = anyMainTicketByOffer[oid];
+      if(!t) return 'η προσφορά δεν έχει ακόμα κύριο job ticket — ο μήνας θα έρθει από το deadline του';
+      if(!/^\d{4}-\d{2}/.test(String(t.data.deadline || ''))) return 'το κύριο ticket δεν έχει Deadline — συμπλήρωσέ το εκεί';
+      return 'δεν συμπληρώθηκε — πες το στον προγραμματιστή';
+    };
+
+    const fullList = Object.entries(record.forecast).map(([id, o]) => ({ id, ...o,
+      __why: (o.status !== 'invoiced' && !o.month) ? whyNoMonth(id) : '' }));
 
     // Populate the month filter with every month that actually appears in the data.
     const monthSel = document.getElementById('forecastMonthFilter');
@@ -14240,11 +14718,14 @@ async function refreshForecastList(){
       const noMonth = !month;
       const jobsHtml = jobs.map(o=>{
         const invoiced = o.status === 'invoiced';
+        // Ό,τι δεν γεννήθηκε από έγκριση προσφοράς μπήκε με το χέρι — και
+        // πρέπει να φαίνεται, γιατί δεν έχει προσφορά από πίσω να το τεκμηριώνει.
+        const manual = !String(o.notes || '').includes('Αυτόματα από έγκριση προσφοράς');
         return `
-          <div class="fc-job-row" data-fc-id="${o.id}">
-            <div class="name"><span class="client">${esc(o.client)}</span> — ${esc(o.job || '(χωρίς περιγραφή)')}</div>
+          <div class="fc-job-row${manual ? ' fc-manual' : ''}" data-fc-id="${o.id}">
+            <div class="name"><span class="client">${esc(o.client)}</span> — ${esc(o.job || '(χωρίς περιγραφή)')}${manual ? ' <span class="fc-manual-tag" title="Καταχωρήθηκε με το χέρι — δεν προέρχεται από έγκριση προσφοράς">ΧΕΙΡΟΚΙΝΗΤΗ</span>' : ''}</div>
             <div class="btns">
-              <span class="fc-month-btn" onclick="toggleForecastMonthEditPopover('${o.id}', this, '${esc(o.month||'')}')" title="Μήνας τιμολόγησης: ${o.month ? esc(monthLabel(o.month)) : 'δεν έχει οριστεί'} — κλικ για αλλαγή">📅</span>
+              <span class="fc-month-btn" onclick="toggleForecastMonthEditPopover('${o.id}', this, '${esc(o.month||'')}')" title="Μήνας τιμολόγησης: ${o.month ? esc(monthLabel(o.month)) : 'δεν έχει οριστεί' + (o.__why ? ' — ' + esc(o.__why) : '')} — κλικ για αλλαγή">📅</span>
               <span class="amount">${num(o.amount).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
               <span class="order-badge${invoiced?' received':''}" style="cursor:pointer;" onclick="toggleForecastStatus('${o.id}')" title="Κλικ για εναλλαγή κατάστασης">${invoiced ? 'ΤΙΜΟΛΟΓΗΘΗΚΕ' : 'ΕΚΚΡΕΜΕΙ'}</span>
               <button class="del-link" onclick="deleteForecastJob('${o.id}')">Διαγραφή</button>
@@ -16888,6 +17369,49 @@ async function sendOfferNote(){
 
 // Εγκεκριμένες προσφορές χωρίς παραγγελία χαρτιού. Εγκρίθηκε σημαίνει ότι η
 // δουλειά θα γίνει· αν το χαρτί δεν παραγγέλθηκε, κάποια μέρα θα το ψάχνουμε.
+// ===== Email από τα εκκρεμή υλικά της κάρτας =====
+// Ανεξάρτητο από τα κουτάκια «παραγγέλθηκε»: εδώ επιλέγεις μόνο τι θα γραφτεί
+// στο email — τίποτα δεν μαρκάρεται ως παραγγελμένο.
+function togglePmEmailPanel(){
+  const panel = document.getElementById('pmEmailPanel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if(!open) return;
+  const items = [];
+  (window.__pmPending || []).forEach(p => {
+    p.papers.filter(n => !p.ordered.includes(n)).forEach(n => {
+      items.push({ material: n, sheets: p.needs[n] || '', job: [p.client, p.title].filter(Boolean).join(' — ') });
+    });
+  });
+  document.getElementById('pmEmailItems').innerHTML = items.length
+    ? items.map((it, i) => `<label style="display:grid;grid-template-columns:22px minmax(0,2fr) 80px minmax(0,1.4fr);gap:6px;align-items:center;padding:3px 2px;cursor:pointer;font-size:12.5px;text-align:left;">
+        <input type="checkbox" class="pm-email-check" checked data-i="${i}" onchange="updatePmEmailCount()" style="margin:0;justify-self:start;">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.material)}</span>
+        <b style="justify-self:start;">${it.sheets ? Number(it.sheets).toLocaleString('el-GR') + ' φ.' : '—'}</b>
+        <span class="empty-note" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.job)}</span>
+      </label>`).join('')
+    : '<div class="empty-note">Δεν υπάρχουν εκκρεμή υλικά — όλα έχουν παραγγελθεί ✓</div>';
+  window.__pmEmailItems = items;
+  updatePmEmailCount();
+}
+
+function updatePmEmailCount(){
+  const n = document.querySelectorAll('.pm-email-check:checked').length;
+  document.getElementById('pmEmailCount').textContent = n;
+  document.getElementById('pmEmailGoBtn').style.display = n ? '' : 'none';
+}
+
+async function emailPendingMaterials(){
+  const items = (window.__pmEmailItems || []);
+  const picked = Array.from(document.querySelectorAll('.pm-email-check:checked'))
+    .map(cb => items[Number(cb.dataset.i)]).filter(Boolean);
+  if(!picked.length) return;
+  const { subject, body } = buildOrdersEmail(picked.map(it => ({ material: it.material, sheets: it.sheets, job: it.job, supplier: '' })));
+  try{ await navigator.clipboard.writeText(body); }catch(e){}
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  statusMsg('Άνοιξε το email — το κείμενο αντιγράφηκε και στο πρόχειρο ✓');
+}
+
 async function refreshPendingMaterialsBar(){
   const card = document.getElementById('pendingMaterialsCard');
   const list = document.getElementById('pendingMaterialsList');
@@ -16906,6 +17430,7 @@ async function refreshPendingMaterialsBar(){
         ordered: o.orderedPapers || [] }))
       .sort((a, b) => String(a.when).localeCompare(String(b.when)));
 
+    window.__pmPending = pending;
     if(!pending.length){ card.style.display = 'none'; list.innerHTML = ''; return; }
     card.style.display = '';
     if(count) count.textContent = `${pending.length} ${pending.length === 1 ? 'προσφορά' : 'προσφορές'}`;
