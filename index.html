@@ -320,6 +320,11 @@
   .ost-sent{background:#eaf1fe;color:#1f4f9e;border-color:#cfe0fb;}
   .ost-approved{background:#e6f4ec;color:#0e6b3a;border-color:#c9e6d6;}
   .ost-rejected{background:#fdecea;color:#a12622;border-color:#f2c9c5;}
+  .kanban-paper-chip{font-size:10px;border-radius:5px;padding:1px 6px;font-weight:700;white-space:nowrap;}
+  .kanban-paper-chip.ok{background:#e6f4ec;color:#0e6b3a;border:1px solid #c9e6d6;}
+  .kanban-paper-chip.wait{background:#fdf1e3;color:#a2601d;border:1px solid #f2ddc0;}
+  .tk-paper-status{margin-top:8px;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--page);}
+  .tk-paper-status .row{display:flex;gap:8px;align-items:baseline;padding:2px 0;}
   .ost-menu{position:fixed;z-index:3000;background:#fff;border:1px solid var(--line);
     border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,0.18);min-width:230px;overflow:hidden;font-size:13px;}
   .ost-menu .item{padding:9px 14px;cursor:pointer;}
@@ -1883,7 +1888,10 @@ function toggleMobileSidebar(forceClose){
 
   <div id="viewTicketForm" style="display:none;">
     <div class="topbar" style="margin-bottom:16px;">
-      <div><span id="ticketDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:5px 9px;border-radius:10px;">● Αποθήκευση...</span></div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn" onclick="toggleTkPaperStatus()" title="Τι έχει παραγγελθεί και τι έχει παραληφθεί για τα χαρτιά αυτής της δουλειάς">📄 Κατάσταση χαρτιών</button>
+        <span id="ticketDirtyBadge" style="display:none;font-size:11px;font-weight:700;color:#2f6fed;background:#eaf1fe;padding:5px 9px;border-radius:10px;">● Αποθήκευση...</span>
+      </div>
       <div class="actions">
         <span style="position:relative;">
           <button class="btn" id="tkTemplateBtn" onclick="toggleTemplateMenu(event)" title="Έτοιμα στήσιμα για δουλειές που επαναλαμβάνονται">📋 Πρότυπα</button>
@@ -1902,6 +1910,7 @@ function toggleMobileSidebar(forceClose){
       <button class="btn" onclick="unlockTicketForm()">Ξεκλείδωμα</button>
     </div>
     <div id="tmplReviewBanner" style="display:none;"></div>
+    <div id="tkPaperStatusBox" class="tk-paper-status" style="display:none;margin:0 0 14px;"></div>
     <div id="linkedTicketsIndicator" style="display:none;"></div>
     <div class="card">
       <div class="card-head"><div class="title">Στοιχεία Job Ticket</div></div>
@@ -2086,28 +2095,24 @@ function toggleMobileSidebar(forceClose){
     <div class="card" id="pendingMaterialsCard" style="display:none;">
       <div class="card-head">
         <div class="title">📦 Εκκρεμείς Παραγγελίες Χαρτιού</div>
-        <span style="display:flex;gap:10px;align-items:center;">
+        <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span class="empty-note" id="pendingMaterialsCount"></span>
-          <button class="btn" onclick="togglePmEmailPanel()">📧 Email Παραγγελίας</button>
+          <button class="btn" onclick="togglePmEmailPanel('email')">📧 Email Παραγγελίας</button>
+          <button class="btn" onclick="togglePmEmailPanel('orders')" title="Τσεκάρεις υλικά και δημιουργούνται εκκρεμείς παραγγελίες μαζικά">📦 Δημιουργία Παραγγελιών</button>
+          <button class="btn solid" onclick="toggleNewOrderPanel()">+ Νέα Παραγγελία</button>
         </span>
       </div>
       <div class="card-body">
         <div id="pmEmailPanel" style="display:none;margin-bottom:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--page);">
-          <div class="empty-note" style="margin-bottom:8px;">Διάλεξε ποια από τα εκκρεμή υλικά θα μπουν στο email — όλα προεπιλεγμένα, ξετσέκαρε ό,τι δεν θες. (Δεν αλλάζει το «παραγγέλθηκε» — μόνο το email φτιάχνει.)</div>
+          <div class="empty-note" style="margin-bottom:8px;">Διάλεξε υλικά (όλα προεπιλεγμένα) και διόρθωσε τα φύλλα όπου χρειάζεται — ο αριθμός που γράφεις ισχύει και για το email και για τις παραγγελίες. Το «Δημιουργία Παραγγελιών» φτιάχνει εκκρεμείς παραγγελίες και μαρκάρει τα χαρτιά ως παραγγελθέντα, όπως το μονό 📦.</div>
           <div id="pmEmailItems" style="max-height:260px;overflow:auto;"></div>
-          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-            <button class="btn solid" id="pmEmailGoBtn" onclick="emailPendingMaterials()">📧 Άνοιγμα Email (<span id="pmEmailCount">0</span>)</button>
+          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn solid" id="pmEmailGoBtn" onclick="emailPendingMaterials()">📧 Αποστολή Email (<span id="pmEmailCount">0</span>)</button>
+            <button class="btn solid" id="pmOrderGoBtn" style="display:none;" onclick="createPendingOrdersFromPanel()">📦 Δημιουργία Παραγγελιών (<span id="pmOrderCount">0</span>)</button>
             <button class="btn" onclick="togglePmEmailPanel()">Κλείσιμο</button>
           </div>
         </div>
-        <div id="pendingMaterialsList"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div class="title">Παραγγελίες Υλικών</div>
-        <button class="btn solid" onclick="toggleNewOrderPanel()">+ Νέα Παραγγελία</button>
-      </div>
-      <div id="newOrderPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div id="newOrderPanel" style="display:none;padding:14px 16px;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;background:var(--page);">
         <div class="fieldgrid c2">
           <div class="field"><label>Ημερομηνία παραγγελίας</label><input id="ordDate" type="date"></div>
           <div class="field"><label>Δουλειά / Έργο</label><input id="ordJob" list="orderJobOptions" placeholder="π.χ. Έργο Παπαδόπουλος, ή 'Αποθήκη'"><datalist id="orderJobOptions"></datalist></div>
@@ -2160,6 +2165,12 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" onclick="toggleNewOrderPanel()">Κλείσιμο</button>
         </div>
       </div>
+        <div id="pendingMaterialsList"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">Παραγγελίες Υλικών</div></div>
+      
       <div class="card-body">
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <button class="btn ord-filter-btn" data-filter="all" onclick="setOrdersFilter('all')">Όλες</button>
@@ -2747,6 +2758,18 @@ function toggleMobileSidebar(forceClose){
             <input type="checkbox" id="autoBackupDownload" onchange="localStorage.setItem('ff_auto_backup_dl', this.checked ? '1' : '0')">
             Αυτόματη λήψη αντιγράφου στις Λήψεις, μία φορά την ημέρα (από αυτόν τον υπολογιστή)
           </label>
+          <label style="font-size:12.5px;display:flex;gap:8px;align-items:center;margin-top:8px;">
+            Αυτόματη αποσύνδεση και καθάρισμα καρτέλας μετά από
+            <select id="autoLogoutHours" onchange="localStorage.setItem('ff_auto_logout_hours', this.value)" style="width:110px;">
+              <option value="0">ποτέ</option>
+              <option value="4">4 ώρες</option>
+              <option value="8">8 ώρες</option>
+              <option value="12" selected>12 ώρες</option>
+              <option value="24">24 ώρες</option>
+            </select>
+            αδράνειας
+          </label>
+          <div class="empty-note" style="margin:2px 0 8px;">Ξεχασμένη καρτέλα με παλιά δεδομένα στη μνήμη είναι ό,τι προκάλεσε την απώλεια της 25/9 — μετά το όριο, η καρτέλα αποσυνδέεται και ξαναφορτώνει καθαρή.</div>
           <div class="empty-note" style="margin:6px 0 4px;">Ανεξάρτητα από τη λήψη, το πρόγραμμα κρατά αυτόματα καθημερινό στιγμιότυπο ΚΑΙ μέσα στον browser (τα τελευταία 10) — για γρήγορη επαναφορά ακόμα κι αν χαθεί ό,τι υπάρχει στη βάση:</div>
           <div id="autoSnapshotsList" class="empty-note">—</div>
         </div>
@@ -9348,6 +9371,8 @@ function switchView(view){
   if(view==='settings'){
     const cb = document.getElementById('autoBackupDownload');
     if(cb) cb.checked = localStorage.getItem('ff_auto_backup_dl') === '1';
+    const sel = document.getElementById('autoLogoutHours');
+    if(sel) sel.value = String(ffAutoLogoutHours());
     renderAutoSnapshots();
   }
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
@@ -9496,6 +9521,8 @@ async function maybeDailyBackup(record){
     // Κράτα μόνο τα 10 πιο πρόσφατα ημερήσια
     const all = (await snapList()).filter(s => s.key.startsWith('day_'));
     for(const s of all.slice(10)) await snapDelete(s.key);
+    const pre = (await snapList()).filter(s => s.key.startsWith('pre_restore'));
+    for(const s of pre.slice(5)) await snapDelete(s.key);
     localStorage.setItem('ff_last_snap_day', today);
     if(localStorage.getItem('ff_auto_backup_dl') === '1'){
       const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
@@ -9566,6 +9593,13 @@ async function exportFullBackup(){
   const statusEl = document.getElementById('backupStatus');
   try{
     const record = await jbGetRecord();
+    // Ποτέ εξαγωγή μισού αντιγράφου: αν αυτή η καρτέλα δεν κατάφερε να
+    // διαβάσει την κύρια φέτα, το «αντίγραφο ασφαλείας» θα ήταν παγίδα.
+    if(record.__mainMissing){
+      statusEl.textContent = 'Η καρτέλα δεν βλέπει πλήρη δεδομένα αυτή τη στιγμή — κάνε ανανέωση (F5) και ξαναδοκίμασε. Δεν κατέβηκε τίποτα.';
+      bigRedAlert('Η ΛΗΨΗ ΑΝΤΙΓΡΑΦΟΥ ΑΚΥΡΩΘΗΚΕ: αυτή η καρτέλα έχει φορτώσει ελλιπή δεδομένα (πιθανό πρόβλημα σύνδεσης). Κάνε F5 και ξαναδοκίμασε.');
+      return;
+    }
     const json = JSON.stringify(record, null, 2);
     const blob = new Blob([json], {type:'application/json;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -9643,6 +9677,7 @@ let readableSlices = { offers:false, forecast:false };
 // just happened is reused instead of repeated. Any write clears it at once, so a
 // stale copy is never served.
 let jbCache = null, jbCacheAt = 0, jbCachePromise = null;
+let jbSliceStamp = {};
 // 8s αντί 1.5s: κάθε αστοχία της cache κατεβάζει ΟΛΟΚΛΗΡΟ το record, οπότε οι
 // απανωτές ενέργειες μιας ροής μοιράζονται ένα κατέβασμα. Οι γραφές ακυρώνουν
 // την cache (jbInvalidate), άρα ο χρήστης βλέπει πάντα ό,τι μόλις έκανε· το
@@ -9673,12 +9708,16 @@ async function jbFetchRecord(){
   // Fetch every row/slice the current user's RLS allows — restricted slices
   // (offers, forecast) simply won't come back at all if unauthorized, and we
   // merge whatever we DO get into one combined object, exactly like before.
-  const res = await fetch(`${url}/rest/v1/app_data?select=record`, {
+  const res = await fetch(`${url}/rest/v1/app_data?select=id,record,updated_at`, {
     headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` },
     cache: 'no-store'
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const rows = await res.json();
+  // Χρονοσφραγίδα ανά φέτα: η επόμενη ολική εγγραφή θα γίνει δεκτή μόνο αν η
+  // βάση είναι ΑΚΟΜΑ όπως τη διαβάσαμε — αλλιώς κάποιος άλλος έγραψε πρώτος
+  // και δεν πατάμε τη δουλειά του (η ρίζα του περιστατικού της 25/9).
+  rows.forEach(row => { if(row && row.id !== undefined && row.updated_at) jbSliceStamp[row.id] = row.updated_at; });
   let record = {};
   readableSlices = { offers:false, forecast:false };
   rows.forEach(row => {
@@ -9786,6 +9825,45 @@ async function jbFallbackWrite(sliceId, path, value, isDelete){
 }
 
 const SLICE_MAIN = 1, SLICE_OFFERS = 2, SLICE_FORECAST = 3;
+// Το ιστορικό κινήσεων αποθήκης ζει μέσα στο κύριο record (που κατεβαίνει
+// συχνά), γι' αυτό δεν είναι εντελώς απεριόριστο — αλλά οι 1000 κινήσεις
+// (από 200) καλύπτουν χρόνια δουλειάς με αμελητέο βάρος (~150KB).
+const STOCK_LOG_MAX = 1000;
+
+// ===== Αυτόματη αποσύνδεση αδρανούς καρτέλας =====
+// Η απώλεια της 25/9 ξεκίνησε από καρτέλα ανοιχτή επί μέρες, με οκταήμερο
+// αντίγραφο δεδομένων στη μνήμη της. Μετά από Χ ώρες χωρίς καμία ενέργεια,
+// η καρτέλα αποσυνδέεται ΚΑΙ ξαναφορτώνει — φεύγει και η παλιά συνεδρία και
+// (το κυριότερο) το μπαγιάτικο αντίγραφο. Η αδράνεια μετράει από το τελευταίο
+// κλικ/πλήκτρο, οπότε όσο δουλεύεις δεν σε αγγίζει ποτέ.
+let ffLastActivity = Date.now();
+['pointerdown', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, () => { ffLastActivity = Date.now(); }, { passive: true, capture: true }));
+
+function ffAutoLogoutHours(){
+  const v = localStorage.getItem('ff_auto_logout_hours');
+  return v === null ? 12 : Number(v);   // προεπιλογή 12 ώρες — καλύπτει το ξεχασμένο βράδυ
+}
+
+async function ffDoAutoLogout(){
+  try{ if(supabaseAuthClient) await supabaseAuthClient.auth.signOut(); }catch(e){}
+  try{ localStorage.setItem('ff_auto_logout_at', new Date().toISOString()); }catch(e){}
+  window.location.reload();
+}
+
+function checkAutoLogout(){
+  const hours = ffAutoLogoutHours();
+  if(!hours) return false;
+  if(Date.now() - ffLastActivity > hours * 3600 * 1000){
+    ffDoAutoLogout();
+    return true;
+  }
+  return false;
+}
+setInterval(checkAutoLogout, 60 * 1000);
+// Οι κρυφές καρτέλες παγώνουν τα χρονόμετρα — ο έλεγχος τρέχει και τη στιγμή
+// που η καρτέλα ξαναγίνεται ορατή, πριν προλάβει να κάνει οτιδήποτε άλλο.
+document.addEventListener('visibilitychange', () => { if(!document.hidden) checkAutoLogout(); });
 
 // Συναγερμός που μένει στην οθόνη μέχρι να τον κλείσεις — για γεγονότα που
 // ΔΕΝ επιτρέπεται να περάσουν σαν ψιλό μήνυμα κάτω δεξιά.
@@ -9839,10 +9917,27 @@ async function jbPutRecord(record, opts){
   delete mainSlice.offers;
   delete mainSlice.forecast;
 
-  const mainRes = await fetch(`${url}/rest/v1/app_data?id=eq.1`, {
-    method: 'PATCH', headers, body: JSON.stringify({ record: mainSlice, updated_at: now })
+  // Σφραγίδα χρόνου: «γράψε ΜΟΝΟ αν η γραμμή είναι ακόμα όπως τη διάβασα».
+  // Αν στο μεταξύ έγραψε άλλος υπολογιστής, η βάση δεν ταιριάζει καμία γραμμή,
+  // η εγγραφή ΔΕΝ γίνεται, και ο χρήστης ειδοποιείται να φρεσκάρει — αντί να
+  // πατηθεί σιωπηλά η δουλειά του άλλου (ο μηχανισμός της απώλειας της 25/9).
+  let mainUrl = `${url}/rest/v1/app_data?id=eq.1`;
+  const stampCheck = !force && jbSliceStamp[1];
+  if(stampCheck) mainUrl += `&updated_at=eq.${encodeURIComponent(jbSliceStamp[1])}`;
+  const mainHeaders = stampCheck ? Object.assign({}, headers, { 'Prefer': 'return=minimal, count=exact' }) : headers;
+  const mainRes = await fetch(mainUrl, {
+    method: 'PATCH', headers: mainHeaders, body: JSON.stringify({ record: mainSlice, updated_at: now })
   });
   if(!mainRes.ok) throw new Error('HTTP ' + mainRes.status);
+  if(stampCheck && mainRes.headers && typeof mainRes.headers.get === 'function'){
+    const range = mainRes.headers.get('content-range') || '';
+    const total = range.split('/')[1];
+    if(total === '0'){
+      bigRedAlert('Η ΑΠΟΘΗΚΕΥΣΗ ΔΕΝ ΕΓΙΝΕ: τα δεδομένα άλλαξαν από άλλον υπολογιστή μετά την τελευταία ανάγνωση αυτής της καρτέλας. Κάνε ανανέωση (F5) για να δεις την τρέχουσα εικόνα και ξαναδοκίμασε. Τίποτα δεν πατήθηκε.');
+      throw new Error('Σύγκρουση εκδόσεων — η βάση άλλαξε από άλλη καρτέλα');
+    }
+  }
+  jbSliceStamp[1] = now;
 
   // Only write back the restricted slices we were actually able to READ.
   // A user without permission never touches them at all — this way a save can
@@ -9852,6 +9947,7 @@ async function jbPutRecord(record, opts){
       await fetch(`${url}/rest/v1/app_data?id=eq.2`, {
         method: 'PATCH', headers, body: JSON.stringify({ record: { offers: record.offers || {} }, updated_at: now })
       });
+      jbSliceStamp[2] = now;
     }catch(e){ console.error('Offers slice write failed:', e); }
   }
   if(readableSlices.forecast){
@@ -9859,6 +9955,7 @@ async function jbPutRecord(record, opts){
       await fetch(`${url}/rest/v1/app_data?id=eq.3`, {
         method: 'PATCH', headers, body: JSON.stringify({ record: { forecast: record.forecast || {} }, updated_at: now })
       });
+      jbSliceStamp[3] = now;
     }catch(e){ console.error('Forecast slice write failed:', e); }
   }
 
@@ -11049,8 +11146,7 @@ async function consumeTicketPaper(){
       });
       r.consumed = true;
     }
-    record.stockLog = record.stockLog.slice(0, 200);
-    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     renderTkPaper();
     markTicketDirty();
@@ -11140,8 +11236,7 @@ async function postLeftoverToStock(rowId){
       id: 'stk'+Date.now(), paper, type:'add', qty, unit: stockOf(paper).unit,
       note: `Περίσσευμα από «${jobName}»`, date: new Date().toISOString()
     });
-    record.stockLog = record.stockLog.slice(0, 200);
-    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     // Mark it posted so the same sheets can't be added to stock twice.
     r.leftoverPosted = true;
@@ -12157,6 +12252,74 @@ async function saveTicketInner(){
   }
 }
 
+// ===== Κατάσταση χαρτιών ανά job ticket =====
+// Καμία νέα καταχώρηση: η αλήθεια ζει ήδη στις Παραγγελίες Υλικών (υλικό,
+// εκκρεμής/παραλήφθηκε, δεσμός με προσφορά). Εδώ απλώς διαβάζεται μέσω του
+// δεσμού ticket→προσφορά και ανά χαρτί του ticket προκύπτει:
+// ✓ παραλήφθηκε · 📦 σε αναμονή · ⏳ δεν παραγγέλθηκε.
+function ticketPaperStatus(data, record){
+  const papers = [...new Set((data && data.paperRows || [])
+    .map(r => String(r.xarti || '').trim()).filter(Boolean))];
+  if(!papers.length) return null;
+  const offerId = data.offerId || '';
+  const orders = offerId
+    ? Object.entries(record.orders || {}).filter(([, o]) => o && o.offerId === offerId)
+    : [];
+  const rows = papers.map(name => {
+    const rel = orders.filter(([, o]) => String(o.material || '').trim() === name);
+    const received = rel.find(([, o]) => o.status === 'received');
+    const pending = rel.find(([, o]) => o.status !== 'received');
+    const po = pending ? pending[1] : null;
+    return { name,
+      state: received ? 'received' : (pending ? 'pending' : 'none'),
+      date: received ? (received[1].receivedDate || '') : '',
+      partial: po && num(po.receivedQty) > 0
+        ? `${num(po.receivedQty).toLocaleString('el-GR')}/${num(po.sheets).toLocaleString('el-GR')}` : '',
+      orderId: pending ? pending[0] : '' };
+  });
+  const received = rows.filter(r => r.state === 'received').length;
+  return { rows, received, total: rows.length,
+           linked: !!offerId,
+           allOk: rows.length > 0 && received === rows.length };
+}
+
+function paperStateLabel(r){
+  return r.state === 'received' ? ('✓ παραλήφθηκε' + (r.date ? ' ' + fmtDateShort(String(r.date).slice(0,10)) : ''))
+       : r.state === 'pending' ? ('📦 σε αναμονή' + (r.partial ? ` (${r.partial})` : ''))
+       : '⏳ δεν παραγγέλθηκε';
+}
+
+async function toggleTkPaperStatus(){
+  const box = document.getElementById('tkPaperStatusBox');
+  if(!box) return;
+  if(box.style.display !== 'none'){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  try{
+    const record = await jbGetRecord();
+    const data = collectTicket();   // η ζωντανή φόρμα — πιάνει και αποθηκευμένα και τρέχοντα χαρτιά
+    const ps = ticketPaperStatus(data, record);
+    box.style.display = '';
+    if(!ps){
+      box.innerHTML = '<div class="empty-note" style="margin:0;">Το ticket δεν έχει γραμμές χαρτιού.</div>';
+      return;
+    }
+    box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-weight:700;">Κατάσταση χαρτιών ${
+          ps.allOk ? '<span class="kanban-paper-chip ok">Χαρτί ΟΚ ✓</span>'
+                   : `<span class="kanban-paper-chip wait">📦 ${ps.received}/${ps.total}</span>`}</span>
+        <span style="cursor:pointer;font-weight:700;padding:0 4px;" onclick="toggleTkPaperStatus()">×</span>
+      </div>`
+      + ps.rows.map(r => `<div class="row"><span style="min-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</span><span>${esc(paperStateLabel(r))}</span>${
+          r.state === 'pending' && r.orderId
+            ? `<button class="btn" style="padding:1px 8px;font-size:11px;" onclick="receivePaperFromTicket('${esc(r.orderId)}')">✓ Παραλήφθηκε</button>`
+            : ''}</div>`).join('')
+      + (ps.linked ? '<div class="empty-note" style="margin:4px 0 0;">Βάσει των παραγγελιών που έγιναν μέσα από το πρόγραμμα — παλιότερες δουλειές με παραγγελίες εκτός συστήματος μπορεί να δείχνουν «δεν παραγγέλθηκε».</div>'
+                   : '<div class="empty-note" style="margin:4px 0 0;">Το ticket δεν συνδέεται με προσφορά — οι παραγγελίες δεν μπορούν να ταιριαχτούν αυτόματα.</div>');
+  }catch(e){
+    box.style.display = '';
+    box.innerHTML = '<div class="empty-note" style="margin:0;">Σφάλμα: ' + esc(e.message) + '</div>';
+  }
+}
+
 async function loadTicket(id, locked){
   // The machine list may not be fetched yet if a ticket is the first thing opened.
   if(!window.__machineList){
@@ -12167,6 +12330,8 @@ async function loadTicket(id, locked){
     const t = record.tickets[id];
     if(!t){ statusMsg('Δεν βρέθηκε'); return; }
     applyTicketData(t.data, t.deadlineDate);
+    const psBox = document.getElementById('tkPaperStatusBox');
+    if(psBox){ psBox.style.display = 'none'; psBox.innerHTML = ''; }
     currentTicketId = id;
     switchView('ticketform');
     // The stage lives on the ticket record, not in the form, so it's carried
@@ -13828,6 +13993,74 @@ function setOrdersFilter(f){
 
 // Οι ετικέτες «⏳ Αναμονή χαρτί» και «✓ Χαρτί ΟΚ» μπαίνουν μόνες τους: κανείς δεν
 // θυμάται να τις αλλάξει, και μια δουλειά που περιμένει χαρτί μοιάζει έτοιμη.
+// Παραλαβή με ένα κλικ μέσα από το job ticket: περνά από την ίδια ακριβώς
+// markOrderReceived με τη λίστα Παραγγελιών — απόθεμα, ιστορικό αποθήκης και
+// ειδοποιήσεις συμπεριφέρονται πανομοιότυπα από όπου κι αν γίνει το κλικ.
+async function receivePaperFromTicket(orderId){
+  await markOrderReceived(orderId);
+  const box = document.getElementById('tkPaperStatusBox');
+  if(box && box.style.display !== 'none'){
+    box.style.display = 'none';
+    await toggleTkPaperStatus();   // ξαναχτίζεται με τη νέα κατάσταση
+  }
+}
+
+// ===== Μερική παραλαβή =====
+// Ήρθαν 600 από τα 850; Καταγράφεται η μερική ποσότητα (μπαίνει στο απόθεμα
+// με το δικό της ίχνος στο ιστορικό), η παραγγελία μένει ΕΚΚΡΕΜΗΣ δείχνοντας
+// «Παραλαβή 600/850», και προτείνεται συμπληρωματική παραγγελία για το
+// υπόλοιπο — ώστε το έλλειμμα να μη χαθεί σε ένα σημείωμα.
+async function receiveOrderPartial(id){
+  try{
+    const record = await jbGetRecord();
+    const order = record.orders[id];
+    if(!order) return;
+    const total = num(order.sheets);
+    const already = num(order.receivedQty || 0);
+    const remaining = Math.max(0, total - already);
+    const ans = prompt(`Πόσα παραλήφθηκαν τώρα; (εκκρεμούν ${remaining.toLocaleString('el-GR')} από ${total.toLocaleString('el-GR')})`, remaining || '');
+    if(ans === null) return;
+    const got = num(ans);
+    if(!(got > 0)){ statusMsg('Γράψε ποσότητα μεγαλύτερη από 0.'); return; }
+    if(total > 0 && got >= remaining){
+      // Ήρθαν όλα (ή και παραπάνω) — κανονική πλήρης παραλαβή.
+      await markOrderReceived(id);
+      return;
+    }
+    order.receivedQty = already + got;
+    const unit = order.unit || 'φύλλα';
+    if(order.material && findPaper(order.material)){
+      await addStock(order.material, got, unit);
+      record.stockLog = Array.isArray(record.stockLog) ? record.stockLog : [];
+      record.stockLog.unshift({
+        id: 'stk' + Date.now(), paper: order.material, type: 'add', qty: got, unit,
+        note: `Μερική παραλαβή (${order.receivedQty.toLocaleString('el-GR')}/${total.toLocaleString('el-GR')})${order.supplier ? ' από ' + order.supplier : ''}${order.job ? ' — ' + order.job : ''}`,
+        date: new Date().toISOString()
+      });
+      record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    }
+    await jbMergePath(SLICE_MAIN, ['orders', id], order);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog || []);
+    statusMsg(`Μερική παραλαβή ✓ — ${order.receivedQty.toLocaleString('el-GR')}/${total.toLocaleString('el-GR')} ${unit}`);
+    const left = total - order.receivedQty;
+    if(left > 0 && confirm(`Εκκρεμούν ακόμα ${left.toLocaleString('el-GR')} ${unit}.\n\nΝα δημιουργηθεί ΣΥΜΠΛΗΡΩΜΑΤΙΚΗ παραγγελία για το υπόλοιπο;`)){
+      record.orders['o' + Date.now()] = {
+        date: todayISO(), job: order.job || '', material: order.material, sheets: left,
+        supplier: order.supplier || '', unit,
+        notes: `Συμπληρωματική — έλλειμμα παραλαβής (ήρθαν ${order.receivedQty.toLocaleString('el-GR')}/${total.toLocaleString('el-GR')})`,
+        status: 'pending', receivedDate: '', offerId: order.offerId || ''
+      };
+      await jbMergePath(SLICE_MAIN, ['orders'], record.orders);
+      statusMsg('Δημιουργήθηκε συμπληρωματική παραγγελία για ' + left.toLocaleString('el-GR') + ' ' + unit + ' ✓');
+    }
+    if(typeof refreshOrdersList === 'function') refreshOrdersList();
+    if(typeof nudgeNotifications === 'function') nudgeNotifications();
+  }catch(e){
+    console.error('Partial receive:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
+}
+
 async function markOrderReceived(id){
   try{
     const record = await jbGetRecord();
@@ -13840,7 +14073,9 @@ async function markOrderReceived(id){
 
       // If this order was for a paper that exists in the paper database, and a
       // sheet count was given, automatically add it to the Αποθήκη stock.
-      const sheets = num(order.sheets);
+      // Αν είχε προηγηθεί μερική παραλαβή, τα ήδη παραληφθέντα έχουν μπει
+      // στο απόθεμα — εδώ προστίθεται μόνο το υπόλοιπο.
+      const sheets = Math.max(0, num(order.sheets) - num(order.receivedQty || 0));
       // Roll goods arrive in metres and finished items in pieces, so the stock
       // entry has to carry the order's own unit rather than assume sheets.
       const unit = order.unit || 'φύλλα';
@@ -13853,7 +14088,7 @@ async function markOrderReceived(id){
           note: `Παραλαβή παραγγελίας${order.supplier ? ' από '+order.supplier : ''}${order.job ? ' — '+order.job : ''}`,
           date: new Date().toISOString()
         });
-        record.stockLog = record.stockLog.slice(0, 200);
+        record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
         statusMsg(`Παραλήφθηκε ✓ — προστέθηκαν ${sheets} φύλλα στο απόθεμα του "${order.material}"`);
       } else {
         statusMsg('Παραλήφθηκε ✓');
@@ -13942,10 +14177,8 @@ function buildOrdersEmail(orders){
   suppliers.forEach(sup => {
     if(suppliers.length > 1) lines.push(`— ${sup} —`);
     bySupplier[sup].forEach(o => {
-      const p = paperByName[o.material];
-      const specs = p ? [' (', [p.w && p.l ? `${p.w}x${p.l}` : '', p.g ? `${num(p.g)}γρ.` : ''].filter(Boolean).join(', '), ')'].join('') : '';
       const qty = o.sheets ? `${Number(o.sheets).toLocaleString('el-GR')} φύλλα` : '';
-      lines.push(`• ${o.material}${specs}${qty ? ' — ' + qty : ''}`);
+      lines.push(`• ${o.material}${qty ? ' — ' + qty : ''}`);
     });
     lines.push('');
   });
@@ -14043,7 +14276,7 @@ async function deleteOrder(id){
       }
       record.stockLog = record.stockLog || [];
       record.stockLog.unshift({ id:'stk'+Date.now(), paper: order.material, type:'remove', qty: sheets, unit:'φύλλα', note: 'Διαγραφή παραγγελίας', date: new Date().toISOString() });
-      record.stockLog = record.stockLog.slice(0, 200);
+      record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     }
     await jbPutRecord(record);
     refreshOrdersList();
@@ -14121,8 +14354,9 @@ async function refreshOrdersList(){
         </div>
         </div>
         <div class="right">
-          <span class="order-badge${received?' received':''}${missingInfo?' missing-info':''}">${received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : (missingInfo ? '⚠ Λείπουν Στοιχεία' : 'ΕΚΚΡΕΜΕΙ')}</span>
-          ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')">Παραλήφθηκε</button>`}
+          <span class="order-badge${received?' received':''}${missingInfo?' missing-info':''}">${received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : (num(o.receivedQty) > 0 ? `ΠΑΡΑΛΑΒΗ ${num(o.receivedQty).toLocaleString('el-GR')}/${num(o.sheets).toLocaleString('el-GR')}` : (missingInfo ? '⚠ Λείπουν Στοιχεία' : 'ΕΚΚΡΕΜΕΙ'))}</span>
+          ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')">Παραλήφθηκε</button>
+          <button class="btn" style="white-space:nowrap;" title="Ήρθε μέρος της ποσότητας — καταγραφή μερικής παραλαβής και προαιρετική συμπληρωματική παραγγελία" onclick="receiveOrderPartial('${o.id}')">Μερική Παραλαβή</button>`}
           <button class="del-link" onclick="deleteOrder('${o.id}')">Διαγραφή</button>
         </div>
       `;
@@ -16224,6 +16458,23 @@ async function sendToInvoicing(id){
     t.invoicedAt = new Date().toISOString();
     await jbMergePath(SLICE_MAIN, ['tickets', id], t);
     statusMsg('Πέρασε στην Τιμολόγηση ✓');
+    // Μία κίνηση αντί για δύο: αν η δουλειά έχει δεμένη εκκρεμή καταχώρηση
+    // στο Forecasting, προτείνεται να κλείσει κι εκείνη τώρα — αλλιώς το
+    // Forecasting μένει πίσω μέχρι να το θυμηθεί κάποιος.
+    try{
+      const offerId = (t.data || {}).offerId;
+      const offer = offerId && record.offers ? record.offers[offerId] : null;
+      const fc = offer && offer.forecastId && record.forecast ? record.forecast[offer.forecastId] : null;
+      if(fc && fc.status !== 'invoiced'){
+        const label = [fc.client, fc.job].filter(Boolean).join(' — ');
+        if(confirm(`Η δουλειά «${label}» έχει εκκρεμή καταχώρηση στο Forecasting (${fmt(num(fc.amount))}).\n\nΝα μαρκαριστεί και εκεί ως Τιμολογημένη;`)){
+          fc.status = 'invoiced';
+          fc.invoicedDate = todayISO();
+          await jbMergePath(SLICE_FORECAST, ['forecast', offer.forecastId], fc);
+          statusMsg('Μαρκαρίστηκε Τιμολογημένη και στο Forecasting ✓');
+        }
+      }
+    }catch(e){ console.error('Invoicing→Forecast:', e); }
     refreshProductionBoard();
   }catch(e){
     console.error('Send to invoicing error:', e);
@@ -17372,24 +17623,37 @@ async function sendOfferNote(){
 // ===== Email από τα εκκρεμή υλικά της κάρτας =====
 // Ανεξάρτητο από τα κουτάκια «παραγγέλθηκε»: εδώ επιλέγεις μόνο τι θα γραφτεί
 // στο email — τίποτα δεν μαρκάρεται ως παραγγελμένο.
-function togglePmEmailPanel(){
+function togglePmEmailPanel(mode){
   const panel = document.getElementById('pmEmailPanel');
-  const open = panel.style.display === 'none';
+  const newMode = mode || 'email';
+  const isOpen = panel.style.display !== 'none';
+  // Ανοιχτό σε άλλη λειτουργία; Απλή εναλλαγή κουμπιού, χωρίς κλείσιμο —
+  // η επιλογή και τα διορθωμένα φύλλα του χρήστη διατηρούνται.
+  if(isOpen && window.__pmPanelMode !== newMode){
+    window.__pmPanelMode = newMode;
+    updatePmEmailCount();
+    return;
+  }
+  const open = !isOpen;
+  window.__pmPanelMode = newMode;
   panel.style.display = open ? 'block' : 'none';
   if(!open) return;
   const items = [];
   (window.__pmPending || []).forEach(p => {
     p.papers.filter(n => !p.ordered.includes(n)).forEach(n => {
-      items.push({ material: n, sheets: p.needs[n] || '', job: [p.client, p.title].filter(Boolean).join(' — ') });
+      items.push({ offerId: p.id, material: n, sheets: p.needs[n] || '', job: [p.client, p.title].filter(Boolean).join(' — ') });
     });
   });
   document.getElementById('pmEmailItems').innerHTML = items.length
-    ? items.map((it, i) => `<label style="display:grid;grid-template-columns:22px minmax(0,2fr) 80px minmax(0,1.4fr);gap:6px;align-items:center;padding:3px 2px;cursor:pointer;font-size:12.5px;text-align:left;">
+    ? items.map((it, i) => `<div style="display:grid;grid-template-columns:22px minmax(0,2fr) 110px minmax(0,1.4fr);gap:6px;align-items:center;padding:3px 2px;font-size:12.5px;text-align:left;">
         <input type="checkbox" class="pm-email-check" checked data-i="${i}" onchange="updatePmEmailCount()" style="margin:0;justify-self:start;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.material)}</span>
-        <b style="justify-self:start;">${it.sheets ? Number(it.sheets).toLocaleString('el-GR') + ' φ.' : '—'}</b>
+        <span style="display:flex;gap:4px;align-items:center;">
+          <input type="number" class="pm-item-sheets" data-i="${i}" value="${it.sheets || ''}" placeholder="φύλλα"
+            style="width:75px;padding:2px 6px;" title="Διόρθωσε τα φύλλα — ισχύει για email και παραγγελία"> φ.
+        </span>
         <span class="empty-note" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.job)}</span>
-      </label>`).join('')
+      </div>`).join('')
     : '<div class="empty-note">Δεν υπάρχουν εκκρεμή υλικά — όλα έχουν παραγγελθεί ✓</div>';
   window.__pmEmailItems = items;
   updatePmEmailCount();
@@ -17397,14 +17661,75 @@ function togglePmEmailPanel(){
 
 function updatePmEmailCount(){
   const n = document.querySelectorAll('.pm-email-check:checked').length;
+  const mode = window.__pmPanelMode || 'email';
   document.getElementById('pmEmailCount').textContent = n;
-  document.getElementById('pmEmailGoBtn').style.display = n ? '' : 'none';
+  document.getElementById('pmOrderCount').textContent = n;
+  // Μία ενέργεια τη φορά: φαίνεται μόνο το κουμπί της λειτουργίας με την
+  // οποία άνοιξε το panel.
+  document.getElementById('pmEmailGoBtn').style.display = (n && mode === 'email') ? '' : 'none';
+  document.getElementById('pmOrderGoBtn').style.display = (n && mode === 'orders') ? '' : 'none';
+}
+
+// Τα επιλεγμένα, με τα φύλλα όπως τα διόρθωσε ο χρήστης στο πεδίο.
+function pmPickedItems(){
+  const items = (window.__pmEmailItems || []);
+  return Array.from(document.querySelectorAll('.pm-email-check:checked')).map(cb => {
+    const i = Number(cb.dataset.i);
+    const it = items[i];
+    if(!it) return null;
+    const inp = document.querySelector(`.pm-item-sheets[data-i="${i}"]`);
+    const edited = inp && inp.value !== '' ? num(inp.value) : it.sheets;
+    return Object.assign({}, it, { sheets: edited });
+  }).filter(Boolean);
+}
+
+// Μαζική δημιουργία εκκρεμών παραγγελιών από τα τσεκαρισμένα — ίδιος δρόμος
+// με το μονό «📦 παραγγελία»: ίδια εγγραφή, ίδιο μαρκάρισμα «παραγγέλθηκε»,
+// αλλά με ΜΙΑ επιβεβαίωση και μαζεμένες εγγραφές αντί για μία-μία.
+async function createPendingOrdersFromPanel(){
+  const picked = pmPickedItems();
+  if(!picked.length) return;
+  const preview = picked.slice(0, 8).map(it => `• ${it.material} — ${it.sheets ? Number(it.sheets).toLocaleString('el-GR') + ' φ.' : 'χωρίς ποσότητα'}`).join('\n')
+    + (picked.length > 8 ? `\n… και ${picked.length - 8} ακόμα` : '');
+  if(!confirm(`Δημιουργία ${picked.length} εκκρεμών παραγγελιών:\n\n${preview}\n\nΘα μαρκαριστούν και ως «παραγγέλθηκαν» στις προσφορές τους. Συνέχεια;`)) return;
+  try{
+    jbInvalidate();
+    const record = await jbGetRecord();
+    record.orders = record.orders || {};
+    let seq = Date.now();
+    picked.forEach(it => {
+      record.orders['o' + (seq++)] = {
+        date: todayISO(), job: it.job, material: it.material, sheets: it.sheets || 0, supplier: '',
+        notes: 'Από τις εκκρεμείς παραγγελίες — συμπλήρωσε προμηθευτή',
+        status: 'pending', receivedDate: '', offerId: it.offerId
+      };
+    });
+    await jbMergePath(SLICE_MAIN, ['orders'], record.orders);
+    // Μαρκάρισμα «παραγγέλθηκε» ομαδικά ανά προσφορά — μία εγγραφή η καθεμιά.
+    const byOffer = {};
+    picked.forEach(it => { (byOffer[it.offerId] = byOffer[it.offerId] || []).push(it.material); });
+    for(const [offerId, papers] of Object.entries(byOffer)){
+      const offer = (record.offers || {})[offerId];
+      if(!offer) continue;
+      const set = new Set(offer.orderedPapers || []);
+      papers.forEach(n => set.add(n));
+      offer.orderedPapers = [...set];
+      const all = offerPaperList(offer.data);
+      offer.materialsOrdered = all.length > 0 && all.every(n => set.has(n));
+      await jbMergePath(SLICE_OFFERS, ['offers', offerId], offer);
+    }
+    statusMsg(`Δημιουργήθηκαν ${picked.length} εκκρεμείς παραγγελίες ✓ — συμπλήρωσε προμηθευτές`);
+    refreshPendingMaterialsBar();
+    if(typeof refreshOrdersList === 'function') refreshOrdersList();
+    document.getElementById('pmEmailPanel').style.display = 'none';
+  }catch(e){
+    console.error('Bulk pending orders:', e);
+    statusMsg('Σφάλμα: ' + e.message);
+  }
 }
 
 async function emailPendingMaterials(){
-  const items = (window.__pmEmailItems || []);
-  const picked = Array.from(document.querySelectorAll('.pm-email-check:checked'))
-    .map(cb => items[Number(cb.dataset.i)]).filter(Boolean);
+  const picked = pmPickedItems();
   if(!picked.length) return;
   const { subject, body } = buildOrdersEmail(picked.map(it => ({ material: it.material, sheets: it.sheets, job: it.job, supplier: '' })));
   try{ await navigator.clipboard.writeText(body); }catch(e){}
@@ -17431,8 +17756,12 @@ async function refreshPendingMaterialsBar(){
       .sort((a, b) => String(a.when).localeCompare(String(b.when)));
 
     window.__pmPending = pending;
-    if(!pending.length){ card.style.display = 'none'; list.innerHTML = ''; return; }
     card.style.display = '';
+    if(!pending.length){
+      list.innerHTML = '<div class="empty-note">Όλα τα χαρτιά των εγκεκριμένων προσφορών έχουν παραγγελθεί ✓</div>';
+      if(count) count.textContent = '';
+      return;
+    }
     if(count) count.textContent = `${pending.length} ${pending.length === 1 ? 'προσφορά' : 'προσφορές'}`;
 
     list.innerHTML = pending.map(p => {
@@ -18995,7 +19324,7 @@ async function submitStockMovement(type){
     const next = type==='add' ? current.qty + qty : Math.max(0, current.qty - qty);
     await setStock(paper, next, unit);
     record.stockLog.unshift({ id:'stk'+Date.now(), paper, type, qty, unit, note, date: new Date().toISOString() });
-    record.stockLog = record.stockLog.slice(0, 200); // keep the log from growing forever
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX); // keep the log from growing forever
     await jbPutRecord(record);
     if(!statusEl.textContent.startsWith('Προσοχή')) statusEl.textContent = (type==='add' ? 'Προστέθηκε απόθεμα ✓' : 'Αφαιρέθηκε απόθεμα ✓');
     document.getElementById('stockPaperName').value = '';
@@ -19860,7 +20189,7 @@ async function confirmStockBulkImport(){
       // quantities are written to the material rows below
       record.stockLog.unshift({ id:'stk'+Date.now()+Math.random().toString(36).slice(2,6), paper: e.name, type:'add', qty: e.qty, unit: e.unit, note:'Μαζική εισαγωγή', date: new Date().toISOString() });
     });
-    record.stockLog = record.stockLog.slice(0, 200);
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     await jbPutRecord(record);
 
     // Prices belong to the paper, not the stock line, so they are written there —
