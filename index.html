@@ -936,6 +936,27 @@
   .ticket-item .btns{display:flex;gap:8px;align-items:center;flex:none;}
 
   .order-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;margin-bottom:6px;}
+  /* Ανά Προμηθευτή = στήλες, σαν πίνακας: μία στήλη ο καθένας, οι κάρτες
+     συμπαγείς (ο προμηθευτής φαίνεται από τη στήλη, δεν επαναλαμβάνεται). */
+  .ord-cols{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:10px;scroll-behavior:smooth;}
+  .ord-cols::-webkit-scrollbar{height:12px;}
+  .ord-cols::-webkit-scrollbar-track{background:var(--page);border-radius:6px;}
+  .ord-cols::-webkit-scrollbar-thumb{background:#c3bdb2;border-radius:6px;border:2px solid var(--page);}
+  .ord-cols::-webkit-scrollbar-thumb:hover{background:#a89f92;}
+  .ord-cols-nav{display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;}
+  .ord-col{flex:0 0 275px;min-width:275px;background:var(--page);border:1px solid var(--line);border-radius:10px;}
+  .ord-col.no-supplier{border-color:#e8b4ae;background:#fdf6f5;}
+  .ord-col-head{padding:10px 12px 8px;border-bottom:1px solid var(--line);}
+  .ord-col-head .nm{font-weight:800;font-size:13px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+  .ord-col-head .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .ord-col-cards{padding:8px;display:flex;flex-direction:column;gap:6px;}
+  .ord-mini{background:#fff;border:1px solid var(--line);border-left:4px solid #d9a441;border-radius:8px;padding:7px 9px;font-size:12px;}
+  .ord-mini.received{border-left-color:#4a9d6e;opacity:0.8;}
+  .ord-mini .top{display:flex;gap:6px;align-items:flex-start;}
+  .ord-mini .mat{font-weight:700;flex:1;min-width:0;overflow-wrap:anywhere;}
+  .ord-mini .jb{color:var(--muted);font-size:11px;margin-top:1px;overflow-wrap:anywhere;}
+  .ord-mini .foot{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;}
+  .ord-mini .foot .btn{padding:2px 8px;font-size:11px;}
   .ord-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
     margin:16px 0 7px;padding-bottom:5px;border-bottom:2px solid var(--ink);flex-wrap:wrap;}
   .ord-group-head:first-child{margin-top:0;}
@@ -9781,11 +9802,15 @@ async function jbMergePath(sliceId, path, value){
     if(mergeRpcAvailable === null){
       console.warn('Οι συναρτήσεις app_merge/app_delete_path δεν υπάρχουν στη βάση — προσωρινή χρήση του παλιού τρόπου αποθήκευσης.');
       mergeRpcAvailable = false;
+      // Ο αργός δρόμος ανεβάζει ΟΛΟ το αρχείο σε κάθε αποθήκευση — αργεί και
+      // συγκρούεται συχνά. Ας φανεί μία φορά, με σαφή αιτία.
+      statusMsg('⚠ Αργός τρόπος αποθήκευσης: λείπει η ενεργοποίηση γρήγορης αποθήκευσης στο Supabase (SQL app_merge) — ζήτα το SQL.');
     }
     return jbFallbackWrite(sliceId, path, value, false);
   }
   if(!res.ok) throw new Error('HTTP ' + res.status);
   mergeRpcAvailable = true;
+  jbSliceStamp[sliceId] = null;   // η εγγραφή άλλαξε το updated_at — μη συγκρουστούμε με τον εαυτό μας
   return true;
 }
 
@@ -9803,25 +9828,46 @@ async function jbDeletePath(sliceId, path){
     if(mergeRpcAvailable === null){
       console.warn('Οι συναρτήσεις app_merge/app_delete_path δεν υπάρχουν στη βάση — προσωρινή χρήση του παλιού τρόπου αποθήκευσης.');
       mergeRpcAvailable = false;
+      // Ο αργός δρόμος ανεβάζει ΟΛΟ το αρχείο σε κάθε αποθήκευση — αργεί και
+      // συγκρούεται συχνά. Ας φανεί μία φορά, με σαφή αιτία.
+      statusMsg('⚠ Αργός τρόπος αποθήκευσης: λείπει η ενεργοποίηση γρήγορης αποθήκευσης στο Supabase (SQL app_merge) — ζήτα το SQL.');
     }
     return jbFallbackWrite(sliceId, path, null, true);
   }
   if(!res.ok) throw new Error('HTTP ' + res.status);
   mergeRpcAvailable = true;
+  jbSliceStamp[sliceId] = null;
   return true;
 }
 
 // Legacy path: read the whole record, apply the one change, write it all back.
+// Σε σύγκρουση (άλλος έγραψε πρώτος) ΔΕΝ ενοχλείται ο χρήστης: ξαναδιαβάζεται
+// φρέσκο το record, ξαναεφαρμόζεται η ΙΔΙΑ στοχευμένη αλλαγή (path+value —
+// γνωστή, άρα η επανάληψη είναι ασφαλής) και ξαναγράφεται, έως 4 φορές.
 async function jbFallbackWrite(sliceId, path, value, isDelete){
-  const record = await jbGetRecord();
-  let node = record;
-  for(let i=0;i<path.length-1;i++){
-    if(!node[path[i]]) node[path[i]] = {};
-    node = node[path[i]];
+  let lastErr = null;
+  for(let attempt = 0; attempt < 4; attempt++){
+    try{
+      if(attempt > 0){
+        jbInvalidate();
+        await new Promise(r => setTimeout(r, 120 + Math.random() * 500));
+      }
+      const record = await jbGetRecord();
+      let node = record;
+      for(let i=0;i<path.length-1;i++){
+        if(!node[path[i]]) node[path[i]] = {};
+        node = node[path[i]];
+      }
+      const leaf = path[path.length-1];
+      if(isDelete) delete node[leaf]; else node[leaf] = value;
+      return await jbPutRecord(record, { quietConflict: true });
+    }catch(e){
+      lastErr = e;
+      if(e.code !== 'CONFLICT') throw e;   // ό,τι δεν είναι σύγκρουση δεν διορθώνεται με επανάληψη
+    }
   }
-  const leaf = path[path.length-1];
-  if(isDelete) delete node[leaf]; else node[leaf] = value;
-  return jbPutRecord(record);
+  bigRedAlert('Η ΑΠΟΘΗΚΕΥΣΗ ΔΕΝ ΕΓΙΝΕ μετά από 4 προσπάθειες — άλλοι υπολογιστές γράφουν συνεχώς. Κάνε ανανέωση (F5) και ξαναδοκίμασε.');
+  throw lastErr;
 }
 
 const SLICE_MAIN = 1, SLICE_OFFERS = 2, SLICE_FORECAST = 3;
@@ -9933,8 +9979,15 @@ async function jbPutRecord(record, opts){
     const range = mainRes.headers.get('content-range') || '';
     const total = range.split('/')[1];
     if(total === '0'){
-      bigRedAlert('Η ΑΠΟΘΗΚΕΥΣΗ ΔΕΝ ΕΓΙΝΕ: τα δεδομένα άλλαξαν από άλλον υπολογιστή μετά την τελευταία ανάγνωση αυτής της καρτέλας. Κάνε ανανέωση (F5) για να δεις την τρέχουσα εικόνα και ξαναδοκίμασε. Τίποτα δεν πατήθηκε.');
-      throw new Error('Σύγκρουση εκδόσεων — η βάση άλλαξε από άλλη καρτέλα');
+      // Ο καλών που ξέρει να ξαναπροσπαθήσει (στοχευμένη εγγραφή που θα
+      // ξαναδιαβάσει και θα ξαναεφαρμόσει την αλλαγή) παίρνει το σφάλμα ΧΩΡΙΣ
+      // κόκκινο — ο συναγερμός βγαίνει μόνο όταν η αποτυχία είναι οριστική.
+      if(!(opts && opts.quietConflict)){
+        bigRedAlert('Η ΑΠΟΘΗΚΕΥΣΗ ΔΕΝ ΕΓΙΝΕ: τα δεδομένα άλλαξαν από άλλον υπολογιστή μετά την τελευταία ανάγνωση αυτής της καρτέλας. Κάνε ανανέωση (F5) για να δεις την τρέχουσα εικόνα και ξαναδοκίμασε. Τίποτα δεν πατήθηκε.');
+      }
+      const err = new Error('Σύγκρουση εκδόσεων — η βάση άλλαξε από άλλη καρτέλα');
+      err.code = 'CONFLICT';
+      throw err;
     }
   }
   jbSliceStamp[1] = now;
@@ -13977,6 +14030,65 @@ function toggleTicketGrouping(){
 // before picking up the phone.
 let ordersGrouped = true;    // grouped by supplier is the useful default
 
+// Δεξί κλικ σε κάρτα των στηλών: διόρθωση προμηθευτή ή ποσότητας επιτόπου —
+// οι συμπαγείς κάρτες δεν έχουν χώρο για τα πεδία της πλήρους λίστας.
+function closeOrderMiniMenu(){
+  const m = document.getElementById('ordMiniMenu');
+  if(m) m.remove();
+}
+document.addEventListener('click', closeOrderMiniMenu);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeOrderMiniMenu(); });
+
+function openOrderMiniMenu(ev, id){
+  ev.preventDefault();
+  ev.stopPropagation();
+  closeOrderMiniMenu();
+  const m = document.createElement('div');
+  m.id = 'ordMiniMenu';
+  m.className = 'ost-menu';
+  m.innerHTML = `
+    <div class="item" onclick="editOrderSupplierPrompt('${esc(id)}');closeOrderMiniMenu();">🏢 Αλλαγή προμηθευτή…</div>
+    <div class="item" onclick="editOrderSheetsPrompt('${esc(id)}');closeOrderMiniMenu();">🔢 Αλλαγή ποσότητας…</div>
+    <div class="item" style="color:#c0392b;" onclick="deleteOrder('${esc(id)}');closeOrderMiniMenu();">🗑 Διαγραφή παραγγελίας…</div>`;
+  document.body.appendChild(m);
+  const x = Math.min(ev.clientX, window.innerWidth - m.offsetWidth - 8);
+  const y = Math.min(ev.clientY, window.innerHeight - m.offsetHeight - 8);
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+}
+
+async function editOrderSupplierPrompt(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    const v = prompt('Προμηθευτής για «' + (o.material || '') + '»:', o.supplier || '');
+    if(v === null) return;
+    await updateOrderSupplier(id, v.trim());
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function editOrderSheetsPrompt(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    const unit = o.unit || 'φύλλα';
+    const v = prompt('Ποσότητα (' + unit + ') για «' + (o.material || '') + '»:', o.sheets || '');
+    if(v === null) return;
+    // parseGreekAmount: το «1.500» είναι χίλια πεντακόσια, όχι ενάμισι.
+    const qty = parseGreekAmount(v);
+    if(!(qty >= 0)){ statusMsg('Γράψε έναν αριθμό.'); return; }
+    await updateOrderSheets(id, qty);
+    refreshOrdersList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+function scrollOrdCols(dir){
+  const el = document.getElementById('ordColsScroll');
+  if(el) el.scrollBy({ left: dir * 300, behavior: 'smooth' });
+}
+
 function toggleOrdersGrouping(){
   ordersGrouped = !ordersGrouped;
   document.getElementById('ordGroupBtn').classList.toggle('solid', ordersGrouped);
@@ -14089,12 +14201,19 @@ async function markOrderReceived(id){
           date: new Date().toISOString()
         });
         record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+        window.__recvLogChanged = true;
         statusMsg(`Παραλήφθηκε ✓ — προστέθηκαν ${sheets} φύλλα στο απόθεμα του "${order.material}"`);
       } else {
         statusMsg('Παραλήφθηκε ✓');
       }
+      // Γράφεται ΜΟΝΟ ό,τι άλλαξε: η μία παραγγελία, και το ιστορικό αν
+      // προστέθηκε κίνηση — όχι ολόκληρο το αρχείο δεδομένων.
+      await jbMergePath(SLICE_MAIN, ['orders', id], order);
+      if(window.__recvLogChanged){
+        window.__recvLogChanged = false;
+        await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+      }
     }
-    await jbPutRecord(record);
     // The person logging it gets the same notice as everyone else, so the two
     // never disagree about what arrived.
     nudgeNotifications();
@@ -14113,8 +14232,10 @@ async function markOrderReceived(id){
 async function updateOrderUnit(id, value){
   try{
     const record = await jbGetRecord();
-    if(record.orders[id]) record.orders[id].unit = value;
-    await jbPutRecord(record);
+    if(record.orders[id]){
+      record.orders[id].unit = value;
+      await jbMergePath(SLICE_MAIN, ['orders', id], record.orders[id]);
+    }
     refreshOrdersList();
   }catch(e){
     console.error('Update order unit error:', e);
@@ -14125,8 +14246,10 @@ async function updateOrderUnit(id, value){
 async function updateOrderSheets(id, value){
   try{
     const record = await jbGetRecord();
-    if(record.orders[id]) record.orders[id].sheets = value;
-    await jbPutRecord(record);
+    if(record.orders[id]){
+      record.orders[id].sheets = value;
+      await jbMergePath(SLICE_MAIN, ['orders', id], record.orders[id]);
+    }
     statusMsg('Ενημερώθηκαν τα φύλλα ✓');
   }catch(e){
     console.error('Update sheets error:', e);
@@ -14137,8 +14260,10 @@ async function updateOrderSheets(id, value){
 async function updateOrderSupplier(id, value){
   try{
     const record = await jbGetRecord();
-    if(record.orders[id]) record.orders[id].supplier = value;
-    await jbPutRecord(record);
+    if(record.orders[id]){
+      record.orders[id].supplier = value;
+      await jbMergePath(SLICE_MAIN, ['orders', id], record.orders[id]);
+    }
     if(value.trim()) await addSupplierToList(value.trim());
     statusMsg('Ενημερώθηκε ο προμηθευτής ✓');
     refreshOrdersList();
@@ -14379,6 +14504,40 @@ async function refreshOrdersList(){
         if(pa !== pb) return pb - pa;
         return a.localeCompare(b,'el');
       });
+      // Συμπαγής κάρτα για τη στήλη: η στήλη λέει ήδη τον προμηθευτή, οπότε
+      // μένουν υλικό, ποσότητα, δουλειά, κατάσταση και οι ενέργειες παραλαβής.
+      const buildMiniCard = (o) => {
+        const received = o.status === 'received';
+        const partial = !received && num(o.receivedQty) > 0;
+        const d = document.createElement('div');
+        d.className = 'ord-mini' + (received ? ' received' : '');
+        d.addEventListener('contextmenu', ev => openOrderMiniMenu(ev, o.id));
+        d.innerHTML = `
+          <div class="top">
+            <input type="checkbox" class="order-select-check" data-order-id="${o.id}" onchange="onOrderSelectChange()" style="flex:none;width:14px;height:14px;margin-top:1px;">
+            <div style="flex:1;min-width:0;">
+              <div class="mat">${esc(o.material)}</div>
+              <div class="jb">${esc(o.job || '(χωρίς έργο)')} · ${esc(fmtDate(o.date))}${received ? ' → ' + esc(fmtDate(o.receivedDate)) : ''}</div>
+            </div>
+          </div>
+          <div class="foot">
+            <span style="font-weight:700;">${o.sheets ? num(o.sheets).toLocaleString('el-GR') + ' ' + esc(o.unit || 'φύλλα') : '—'}</span>
+            <span class="order-badge${received ? ' received' : ''}" style="font-size:9.5px;">${
+              received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : partial ? `ΠΑΡΑΛΑΒΗ ${num(o.receivedQty).toLocaleString('el-GR')}/${num(o.sheets).toLocaleString('el-GR')}` : 'ΕΚΚΡΕΜΕΙ'}</span>
+            ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')" title="Πλήρης παραλαβή — μπαίνει και στο απόθεμα" style="white-space:nowrap;">Παραλαβή</button>
+            <button class="btn" onclick="receiveOrderPartial('${o.id}')" title="Ήρθε μέρος της ποσότητας" style="white-space:nowrap;">Μερική</button>`}
+          </div>`;
+        return d;
+      };
+      const nav = document.createElement('div');
+      nav.className = 'ord-cols-nav';
+      nav.innerHTML = `
+        <button class="btn" style="padding:4px 14px;" onclick="scrollOrdCols(-1)" title="Κύλιση αριστερά">◀</button>
+        <button class="btn" style="padding:4px 14px;" onclick="scrollOrdCols(1)" title="Κύλιση δεξιά">▶</button>`;
+      el.appendChild(nav);
+      const cols = document.createElement('div');
+      cols.className = 'ord-cols';
+      cols.id = 'ordColsScroll';
       names.forEach(name=>{
         const items = groups[name];
         const pending = items.filter(o=>o.status!=='received');
@@ -14386,19 +14545,24 @@ async function refreshOrdersList(){
         const byUnit = {};
         pending.forEach(o=>{ const u=o.unit||'φύλλα'; byUnit[u]=(byUnit[u]||0)+num(o.sheets); });
         const sheets = Object.entries(byUnit).filter(([,v])=>v>0)
-          .map(([u,v])=>`<b>${v.toLocaleString('el-GR')}</b> ${u}`).join(' · ');
-        const head = document.createElement('div');
-        head.className = 'ord-group-head';
-        head.innerHTML = `
-          <span class="ord-group-name">${esc(name)}</span>
-          <span class="ord-group-meta">${
-            pending.length
-              ? `<b>${pending.length}</b> εκκρεμ${pending.length===1?'εί':'ούν'}${sheets ? ` · ${sheets} σε αναμονή` : ''}`
-              : 'όλα παραλήφθηκαν'
-          }</span>`;
-        el.appendChild(head);
-        items.forEach(o => el.appendChild(buildOrderCard(o)));
+          .map(([u,v])=>`${v.toLocaleString('el-GR')} ${u}`).join(' · ');
+        const col = document.createElement('div');
+        col.className = 'ord-col' + (name === '(χωρίς προμηθευτή)' ? ' no-supplier' : '');
+        col.innerHTML = `
+          <div class="ord-col-head">
+            <div class="nm"><span>${esc(name)}</span><span>${pending.length ? pending.length : '✓'}</span></div>
+            <div class="sub">${pending.length
+              ? `${pending.length} εκκρεμ${pending.length===1?'εί':'ούν'}${sheets ? ' · ' + sheets : ''}`
+              : 'όλα παραλήφθηκαν'}</div>
+          </div>
+          <div class="ord-col-cards"></div>`;
+        const body = col.querySelector('.ord-col-cards');
+        // Οι εκκρεμείς πάνω, τα παραληφθέντα βουλιάζουν στο τέλος της στήλης.
+        [...items].sort((a, b) => (a.status === 'received') - (b.status === 'received'))
+          .forEach(o => body.appendChild(buildMiniCard(o)));
+        cols.appendChild(col);
       });
+      el.appendChild(cols);
     }
   }catch(e){
     console.error('List orders error:', e);
@@ -14424,10 +14588,8 @@ async function submitForecastJob(){
     invoicedDate: ''
   };
   try{
-    const record = await jbGetRecord();
     const id = 'fc' + Date.now();
-    record.forecast[id] = data;
-    await jbPutRecord(record);
+    await jbMergePath(SLICE_FORECAST, ['forecast', id], data);
     document.getElementById('fcClient').value = '';
     document.getElementById('fcJob').value = '';
     document.getElementById('fcAmount').value = '';
@@ -14456,8 +14618,8 @@ async function toggleForecastStatus(id){
       const nowInvoiced = record.forecast[id].status !== 'invoiced';
       record.forecast[id].status = nowInvoiced ? 'invoiced' : 'pending';
       record.forecast[id].invoicedDate = nowInvoiced ? todayISO() : '';
+      await jbMergePath(SLICE_FORECAST, ['forecast', id], record.forecast[id]);
     }
-    await jbPutRecord(record);
     refreshForecastList();
   }catch(e){
     console.error('Toggle forecast status error:', e);
@@ -14468,9 +14630,8 @@ async function toggleForecastStatus(id){
 async function deleteForecastJob(id){
   if(!confirm('Διαγραφή αυτής της δουλειάς από την πρόβλεψη;')) return;
   try{
-    const record = await jbGetRecord();
-    delete record.forecast[id];
-    await jbPutRecord(record);
+    await jbDeletePath(SLICE_FORECAST, ['forecast', id]);
+    jbInvalidate();
     refreshForecastList();
   }catch(e){
     console.error('Delete forecast error:', e);
@@ -14548,8 +14709,11 @@ async function syncForecastMonthFromTicket(data, record){
 async function setForecastMonth(id, value){
   try{
     const record = await jbGetRecord();
-    if(record.forecast[id]){ record.forecast[id].month = value; record.forecast[id].monthAuto = false; }
-    await jbPutRecord(record);
+    if(record.forecast[id]){
+      record.forecast[id].month = value;
+      record.forecast[id].monthAuto = false;
+      await jbMergePath(SLICE_FORECAST, ['forecast', id], record.forecast[id]);
+    }
     refreshForecastList();
   }catch(e){
     console.error('Set forecast month error:', e);
@@ -16243,7 +16407,10 @@ async function refreshProductionBoard(){
     bindBoardFit();
     setTimeout(fitBoardToViewport, 60);
 
-    if(changed) await jbPutRecord(record);
+    if(changed){
+      try{ await jbPutRecord(record, { quietConflict: true }); }
+      catch(e){ if(e.code !== 'CONFLICT') throw e; console.warn('Board sync: άλλος έγραψε πρώτος — θα ξαναγίνει στην επόμενη ανανέωση.'); }
+    }
   }catch(e){
     console.error('Production board error:', e);
     boardEl.innerHTML = '<div class="empty-note">Σφάλμα σύνδεσης: ' + esc(e.message) + '</div>';
@@ -19323,9 +19490,13 @@ async function submitStockMovement(type){
     // be written back to the material row.
     const next = type==='add' ? current.qty + qty : Math.max(0, current.qty - qty);
     await setStock(paper, next, unit);
+    if(!Array.isArray(record.stockLog)){
+      record.stockLog = record.stockLog && typeof record.stockLog === 'object'
+        ? Object.values(record.stockLog) : [];
+    }
     record.stockLog.unshift({ id:'stk'+Date.now(), paper, type, qty, unit, note, date: new Date().toISOString() });
     record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX); // keep the log from growing forever
-    await jbPutRecord(record);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
     if(!statusEl.textContent.startsWith('Προσοχή')) statusEl.textContent = (type==='add' ? 'Προστέθηκε απόθεμα ✓' : 'Αφαιρέθηκε απόθεμα ✓');
     document.getElementById('stockPaperName').value = '';
     document.getElementById('stockQty').value = '';
