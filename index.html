@@ -320,6 +320,17 @@
   .ost-sent{background:#eaf1fe;color:#1f4f9e;border-color:#cfe0fb;}
   .ost-approved{background:#e6f4ec;color:#0e6b3a;border-color:#c9e6d6;}
   .ost-rejected{background:#fdecea;color:#a12622;border-color:#f2c9c5;}
+  .offer-table .ost{margin-right:12px;}
+  .offer-group-row td{cursor:pointer;user-select:none;}
+  .offer-group-row .grp-sum{float:right;font-weight:700;}
+  .offer-more-row td{text-align:center;padding:7px;font-size:12px;color:#1f4f9e;cursor:pointer;background:#fafafa;}
+  .offer-more-row td:hover{background:#f0f4fb;}
+  .offer-group-row td{font-weight:800;font-size:12px;padding:8px 12px;border-top:2px solid var(--line);
+    letter-spacing:0.02em;}
+  .offer-group-row.g-draft td{background:#f0eeea;color:#6b665c;}
+  .offer-group-row.g-sent td{background:#eaf1fe;color:#1f4f9e;}
+  .offer-group-row.g-approved td{background:#e6f4ec;color:#0e6b3a;}
+  .offer-group-row.g-rejected td{background:#fdecea;color:#a12622;}
   .kanban-paper-chip{font-size:10px;border-radius:5px;padding:1px 6px;font-weight:700;white-space:nowrap;}
   .kanban-paper-chip.ok{background:#e6f4ec;color:#0e6b3a;border:1px solid #c9e6d6;}
   .kanban-paper-chip.wait{background:#fdf1e3;color:#a2601d;border:1px solid #f2ddc0;}
@@ -1487,28 +1498,18 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);">
-            <span>Εμφάνιση</span>
+            <span>Εμφάνιση έως</span>
             <select id="offerPageSize" onchange="offerListPage=0;renderOfferTable()" style="width:auto;padding:4px 6px;">
-              <option value="10">10</option>
-              <option value="25">25</option>
+              <option value="8" selected>8</option>
+              <option value="20">20</option>
               <option value="50">50</option>
               <option value="99999">Όλες</option>
             </select>
-            <span>εγγραφών</span>
+            <span>ανά κατηγορία</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:12.5px;color:var(--muted);">Αναζήτηση:</span>
             <input id="offerSearch" oninput="offerListPage=0;renderOfferTable()" style="width:220px;">
-          </div>
-          <div class="field" style="min-width:170px;">
-            <label>Κατάσταση</label>
-            <select id="offerStageFilter" onchange="offerListPage=0;renderOfferTable()">
-              <option value="">— Όλες —</option>
-              <option value="draft">📝 Προς υπολογισμό</option>
-              <option value="sent">📤 Στάλθηκε / Αναμονή απάντησης</option>
-              <option value="approved">✓ Εγκρίθηκε</option>
-              <option value="rejected">✗ Απορρίφθηκε</option>
-            </select>
           </div>
         </div>
         <div id="combinedBar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;
@@ -10857,7 +10858,7 @@ function offerStatusBadge(o){
     const days = daysSince(d.sentAt);
     const when = days === null ? '' : (days === 0 ? 'σήμερα' : `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`);
     return `<span class="ost ost-sent ost-static"
-      title="Στάλθηκε ${esc(when)}. Η κατάσταση αλλάζει μέσα από την προσφορά.">📤 Στάλθηκε / Αναμονή απάντησης</span>`;
+      title="Στάλθηκε ${esc(when)} — αναμονή απάντησης. Δεξί κλικ για αλλαγή κατάστασης.">📤 Στάλθηκε${when ? ' ' + esc(when) : ''}</span>`;
   }
 
   if(stage === 'rejected'){
@@ -10888,6 +10889,24 @@ function offerListQty(o){
   return { value: num(d.qty), text: d.qty ? String(d.qty) : '', title:'' };
 }
 
+// Αναδίπλωση/άνοιγμα κατηγοριών στη λίστα προσφορών. Το ποιες είναι
+// διπλωμένες θυμάται ανά υπολογιστή· το «εμφάνιση όλων» κρατά μόνο για τη
+// συνεδρία — την επόμενη μέρα ξαναξεκινάς μαζεμένα.
+function toggleOfferGroup(stage){
+  const c = window.__offerGroupsCollapsed || (window.__offerGroupsCollapsed = new Set());
+  c.has(stage) ? c.delete(stage) : c.add(stage);
+  try{ localStorage.setItem('ff_offer_groups_collapsed', JSON.stringify([...c])); }catch(e){}
+  renderOfferTable();
+}
+function openOfferGroup(stage){
+  (window.__offerGroupsOpen = window.__offerGroupsOpen || new Set()).add(stage);
+  renderOfferTable();
+}
+function shrinkOfferGroup(stage){
+  if(window.__offerGroupsOpen) window.__offerGroupsOpen.delete(stage);
+  renderOfferTable();
+}
+
 function renderOfferTable(){
   const wrap = document.getElementById('offerListTableWrap');
   const pagEl = document.getElementById('offerListPagination');
@@ -10915,26 +10934,84 @@ function renderOfferTable(){
     if(col==='total') return num(o.total);
     return o.savedAt||'';
   };
+  // Οι προσφορές χωρίζονται σε ενότητες κατά στάδιο· μέσα σε κάθε ενότητα
+  // ισχύει η ταξινόμηση της στήλης που διάλεξε ο χρήστης.
+  const STAGE_ORDER = { draft: 0, sent: 1, approved: 2, rejected: 3 };
+  const STAGE_HEADERS = {
+    draft:    '📝 Προς υπολογισμό',
+    sent:     '📤 Απεσταλμένες / Αναμονή απάντησης',
+    approved: '✓ Εγκεκριμένες',
+    rejected: '✗ Απορριφθείσες',
+  };
   list.sort((a,b)=>{
+    const sa = STAGE_ORDER[offerStage(a)] ?? 9, sb = STAGE_ORDER[offerStage(b)] ?? 9;
+    if(sa !== sb) return sa - sb;
     const va = getVal(a, offerSortCol), vb = getVal(b, offerSortCol);
     if(typeof va === 'number') return (va-vb)*offerSortDir;
     return String(va).localeCompare(String(vb), 'el') * offerSortDir;
   });
+  const stageCounts = {};
+  list.forEach(o => { const s = offerStage(o); stageCounts[s] = (stageCounts[s] || 0) + 1; });
 
-  const pageSize = parseInt(document.getElementById('offerPageSize').value, 10) || 10;
-  const totalPages = Math.max(1, Math.ceil(list.length/pageSize));
-  if(offerListPage >= totalPages) offerListPage = totalPages-1;
-  if(offerListPage < 0) offerListPage = 0;
-  const pageItems = list.slice(offerListPage*pageSize, offerListPage*pageSize+pageSize);
+  // Χωρίς σελίδες που κόβουν τις ενότητες στη μέση: κάθε ενότητα δείχνει τις
+  // πρώτες Ν και οι υπόλοιπες ανοίγουν με ένα κλικ («Εμφάνιση όλων»). Στην
+  // αναζήτηση φαίνονται πάντα όλα τα ευρήματα.
+  const perGroup = parseInt(document.getElementById('offerPageSize').value, 10) || 8;
+  window.__offerGroupsOpen = window.__offerGroupsOpen || new Set();
+  if(!window.__offerGroupsCollapsed){
+    try{ window.__offerGroupsCollapsed = new Set(JSON.parse(localStorage.getItem('ff_offer_groups_collapsed') || '[]')); }
+    catch(e){ window.__offerGroupsCollapsed = new Set(); }
+  }
 
   const arrow = col => offerSortCol===col ? (offerSortDir===1?' ▲':' ▼') : '';
   const th = (col, label) => `<th style="cursor:pointer;user-select:none;" onclick="setOfferSort('${col}')">${label}${arrow(col)}</th>`;
 
-  const rows = pageItems.map(o=>{
+  const stageSums = {};
+  list.forEach(o => { const s = offerStage(o); stageSums[s] = (stageSums[s] || 0) + num(o.total); });
+  const headerRow = (stage, collapsed) => `
+    <tr class="offer-group-row g-${esc(stage)}" onclick="toggleOfferGroup('${esc(stage)}')"
+        title="Κλικ για ${collapsed ? 'άνοιγμα' : 'κλείσιμο'} της κατηγορίας">
+      <td colspan="9">${collapsed ? '▸' : '▾'} ${STAGE_HEADERS[stage] || stage}
+      (${stageCounts[stage] || 0})<span class="grp-sum">${(stageSums[stage] || 0).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span></td></tr>`;
+  // Ορατές γραμμές ανά ενότητα: όλες όταν ψάχνεις ή την έχεις ανοίξει,
+  // αλλιώς οι πρώτες Ν — καμία όταν η ενότητα είναι διπλωμένη.
+  const visibleRows = [];
+  const extraRows = {};
+  ['draft','sent','approved','rejected'].forEach(stage => {
+    const items = list.filter(o => offerStage(o) === stage);
+    if(!items.length) return;
+    const collapsed = window.__offerGroupsCollapsed.has(stage) && !search;
+    visibleRows.push({ __header: stage, collapsed });
+    if(collapsed) return;
+    const showAll = search || window.__offerGroupsOpen.has(stage);
+    const shown = showAll ? items : items.slice(0, perGroup);
+    shown.forEach(o => visibleRows.push(o));
+    if(items.length > shown.length) extraRows[stage] = items.length - shown.length;
+    else if(showAll && !search && items.length > perGroup) extraRows[stage] = -1;   // ανοιχτή — πρόσφερε μάζεμα
+  });
+
+  const rows = visibleRows.map(o=>{
+    if(o.__header !== undefined){
+      let h = headerRow(o.__header, o.collapsed);
+      return h;
+    }
     const d = o.data || {};
+    let head = '';
+    const stage = offerStage(o);
+    if(extraRows.__pending === stage){ /* unused */ }
     const dateStr = o.date ? fmtDate(o.date) : (o.savedAt ? o.savedAt.slice(0,10) : '');
     const totalStr = o.total>0 ? o.total.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—';
-    return `
+    const isLastShown = (() => {
+      const i = visibleRows.indexOf(o);
+      const next = visibleRows[i+1];
+      return (!next || next.__header !== undefined) && extraRows[stage];
+    })();
+    const moreRow = isLastShown
+      ? `<tr class="offer-more-row"><td colspan="9" onclick="${extraRows[stage] > 0
+          ? `openOfferGroup('${esc(stage)}')">➕ Εμφάνιση όλων — ακόμα ${extraRows[stage]}`
+          : `shrinkOfferGroup('${esc(stage)}')">➖ Εμφάνιση μόνο των πρώτων`}</td></tr>`
+      : '';
+    return head + `
       <tr onclick="loadOffer('${o.id}')" style="cursor:pointer;">
         <td onclick="event.stopPropagation()" style="text-align:center;">
           <input type="checkbox" class="ol-pick" ${combinedPick.has(o.id) ? 'checked' : ''}
@@ -10951,7 +11028,7 @@ function renderOfferTable(){
           <button class="btn" title="Διαγραφή" onclick="deleteOffer('${o.id}')" style="padding:5px 8px;color:#c0392b;">×</button>
         </td>
       </tr>
-    `;
+    ` + moreRow;
   }).join('');
 
   wrap.innerHTML = `
@@ -10968,18 +11045,7 @@ function renderOfferTable(){
     </table>
   `;
 
-  const startIdx = list.length ? offerListPage*pageSize+1 : 0;
-  const endIdx = Math.min(list.length, offerListPage*pageSize+pageSize);
-  pagEl.innerHTML = `
-    <span>${startIdx} - ${endIdx} από ${list.length} εγγραφές</span>
-    <div style="display:flex;gap:6px;">
-      <button class="btn" onclick="offerListPage=0;renderOfferTable()" ${offerListPage===0?'disabled':''}>Πρώτη</button>
-      <button class="btn" onclick="offerListPage=Math.max(0,offerListPage-1);renderOfferTable()" ${offerListPage===0?'disabled':''}>Προηγούμενη</button>
-      <span style="padding:6px 10px;">${offerListPage+1} / ${totalPages}</span>
-      <button class="btn" onclick="offerListPage=Math.min(${totalPages-1},offerListPage+1);renderOfferTable()" ${offerListPage>=totalPages-1?'disabled':''}>Επόμενη</button>
-      <button class="btn" onclick="offerListPage=${totalPages-1};renderOfferTable()" ${offerListPage>=totalPages-1?'disabled':''}>Τελευταία</button>
-    </div>
-  `;
+  pagEl.innerHTML = `<span>Σύνολο: ${list.length} προσφορές${search ? ' στα αποτελέσματα' : ''}</span>`;
 }
 
 async function duplicateOffer(id){
