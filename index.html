@@ -2203,6 +2203,7 @@ function toggleMobileSidebar(forceClose){
           <button class="btn" style="display:none;" id="ordersEmailBtn" onclick="emailSelectedOrders()">📧 Email Παραγγελίας (<span id="ordersEmailCount">0</span>)</button>
           <button class="btn" style="color:#c0392b;border-color:#c0392b;display:none;" id="ordersBulkDeleteBtn" onclick="deleteSelectedOrders()">🗑 Διαγραφή Επιλεγμένων (<span id="ordersSelectedCount">0</span>)</button>
         </div>
+        <input type="file" id="orderEmailFile" accept=".msg,.eml" style="display:none" onchange="uploadOrderEmailFile(this)">
         <div id="ordersList"></div>
       </div>
     </div>
@@ -2358,6 +2359,13 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewStock" style="display:none;">
+    <div class="card" id="stockOverviewCard" style="display:none;">
+      <div class="card-head">
+        <div class="title">📊 Συνολική εικόνα — τι έρχεται & τι είναι κρατημένο</div>
+        <span class="empty-note" id="stockOverviewCount"></span>
+      </div>
+      <div class="card-body" id="stockOverviewBody"></div>
+    </div>
     <div class="card">
       <div class="card-head"><div class="title">🏬 Αποθήκη — Κίνηση Χαρτιού</div>
         <div style="display:flex;gap:8px;">
@@ -2780,6 +2788,15 @@ function toggleMobileSidebar(forceClose){
             <input type="checkbox" id="autoBackupDownload" onchange="localStorage.setItem('ff_auto_backup_dl', this.checked ? '1' : '0')">
             Αυτόματη λήψη αντιγράφου στις Λήψεις, μία φορά την ημέρα (από αυτόν τον υπολογιστή)
           </label>
+          <div style="border-top:1px solid var(--line);margin:10px 0;padding-top:10px;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">📧 Σύνδεση Outlook (Microsoft 365)</div>
+            <div class="empty-note" style="margin:0 0 6px;">Με τη σύνδεση, δένεις email με παραγγελίες και τα διαβάζεις μέσα από το πρόγραμμα. Χρειάζεται μία φορά το Application (client) ID από την εγγραφή εφαρμογής στο portal.azure.com — ζήτα τις οδηγίες.</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input id="msGraphClientId" placeholder="Application (client) ID — π.χ. 1a2b3c4d-…" style="flex:1;min-width:260px;font-size:12px;" onchange="saveMsGraphClientId(this.value)">
+              <button class="btn" onclick="testGraphConnection()">Δοκιμή σύνδεσης</button>
+            </div>
+            <div class="empty-note" id="msGraphStatus" style="margin:4px 0 0;"></div>
+          </div>
           <label style="font-size:12.5px;display:flex;gap:8px;align-items:center;margin-top:8px;">
             Αυτόματη αποσύνδεση και καθάρισμα καρτέλας μετά από
             <select id="autoLogoutHours" onchange="localStorage.setItem('ff_auto_logout_hours', this.value)" style="width:110px;">
@@ -8563,7 +8580,7 @@ function toggleMaterialsSummary(){
   if(opening) renderMaterialsSummary();
 }
 
-function renderMaterialsSummary(){
+async function renderMaterialsSummary(){
   const listEl = document.getElementById('materialsSummaryList');
   const summary = computeMaterialsSummary();
   const materials = Object.keys(summary);
@@ -8571,22 +8588,84 @@ function renderMaterialsSummary(){
     listEl.innerHTML = '<div class="empty-note">Δεν βρέθηκαν γραμμές με επιλεγμένο χαρτί/ύφασμα ακόμα.</div>';
     return;
   }
+  // Ελεύθερο απόθεμα ανά υλικό (μετά τις δεσμεύσεις) — για να μην παραγγείλεις
+  // ό,τι ήδη έχεις στο ράφι.
+  let recForStock = { reservations: {} };
+  try{ recForStock = await jbGetRecord(); }catch(e){}
   listEl.innerHTML = `
     <table>
-      <thead><tr><th style="width:30px;"></th><th>Υλικό</th><th style="text-align:right;">Υπολογισμένα</th><th style="text-align:right;width:110px;">Ποσότητα Παραγγελίας</th></tr></thead>
+      <thead><tr><th style="width:30px;"></th><th>Υλικό</th><th style="text-align:right;">Υπολογισμένα</th><th style="text-align:right;">Απόθεμα</th><th style="text-align:right;width:110px;">Ποσότητα Παραγγελίας</th></tr></thead>
       <tbody>${materials.map((m,i)=>{
         const entry = summary[m];
         const displayQty = entry.unit==='μέτρα' ? Math.round(entry.qty*100)/100 : entry.qty;
+        const free = Math.max(0, stockOf(m).qty - reservedOf(recForStock, m));
+        const covers = free >= entry.qty && entry.qty > 0;
+        const stockCell = free > 0
+          ? `<span class="ms-stock" data-paper="${esc(m)}" style="font-size:11.5px;font-weight:700;color:${covers ? '#0e6b3a' : '#a2601d'};" title="Ελεύθερο απόθεμα (μετά τις δεσμεύσεις άλλων δουλειών)">📦 ${free.toLocaleString('el-GR')}</span>
+             <button class="btn" style="padding:1px 8px;font-size:10.5px;white-space:nowrap;margin-left:4px;" title="Δέσμευση από το απόθεμα για αυτή τη δουλειά — χωρίς παραγγελία" onclick="reserveFromSummary(this.dataset.paper)" data-paper="${esc(m)}">Από απόθεμα</button>`
+          : `<span class="ms-stock" data-paper="${esc(m)}" style="font-size:11.5px;color:var(--muted);" title="Χωρίς ελεύθερο απόθεμα">📦 0</span>`;
         return `
         <tr>
           <td><input type="checkbox" class="materials-summary-check" data-paper="${esc(m)}" checked></td>
           <td>${esc(m)}</td>
           <td style="text-align:right;color:var(--muted);">${displayQty.toLocaleString('el-GR')} ${esc(entry.unit)}</td>
+          <td style="text-align:right;white-space:nowrap;">${stockCell}</td>
           <td style="text-align:right;"><input type="number" min="0" step="${entry.unit==='μέτρα'?'0.01':'1'}" class="materials-summary-qty" data-paper="${esc(m)}" data-unit="${esc(entry.unit)}" value="${displayQty}" style="width:95px;text-align:right;font-weight:700;padding:4px 6px;"></td>
         </tr>
       `;}).join('')}</tbody>
     </table>
   `;
+}
+
+// Δέσμευση από τη Σύνοψη υλικών της προσφοράς: ίδια λογική με το panel των
+// εκκρεμών — πλήρης κάλυψη ξετσεκάρει τη γραμμή (δεν θα παραγγελθεί), μερική
+// αφήνει στην Ποσότητα Παραγγελίας μόνο το υπόλοιπο.
+async function reserveFromSummary(paper){
+  try{
+    const inp = document.querySelector(`.materials-summary-qty[data-paper="${CSS.escape(paper)}"]`);
+    const needed = inp ? num(inp.value) : 0;
+    if(!(needed > 0)){ statusMsg('Δεν υπάρχει ποσότητα για δέσμευση — συμπλήρωσε την Ποσότητα Παραγγελίας.'); return; }
+    if(!currentOfferId) await saveOffer();
+    if(!currentOfferId){ statusMsg('Αποθήκευσε πρώτα την προσφορά.'); return; }
+    const job = [document.getElementById('fClient').value, document.getElementById('fTitle').value].filter(Boolean).join(' — ');
+    const record = await jbGetRecord();
+    const st = stockOf(paper);
+    const free = Math.max(0, st.qty - reservedOf(record, paper));
+    if(free <= 0){ statusMsg('Δεν υπάρχει ελεύθερο απόθεμα.'); return; }
+    const take = Math.min(free, needed);
+    const full = take >= needed;
+    if(!confirm(full
+      ? `Δέσμευση ${take.toLocaleString('el-GR')} ${st.unit} «${paper}» από το απόθεμα για:\n${job}\n\nΔΕΝ θα γίνει παραγγελία για αυτό το υλικό.`
+      : `Το ελεύθερο απόθεμα καλύπτει ${take.toLocaleString('el-GR')} από τα ${needed.toLocaleString('el-GR')} ${st.unit}.\n\nΝα δεσμευτούν τα ${take.toLocaleString('el-GR')} και να μείνει για παραγγελία το υπόλοιπο (${(needed - take).toLocaleString('el-GR')});`)) return;
+    record.reservations = record.reservations || {};
+    const rid = 'rsv' + Date.now();
+    const resv = { paper, qty: take, offerId: currentOfferId, job, date: new Date().toISOString() };
+    record.reservations[rid] = resv;
+    await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+    record.stockLog = Array.isArray(record.stockLog) ? record.stockLog : [];
+    record.stockLog.unshift({ id: 'stk' + Date.now(), paper, type: 'reserve', qty: take,
+      unit: st.unit, note: `Δέσμευση για «${job}»`, date: new Date().toISOString() });
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    // Ενημέρωση της γραμμής επιτόπου — χωρίς πλήρες ξαναχτίσιμο, για να μη
+    // χαθούν οι διορθωμένες ποσότητες των άλλων γραμμών.
+    const chk = document.querySelector(`.materials-summary-check[data-paper="${CSS.escape(paper)}"]`);
+    if(full){
+      if(inp) inp.value = 0;
+      if(chk) chk.checked = false;
+      await togglePaperOrdered(currentOfferId, paper, true);
+      statusMsg(`Δεσμεύτηκαν ${take.toLocaleString('el-GR')} ${st.unit} ✓ — το «${paper}» καλύφθηκε από το απόθεμα`);
+    } else {
+      if(inp) inp.value = needed - take;
+      statusMsg(`Δεσμεύτηκαν ${take.toLocaleString('el-GR')} ${st.unit} ✓ — για παραγγελία έμειναν ${(needed - take).toLocaleString('el-GR')}`);
+    }
+    const span = document.querySelector(`.ms-stock[data-paper="${CSS.escape(paper)}"]`);
+    if(span){
+      const newFree = free - take;
+      span.textContent = '📦 ' + newFree.toLocaleString('el-GR');
+      if(newFree <= 0){ span.style.color = 'var(--muted)'; const b = span.parentElement.querySelector('button'); if(b) b.remove(); }
+    }
+  }catch(e){ statusMsg('Σφάλμα δέσμευσης: ' + e.message); }
 }
 
 function getSelectedMaterialsForOrder(){
@@ -9395,6 +9474,10 @@ function switchView(view){
     if(cb) cb.checked = localStorage.getItem('ff_auto_backup_dl') === '1';
     const sel = document.getElementById('autoLogoutHours');
     if(sel) sel.value = String(ffAutoLogoutHours());
+    jbGetRecord().then(r => {
+      const inp = document.getElementById('msGraphClientId');
+      if(inp) inp.value = r.msGraphClientId || '';
+    }).catch(()=>{});
     renderAutoSnapshots();
   }
   if(view==='production'){ if(productionView==='calendar') renderProductionCalendar(); else refreshProductionBoard(); }
@@ -11267,6 +11350,20 @@ async function consumeTicketPaper(){
     }
     record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    // Η δουλειά πήρε το χαρτί της — οι δεσμεύσεις της για αυτά τα χαρτιά
+    // ελευθερώνονται, αλλιώς θα κρατούσαν «πιασμένο» απόθεμα για πάντα.
+    try{
+      const tkOffer = document.getElementById('tkOfferId').value || '';
+      if(tkOffer && record.reservations){
+        const consumedPapers = new Set(pending.map(r => r.xarti.trim()));
+        for(const [rid, rv] of Object.entries(record.reservations)){
+          if(rv && rv.offerId === tkOffer && consumedPapers.has(rv.paper)){
+            delete record.reservations[rid];
+            await jbDeletePath(SLICE_MAIN, ['reservations', rid]);
+          }
+        }
+      }
+    }catch(e){ console.error('Release reservations:', e); }
     renderTkPaper();
     markTicketDirty();
     statusMsg(warnings.length
@@ -12389,22 +12486,33 @@ function ticketPaperStatus(data, record){
     const received = rel.find(([, o]) => o.status === 'received');
     const pending = rel.find(([, o]) => o.status !== 'received');
     const po = pending ? pending[1] : null;
+    // Δεσμευμένα από το απόθεμα για ΑΥΤΗ τη δουλειά: το χαρτί είναι ήδη στο
+    // ράφι — δεν περιμένουμε κανέναν, το παίρνουμε από εκεί.
+    const reservedQty = offerId
+      ? Object.values(record.reservations || {})
+          .filter(rv => rv && rv.offerId === offerId && rv.paper === name)
+          .reduce((s, rv) => s + num(rv.qty), 0)
+      : 0;
     return { name,
-      state: received ? 'received' : (pending ? 'pending' : 'none'),
+      state: received ? 'received' : (pending ? 'pending' : (reservedQty > 0 ? 'reserved' : 'none')),
       date: received ? (received[1].receivedDate || '') : '',
       partial: po && num(po.receivedQty) > 0
         ? `${num(po.receivedQty).toLocaleString('el-GR')}/${num(po.sheets).toLocaleString('el-GR')}` : '',
+      reservedQty,
       orderId: pending ? pending[0] : '' };
   });
   const received = rows.filter(r => r.state === 'received').length;
+  const reserved = rows.filter(r => r.state === 'reserved').length;
   return { rows, received, total: rows.length,
            linked: !!offerId,
-           allOk: rows.length > 0 && received === rows.length };
+           allOk: rows.length > 0 && received + reserved === rows.length };
 }
 
 function paperStateLabel(r){
   return r.state === 'received' ? ('✓ παραλήφθηκε' + (r.date ? ' ' + fmtDateShort(String(r.date).slice(0,10)) : ''))
-       : r.state === 'pending' ? ('📦 σε αναμονή' + (r.partial ? ` (${r.partial})` : ''))
+       : r.state === 'reserved' ? `🔒 δεσμευμένο από το απόθεμα (${num(r.reservedQty).toLocaleString('el-GR')}) — πάρ' το από το ράφι`
+       : r.state === 'pending' ? ('📦 σε αναμονή' + (r.partial ? ` (${r.partial})` : '')
+           + (num(r.reservedQty) > 0 ? ` + 🔒 ${num(r.reservedQty).toLocaleString('el-GR')} από το ράφι` : ''))
        : '⏳ δεν παραγγέλθηκε';
 }
 
@@ -14105,15 +14213,27 @@ function closeOrderMiniMenu(){
 document.addEventListener('click', closeOrderMiniMenu);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeOrderMiniMenu(); });
 
-function openOrderMiniMenu(ev, id){
+async function openOrderMiniMenu(ev, id){
   ev.preventDefault();
   ev.stopPropagation();
+  window.__ordMenuPos = { x: ev.clientX, y: ev.clientY };
   closeOrderMiniMenu();
+  // Το αν έχει ήδη δεμένο email αλλάζει τι δείχνει το μενού.
+  let hasEmail = false, hasFile = false, hasGraph = false;
+  try{
+    const record = await jbGetRecord();
+    hasEmail = !!(record.orders[id] && record.orders[id].emailLink);
+    hasFile = !!(record.orders[id] && record.orders[id].emailFile);
+    hasGraph = !!(record.orders[id] && record.orders[id].emailGraphId);
+  }catch(e){}
   const m = document.createElement('div');
   m.id = 'ordMiniMenu';
   m.className = 'ost-menu';
   m.innerHTML = `
-    <div class="item" onclick="editOrderSupplierPrompt('${esc(id)}');closeOrderMiniMenu();">🏢 Αλλαγή προμηθευτή…</div>
+    ${hasEmail || hasFile || hasGraph ? `<div class="item" onclick="openOrderEmail('${esc(id)}');closeOrderMiniMenu();">📧 Άνοιγμα συνδεδεμένου email</div>` : ''}
+    <div class="item" onclick="pickOrderEmail('${esc(id)}');closeOrderMiniMenu();">${hasGraph ? '✏️ Αλλαγή δεμένου email (Outlook)…' : '📧 Σύνδεση email από το Outlook…'}</div>
+    ${hasGraph ? `<div class="item" onclick="unlinkOrderEmail('${esc(id)}');closeOrderMiniMenu();">✂ Αφαίρεση δεμένου email</div>` : ''}
+    <div class="item" onclick="pickOrderSupplier('${esc(id)}');closeOrderMiniMenu();">🏢 Αλλαγή προμηθευτή ▸</div>
     <div class="item" onclick="editOrderSheetsPrompt('${esc(id)}');closeOrderMiniMenu();">🔢 Αλλαγή ποσότητας…</div>
     <div class="item" style="color:#c0392b;" onclick="deleteOrder('${esc(id)}');closeOrderMiniMenu();">🗑 Διαγραφή παραγγελίας…</div>`;
   document.body.appendChild(m);
@@ -14121,6 +14241,475 @@ function openOrderMiniMenu(ev, id){
   const y = Math.min(ev.clientY, window.innerHeight - m.offsetHeight - 8);
   m.style.left = x + 'px';
   m.style.top = y + 'px';
+}
+
+// ===== Δεμένο email ανά παραγγελία =====
+// Όχι σύνδεση με το γραμματοκιβώτιο — μόνο ο σύνδεσμος του συγκεκριμένου
+// email: τον αντιγράφεις από τη γραμμή διευθύνσεων του Outlook/Gmail στον
+// browser με ανοιχτό το email, και από εδώ ξανανοίγει με ένα κλικ.
+async function editOrderEmailPrompt(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    const v = prompt('Επικόλλησε τον σύνδεσμο του email για «' + (o.material || '') + '»\n'
+      + '(άνοιξε το email στο Outlook/Gmail στον browser και αντίγραψε τη διεύθυνση από τη γραμμή διευθύνσεων — κενό σβήνει τον σύνδεσμο):', o.emailLink || '');
+    if(v === null) return;
+    const link = v.trim();
+    if(link && !/^https?:\/\//i.test(link)){
+      statusMsg('Ο σύνδεσμος πρέπει να ξεκινά με http:// ή https:// — αντίγραψε τη διεύθυνση από τον browser.');
+      return;
+    }
+    o.emailLink = link;
+    await jbMergePath(SLICE_MAIN, ['orders', id], o);
+    statusMsg(link ? 'Το email συνδέθηκε με την παραγγελία ✓' : 'Ο σύνδεσμος email αφαιρέθηκε.');
+    refreshOrdersList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// ===== Δεσμεύσεις αποθέματος =====
+// «Έχω το χαρτί — το κρατάω για αυτή τη δουλειά αντί να το παραγγείλω.»
+// Η δέσμευση ζει στο record (όλα τα μηχανήματα τη βλέπουν), ΔΕΝ αφαιρεί από
+// το απόθεμα — το μειώνει η κατανάλωση του ticket όπως πάντα, η οποία και
+// ελευθερώνει αυτόματα τη δέσμευση. Μέχρι τότε, παντού φαίνεται «ελεύθερο =
+// απόθεμα − δεσμευμένα», ώστε να μην υποσχεθεί δύο δουλειές το ίδιο χαρτί.
+function reservedOf(record, paper){
+  return Object.values((record && record.reservations) || {})
+    .filter(r => r && r.paper === paper)
+    .reduce((s, r) => s + num(r.qty), 0);
+}
+
+async function releaseReservation(rid){
+  try{
+    const record = await jbGetRecord();
+    const r = (record.reservations || {})[rid];
+    if(!r) return;
+    if(!confirm(`Αποδέσμευση ${num(r.qty).toLocaleString('el-GR')} «${r.paper}» από τη δουλειά:\n${r.job || '—'}\n\nΤο απόθεμα ξαναγίνεται ελεύθερο για άλλες δουλειές.`)) return;
+    delete record.reservations[rid];
+    await jbDeletePath(SLICE_MAIN, ['reservations', rid]);
+    record.stockLog = Array.isArray(record.stockLog) ? record.stockLog : [];
+    record.stockLog.unshift({ id: 'stk' + Date.now(), paper: r.paper, type: 'release', qty: num(r.qty),
+      unit: stockOf(r.paper).unit, note: `Αποδέσμευση από «${r.job || ''}»`, date: new Date().toISOString() });
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    statusMsg('Αποδεσμεύτηκε ✓');
+    refreshStockList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function reserveFromStock(i){
+  try{
+    const items = window.__pmEmailItems || [];
+    const it = items[i];
+    if(!it) return;
+    const inp = document.querySelector(`.pm-item-sheets[data-i="${i}"]`);
+    const needed = inp && inp.value !== '' ? num(inp.value) : num(it.sheets);
+    if(!(needed > 0)){ statusMsg('Δεν υπάρχει ποσότητα για δέσμευση.'); return; }
+    const record = await jbGetRecord();
+    const st = stockOf(it.material);
+    const free = Math.max(0, st.qty - reservedOf(record, it.material));
+    if(free <= 0){ statusMsg('Δεν υπάρχει ελεύθερο απόθεμα.'); return; }
+    const take = Math.min(free, needed);
+    const full = take >= needed;
+    if(!confirm(full
+      ? `Δέσμευση ${take.toLocaleString('el-GR')} ${st.unit} «${it.material}» από το απόθεμα για:\n${it.job}\n\nΔΕΝ θα γίνει παραγγελία — το χαρτί θα μαρκαριστεί καλυμμένο.`
+      : `Το ελεύθερο απόθεμα καλύπτει ${take.toLocaleString('el-GR')} από τα ${needed.toLocaleString('el-GR')} ${st.unit}.\n\nΝα δεσμευτούν τα ${take.toLocaleString('el-GR')} και να μείνει για παραγγελία το υπόλοιπο (${(needed - take).toLocaleString('el-GR')});`)) return;
+    record.reservations = record.reservations || {};
+    const rid = 'rsv' + Date.now();
+    const resv = { paper: it.material, qty: take, offerId: it.offerId || '', job: it.job || '', date: new Date().toISOString() };
+    record.reservations[rid] = resv;
+    await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+    // Ίχνος στο ιστορικό — καμία αλλαγή ποσότητας.
+    record.stockLog = Array.isArray(record.stockLog) ? record.stockLog : [];
+    record.stockLog.unshift({ id: 'stk' + Date.now(), paper: it.material, type: 'reserve', qty: take,
+      unit: st.unit, note: `Δέσμευση για «${it.job}»`, date: new Date().toISOString() });
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    if(full){
+      if(it.offerId) await togglePaperOrdered(it.offerId, it.material, true);
+      statusMsg(`Δεσμεύτηκαν ${take.toLocaleString('el-GR')} ${st.unit} ✓ — το χαρτί καλύφθηκε από το απόθεμα`);
+    } else {
+      if(inp) inp.value = needed - take;
+      statusMsg(`Δεσμεύτηκαν ${take.toLocaleString('el-GR')} ${st.unit} ✓ — για παραγγελία έμειναν ${(needed - take).toLocaleString('el-GR')}`);
+    }
+    // Ξαναχτίσιμο του panel με φρέσκα ελεύθερα (κρατώντας τη λειτουργία του)
+    const panel = document.getElementById('pmEmailPanel');
+    if(panel && full){
+      await refreshPendingMaterialsBar();
+      panel.style.display = 'none';
+      togglePmEmailPanel(window.__pmPanelMode || 'email');
+    }
+  }catch(e){ statusMsg('Σφάλμα δέσμευσης: ' + e.message); }
+}
+
+// ===== Σύνδεση Outlook (Microsoft Graph) =====
+// Το πρόγραμμα μιλά απευθείας με το γραμματοκιβώτιο Microsoft 365 μέσω του
+// επίσημου Graph: διαλέγεις email από λίστα ΜΕΣΑ στο πρόγραμμα, δένεται με
+// την παραγγελία (αποθηκεύεται μόνο η ταυτότητά του — όχι το περιεχόμενο),
+// και διαβάζεται σε παράθυρο του προγράμματος. Κάθε χρήστης συνδέεται μία
+// φορά με τον δικό του λογαριασμό· η βιβλιοθήκη σύνδεσης της Microsoft
+// (MSAL) φορτώνεται μόνο όταν χρειαστεί.
+let msalInstance = null, msalLoading = null;
+
+function ensureMsal(){
+  if(window.msal) return Promise.resolve();
+  if(msalLoading) return msalLoading;
+  msalLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js';
+    s.onload = res;
+    s.onerror = () => { msalLoading = null; rej(new Error('Δεν φορτώθηκε η βιβλιοθήκη σύνδεσης Microsoft — έλεγξε το internet.')); };
+    document.head.appendChild(s);
+  });
+  return msalLoading;
+}
+
+async function getGraphToken(interactive){
+  if(location.protocol === 'file:')
+    throw new Error('Η σύνδεση Outlook δουλεύει μόνο όταν το πρόγραμμα ανοίγει από τη διεύθυνσή του στο internet, όχι από τοπικό αρχείο.');
+  const record = await jbGetRecord();
+  const clientId = (record.msGraphClientId || '').trim();
+  if(!clientId){ const e = new Error('NOCLIENT'); e.code = 'NOCLIENT'; throw e; }
+  await ensureMsal();
+  if(!msalInstance){
+    msalInstance = new msal.PublicClientApplication({
+      auth: { clientId, authority: 'https://login.microsoftonline.com/common',
+              redirectUri: location.origin + location.pathname },
+      cache: { cacheLocation: 'localStorage' }
+    });
+    await msalInstance.initialize();
+  }
+  const scopes = ['Mail.Read'];
+  const accounts = msalInstance.getAllAccounts();
+  if(accounts.length){
+    try{
+      const r = await msalInstance.acquireTokenSilent({ scopes, account: accounts[0] });
+      return r.accessToken;
+    }catch(e){ /* θέλει φρέσκια σύνδεση */ }
+  }
+  if(interactive === false){ const e = new Error('NOSESSION'); e.code = 'NOSESSION'; throw e; }
+  const r = await msalInstance.loginPopup({ scopes });
+  return (await msalInstance.acquireTokenSilent({ scopes, account: r.account })).accessToken;
+}
+
+async function graphFetch(path, token){
+  const res = await fetch('https://graph.microsoft.com/v1.0' + path, {
+    headers: { 'Authorization': 'Bearer ' + token } });
+  if(!res.ok) throw new Error('Graph HTTP ' + res.status);
+  return res.json();
+}
+
+async function saveMsGraphClientId(v){
+  try{
+    const record = await jbGetRecord();
+    record.msGraphClientId = String(v || '').trim();
+    await jbMergePath(SLICE_MAIN, ['msGraphClientId'], record.msGraphClientId);
+    msalInstance = null;   // νέο ID = νέα σύνδεση
+    const el = document.getElementById('msGraphStatus');
+    if(el) el.textContent = 'Αποθηκεύτηκε ✓ — πάτα «Δοκιμή σύνδεσης».';
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function testGraphConnection(){
+  const el = document.getElementById('msGraphStatus');
+  try{
+    el.textContent = 'Σύνδεση…';
+    const token = await getGraphToken(true);
+    const me = await graphFetch('/me?$select=displayName,mail,userPrincipalName', token);
+    el.textContent = `Συνδέθηκε ✓ — ${me.displayName || ''} (${me.mail || me.userPrincipalName || ''})`;
+  }catch(e){
+    el.textContent = e.code === 'NOCLIENT'
+      ? 'Συμπλήρωσε πρώτα το Application (client) ID.'
+      : 'Σφάλμα: ' + e.message;
+  }
+}
+
+// ----- Παράθυρο (κοινό για επιλογή και ανάγνωση) -----
+function closeGraphModal(){ const m = document.getElementById('graphMailModal'); if(m) m.remove(); }
+function graphModal(title, bodyHtml){
+  closeGraphModal();
+  const m = document.createElement('div');
+  m.id = 'graphMailModal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:6000;background:rgba(20,18,14,0.45);display:flex;align-items:center;justify-content:center;padding:20px;';
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);">
+        <b style="font-size:14px;">${title}</b>
+        <span style="cursor:pointer;font-size:20px;font-weight:700;padding:0 4px;" onclick="closeGraphModal()">×</span>
+      </div>
+      <div id="graphModalBody" style="padding:14px 18px;overflow:auto;flex:1;">${bodyHtml}</div>
+    </div>`;
+  m.addEventListener('click', e => { if(e.target === m) closeGraphModal(); });
+  document.body.appendChild(m);
+}
+
+// ----- Επιλογή email για δέσιμο -----
+async function pickOrderEmail(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    graphModal('📧 Σύνδεση email με: ' + esc(o.material || ''), '<div class="empty-note">Σύνδεση με το Outlook…</div>');
+    const token = await getGraphToken(true);
+    window.__graphPickOrder = id;
+    const q = [o.supplier, o.job ? o.job.split(' — ')[0] : ''].filter(Boolean)[0] || '';
+    document.getElementById('graphModalBody').innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="graphSearch" value="${esc(q)}" placeholder="Αναζήτηση σε θέμα/αποστολέα…" style="flex:1;"
+          onkeydown="if(event.key==='Enter')graphSearchRun()">
+        <button class="btn solid" onclick="graphSearchRun()">Αναζήτηση</button>
+      </div>
+      <div id="graphResults" class="empty-note">Φόρτωση πρόσφατων…</div>`;
+    await graphSearchRun();
+  }catch(e){
+    const body = document.getElementById('graphModalBody');
+    if(body) body.innerHTML = graphErrorHtml(e);
+  }
+}
+
+function graphErrorHtml(e){
+  if(e.code === 'NOCLIENT')
+    return '<div class="empty-note">Δεν έχει οριστεί το Application (client) ID.<br>Ρυθμίσεις → «📧 Σύνδεση Outlook» — και ζήτα τις οδηγίες για το portal.azure.com (μία φορά, 5 λεπτά).</div>';
+  return '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
+}
+
+async function graphSearchRun(){
+  const el = document.getElementById('graphResults');
+  try{
+    el.innerHTML = '<div class="empty-note">Αναζήτηση…</div>';
+    const token = await getGraphToken(true);
+    const q = (document.getElementById('graphSearch').value || '').trim();
+    const sel = '$select=id,subject,from,receivedDateTime,hasAttachments,webLink&$top=20';
+    const path = q
+      ? `/me/messages?${sel}&$search=${encodeURIComponent('"' + q.replace(/"/g, '') + '"')}`
+      : `/me/messages?${sel}&$orderby=receivedDateTime desc`;
+    const data = await graphFetch(path, token);
+    const items = data.value || [];
+    el.innerHTML = items.length ? items.map(msg => `
+      <div onclick="linkGraphEmail('${esc(msg.id)}')" style="display:grid;grid-template-columns:90px minmax(0,1fr) 18px;gap:8px;padding:7px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px;align-items:baseline;" onmouseover="this.style.background='var(--page)'" onmouseout="this.style.background=''">
+        <span style="color:var(--muted);font-size:11px;">${esc(fmtDateShort(String(msg.receivedDateTime || '').slice(0,10)))}</span>
+        <span style="min-width:0;overflow:hidden;">
+          <b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(msg.subject || '(χωρίς θέμα)')}</b>
+          <span style="color:var(--muted);font-size:11px;">${esc((msg.from && msg.from.emailAddress && (msg.from.emailAddress.name || msg.from.emailAddress.address)) || '')}</span>
+        </span>
+        <span>${msg.hasAttachments ? '📎' : ''}</span>
+      </div>`).join('')
+      : '<div class="empty-note">Τίποτα — δοκίμασε άλλη αναζήτηση.</div>';
+    window.__graphResults = {};
+    items.forEach(msg => window.__graphResults[msg.id] = msg);
+  }catch(e){ el.innerHTML = graphErrorHtml(e); }
+}
+
+async function linkGraphEmail(msgId){
+  try{
+    const id = window.__graphPickOrder;
+    const msg = (window.__graphResults || {})[msgId];
+    if(!id || !msg) return;
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    o.emailGraphId = msg.id;
+    o.emailSubject = msg.subject || '';
+    o.emailFrom = (msg.from && msg.from.emailAddress && (msg.from.emailAddress.name || msg.from.emailAddress.address)) || '';
+    o.emailDate = msg.receivedDateTime || '';
+    o.emailWebLink = msg.webLink || '';
+    await jbMergePath(SLICE_MAIN, ['orders', id], o);
+    closeGraphModal();
+    statusMsg('Το email δέθηκε με την παραγγελία ✓ — ανοίγει από το 📧');
+    refreshOrdersList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function unlinkOrderEmail(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    o.emailGraphId = ''; o.emailSubject = ''; o.emailFrom = ''; o.emailDate = ''; o.emailWebLink = '';
+    await jbMergePath(SLICE_MAIN, ['orders', id], o);
+    statusMsg('Αφαιρέθηκε το δεμένο email.');
+    refreshOrdersList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// ----- Ανάγνωση μέσα στο πρόγραμμα -----
+async function viewGraphEmail(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o || !o.emailGraphId) return;
+    graphModal('📧 ' + esc(o.emailSubject || 'Email'), '<div class="empty-note">Φόρτωση email…</div>');
+    const token = await getGraphToken(true);
+    const msg = await graphFetch(`/me/messages/${encodeURIComponent(o.emailGraphId)}?$select=subject,from,toRecipients,receivedDateTime,body,webLink,hasAttachments`, token);
+    let attHtml = '';
+    if(msg.hasAttachments){
+      const atts = await graphFetch(`/me/messages/${encodeURIComponent(o.emailGraphId)}/attachments?$select=id,name,size`, token);
+      attHtml = (atts.value || []).map(a => `
+        <button class="btn" style="padding:3px 10px;font-size:11.5px;margin:2px 4px 2px 0;"
+          onclick="downloadGraphAttachment('${esc(o.emailGraphId)}','${esc(a.id)}','${esc(a.name)}')">📎 ${esc(a.name)} (${Math.round((a.size||0)/1024)} KB)</button>`).join('');
+    }
+    const when = msg.receivedDateTime ? new Date(msg.receivedDateTime).toLocaleString('el-GR') : '';
+    const fromStr = (msg.from && msg.from.emailAddress) ? `${msg.from.emailAddress.name || ''} <${msg.from.emailAddress.address || ''}>` : '';
+    const isHtml = msg.body && msg.body.contentType === 'html';
+    const bodyContent = (msg.body && msg.body.content) || '';
+    document.getElementById('graphModalBody').innerHTML = `
+      <div style="font-size:12.5px;margin-bottom:8px;">
+        <div><b>Από:</b> ${esc(fromStr)}</div>
+        <div><b>Ημ/νία:</b> ${esc(when)}</div>
+        <div><b>Θέμα:</b> ${esc(msg.subject || '')}</div>
+        ${attHtml ? `<div style="margin-top:6px;">${attHtml}</div>` : ''}
+        <div style="margin-top:6px;"><a href="${esc(msg.webLink || '#')}" target="_blank" style="font-size:11.5px;">Άνοιγμα στο Outlook ↗</a></div>
+      </div>
+      <iframe id="graphBodyFrame" sandbox="" style="width:100%;height:50vh;border:1px solid var(--line);border-radius:8px;background:#fff;"></iframe>`;
+    // sandbox χωρίς δικαιώματα: το email δείχνεται, αλλά δεν τρέχει τίποτα δικό του.
+    const frame = document.getElementById('graphBodyFrame');
+    frame.srcdoc = isHtml ? bodyContent : `<pre style="font:13px/1.5 sans-serif;white-space:pre-wrap;padding:10px;">${esc(bodyContent)}</pre>`;
+  }catch(e){
+    const body = document.getElementById('graphModalBody');
+    if(body) body.innerHTML = graphErrorHtml(e);
+  }
+}
+
+async function downloadGraphAttachment(msgId, attId, name){
+  try{
+    statusMsg('Λήψη συνημμένου…');
+    const token = await getGraphToken(true);
+    const res = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(msgId)}/attachments/${encodeURIComponent(attId)}/$value`, {
+      headers: { 'Authorization': 'Bearer ' + token } });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name || 'attachment';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    statusMsg('Κατέβηκε: ' + name + ' ✓');
+  }catch(e){ statusMsg('Σφάλμα λήψης: ' + e.message); }
+}
+
+// ===== Αρχείο email (.msg/.eml) δεμένο στην παραγγελία =====
+// Για όσους δουλεύουν στην ΕΦΑΡΜΟΓΗ Outlook: σέρνεις το email στην Επιφάνεια
+// Εργασίας (γίνεται .msg) και το επισυνάπτεις εδώ. Αποθηκεύεται στο Storage
+// του Supabase (κουβάς «emails») — ΟΧΙ μέσα στο record, άρα δεν βαραίνει τον
+// καθημερινό συγχρονισμό — και ανοίγει ακριβώς το ίδιο email από κάθε
+// μηχάνημα, όσα όμοια θέματα κι αν υπάρχουν.
+function attachOrderEmailFile(id){
+  window.__emailAttachOrderId = id;
+  const input = document.getElementById('orderEmailFile');
+  input.value = '';
+  input.click();
+}
+
+async function uploadOrderEmailFile(input){
+  const id = window.__emailAttachOrderId;
+  const file = input.files && input.files[0];
+  if(!id || !file) return;
+  if(file.size > 15 * 1024 * 1024){ statusMsg('Το αρχείο ξεπερνά τα 15MB — στείλε το email χωρίς τα βαριά συνημμένα.'); return; }
+  try{
+    statusMsg('Ανέβασμα email…');
+    const url = getJbBin(), key = getJbKey();
+    const token = await getAuthToken();
+    const safe = file.name.replace(/[^\w.\-]+/g, '_').slice(-80);
+    const path = `ord_${id}_${Date.now()}_${safe}`;
+    const res = await fetch(`${url}/storage/v1/object/emails/${encodeURIComponent(path)}`, {
+      method: 'POST',
+      headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`,
+                 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: file
+    });
+    if(res.status === 400 || res.status === 404){
+      bigRedAlert('Ο χώρος αποθήκευσης email δεν έχει στηθεί ακόμα στο Supabase (κουβάς «emails»). Ζήτα μου το SQL ενεργοποίησης — μία φορά, ένα λεπτό.');
+      return;
+    }
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    // Παλιό αρχείο της ίδιας παραγγελίας καθαρίζεται — χωρίς να μπλοκάρει αν αποτύχει.
+    if(o.emailFile){
+      try{ await fetch(`${url}/storage/v1/object/emails/${encodeURIComponent(o.emailFile)}`, {
+        method: 'DELETE', headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` } }); }catch(e){}
+    }
+    o.emailFile = path;
+    o.emailFileName = file.name;
+    await jbMergePath(SLICE_MAIN, ['orders', id], o);
+    statusMsg('Το email δέθηκε με την παραγγελία ✓ — ανοίγει από το 📧');
+    refreshOrdersList();
+  }catch(e){
+    console.error('Email upload:', e);
+    statusMsg('Σφάλμα ανεβάσματος: ' + e.message);
+  }
+}
+
+async function removeOrderEmailFile(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o || !o.emailFile) return;
+    if(!confirm('Αφαίρεση του δεμένου αρχείου email από αυτή την παραγγελία;')) return;
+    const url = getJbBin(), key = getJbKey();
+    const token = await getAuthToken();
+    try{ await fetch(`${url}/storage/v1/object/emails/${encodeURIComponent(o.emailFile)}`, {
+      method: 'DELETE', headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}` } }); }catch(e){}
+    o.emailFile = '';
+    o.emailFileName = '';
+    await jbMergePath(SLICE_MAIN, ['orders', id], o);
+    statusMsg('Αφαιρέθηκε.');
+    refreshOrdersList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function openOrderEmail(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    if(o.emailGraphId){ await viewGraphEmail(id); return; }
+    if(o.emailFile){
+      // Υπογεγραμμένος σύνδεσμος μικρής διάρκειας και λήψη — το .msg ανοίγει
+      // με διπλό κλικ στο Outlook, το .eml σε κάθε πρόγραμμα email.
+      const url = getJbBin(), key = getJbKey();
+      const token = await getAuthToken();
+      const res = await fetch(`${url}/storage/v1/object/sign/emails/${encodeURIComponent(o.emailFile)}`, {
+        method: 'POST',
+        headers: { 'apikey': jbClean(key), 'Authorization': `Bearer ${jbClean(token)}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expiresIn: 3600 })
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const { signedURL } = await res.json();
+      const a = document.createElement('a');
+      a.href = `${url}/storage/v1${signedURL}`;
+      a.download = o.emailFileName || 'email.msg';
+      document.body.appendChild(a); a.click(); a.remove();
+      statusMsg('Κατεβαίνει το email — άνοιξέ το με διπλό κλικ ✓');
+      return;
+    }
+    if(o.emailLink) window.open(o.emailLink, '_blank');
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// Λίστα προμηθευτών ως μενού — ένα κλικ αντί για πληκτρολόγηση. Το «Άλλος/
+// νέος…» κρατά τον παλιό δρόμο για καινούργιο όνομα.
+async function pickOrderSupplier(id){
+  try{
+    const record = await jbGetRecord();
+    const o = record.orders[id];
+    if(!o) return;
+    const suppliers = (record.suppliers || []).slice().sort((a,b)=>a.localeCompare(b,'el'));
+    const m = document.createElement('div');
+    m.id = 'ordMiniMenu';
+    m.className = 'ost-menu';
+    m.style.maxHeight = '320px';
+    m.style.overflow = 'auto';
+    m.innerHTML = (suppliers.length
+      ? suppliers.map(s => `<div class="item" data-sup="${esc(s)}" onclick="updateOrderSupplier('${esc(id)}', this.dataset.sup);closeOrderMiniMenu();">${s === o.supplier ? '✓ ' : ''}${esc(s)}</div>`).join('')
+      : '<div class="note">Δεν υπάρχουν αποθηκευμένοι προμηθευτές ακόμα.</div>')
+      + `<div class="item" style="border-top:1px solid var(--line);" onclick="editOrderSupplierPrompt('${esc(id)}');closeOrderMiniMenu();">✏️ Άλλος / νέος…</div>`;
+    document.body.appendChild(m);
+    const pos = window.__ordMenuPos || { x: 200, y: 200 };
+    m.style.left = Math.min(pos.x, window.innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top = Math.min(pos.y, window.innerHeight - m.offsetHeight - 8) + 'px';
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
 }
 
 async function editOrderSupplierPrompt(id){
@@ -14528,6 +15117,7 @@ async function refreshOrdersList(){
       const missingInfo = !received && !o.supplier;
       const div = document.createElement('div');
       div.className = 'order-card' + (received ? ' received' : '') + (missingInfo ? ' missing-info' : '');
+      div.addEventListener('contextmenu', ev => openOrderMiniMenu(ev, o.id));
       div.innerHTML = `
         <div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;">
         <input type="checkbox" class="order-select-check" data-order-id="${o.id}" onchange="onOrderSelectChange()" style="flex:none;width:15px;height:15px;">
@@ -14545,6 +15135,7 @@ async function refreshOrdersList(){
         </div>
         </div>
         <div class="right">
+          ${(o.emailLink || o.emailFile || o.emailGraphId) ? `<span style="cursor:pointer;font-size:15px;" title="Άνοιγμα συνδεδεμένου email${o.emailSubject ? ' — ' + esc(o.emailSubject) : ''}" onclick="openOrderEmail('${o.id}')">📧</span>` : ''}
           <span class="order-badge${received?' received':''}${missingInfo?' missing-info':''}">${received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : (num(o.receivedQty) > 0 ? `ΠΑΡΑΛΑΒΗ ${num(o.receivedQty).toLocaleString('el-GR')}/${num(o.sheets).toLocaleString('el-GR')}` : (missingInfo ? '⚠ Λείπουν Στοιχεία' : 'ΕΚΚΡΕΜΕΙ'))}</span>
           ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')">Παραλήφθηκε</button>
           <button class="btn" style="white-space:nowrap;" title="Ήρθε μέρος της ποσότητας — καταγραφή μερικής παραλαβής και προαιρετική συμπληρωματική παραγγελία" onclick="receiveOrderPartial('${o.id}')">Μερική Παραλαβή</button>`}
@@ -14584,12 +15175,14 @@ async function refreshOrdersList(){
             <div style="flex:1;min-width:0;">
               <div class="mat">${esc(o.material)}</div>
               <div class="jb">${esc(o.job || '(χωρίς έργο)')} · ${esc(fmtDate(o.date))}${received ? ' → ' + esc(fmtDate(o.receivedDate)) : ''}</div>
+              ${o.notes ? `<div class="jb" style="color:#8a6d3b;" title="${esc(o.notes)}">💬 ${esc(o.notes)}</div>` : ''}
             </div>
           </div>
           <div class="foot">
             <span style="font-weight:700;">${o.sheets ? num(o.sheets).toLocaleString('el-GR') + ' ' + esc(o.unit || 'φύλλα') : '—'}</span>
             <span class="order-badge${received ? ' received' : ''}" style="font-size:9.5px;">${
               received ? 'ΠΑΡΑΛΗΦΘΗΚΕ' : partial ? `ΠΑΡΑΛΑΒΗ ${num(o.receivedQty).toLocaleString('el-GR')}/${num(o.sheets).toLocaleString('el-GR')}` : 'ΕΚΚΡΕΜΕΙ'}</span>
+            ${(o.emailLink || o.emailFile || o.emailGraphId) ? `<span style="cursor:pointer;" title="Άνοιγμα συνδεδεμένου email${o.emailSubject ? ' — ' + esc(o.emailSubject) : ''}" onclick="event.stopPropagation();openOrderEmail('${o.id}')">📧</span>` : ''}
             ${received ? '' : `<button class="btn solid" onclick="markOrderReceived('${o.id}')" title="Πλήρης παραλαβή — μπαίνει και στο απόθεμα" style="white-space:nowrap;">Παραλαβή</button>
             <button class="btn" onclick="receiveOrderPartial('${o.id}')" title="Ήρθε μέρος της ποσότητας" style="white-space:nowrap;">Μερική</button>`}
           </div>`;
@@ -17856,7 +18449,7 @@ async function sendOfferNote(){
 // ===== Email από τα εκκρεμή υλικά της κάρτας =====
 // Ανεξάρτητο από τα κουτάκια «παραγγέλθηκε»: εδώ επιλέγεις μόνο τι θα γραφτεί
 // στο email — τίποτα δεν μαρκάρεται ως παραγγελμένο.
-function togglePmEmailPanel(mode){
+async function togglePmEmailPanel(mode){
   const panel = document.getElementById('pmEmailPanel');
   const newMode = mode || 'email';
   const isOpen = panel.style.display !== 'none';
@@ -17877,16 +18470,31 @@ function togglePmEmailPanel(mode){
       items.push({ offerId: p.id, material: n, sheets: p.needs[n] || '', job: [p.client, p.title].filter(Boolean).join(' — ') });
     });
   });
+  // Το απόθεμα δίπλα σε κάθε χαρτί: πράσινο = καλύπτει την ανάγκη, πορτοκαλί = εν μέρει.
+  // Φρέσκο διάβασμα — οι δεσμεύσεις άλλων μηχανημάτων πρέπει να μετρήσουν.
+  const recForStock = await jbGetRecord().catch(() => ({ reservations: {} }));
+  items.forEach(it => {
+    const st = stockOf(it.material);
+    it.free = Math.max(0, st.qty - reservedOf(recForStock, it.material));
+    it.unit = st.unit;
+  });
   document.getElementById('pmEmailItems').innerHTML = items.length
-    ? items.map((it, i) => `<div style="display:grid;grid-template-columns:22px minmax(0,2fr) 110px minmax(0,1.4fr);gap:6px;align-items:center;padding:3px 2px;font-size:12.5px;text-align:left;">
+    ? items.map((it, i) => {
+        const covers = it.free >= num(it.sheets) && num(it.sheets) > 0;
+        const stockHtml = it.free > 0
+          ? `<span style="font-size:11px;font-weight:700;color:${covers ? '#0e6b3a' : '#a2601d'};white-space:nowrap;" title="Ελεύθερο απόθεμα (μετά τις δεσμεύσεις)">📦 ${it.free.toLocaleString('el-GR')}</span>
+             <button class="btn" style="padding:1px 8px;font-size:10.5px;white-space:nowrap;" title="Δέσμευση από το απόθεμα αντί για παραγγελία" onclick="reserveFromStock(${i})">Από απόθεμα</button>`
+          : `<span style="font-size:11px;color:var(--muted);white-space:nowrap;" title="Χωρίς ελεύθερο απόθεμα">📦 0</span>`;
+        return `<div style="display:grid;grid-template-columns:22px minmax(0,1.8fr) 105px 150px minmax(0,1.2fr);gap:6px;align-items:center;padding:3px 2px;font-size:12.5px;text-align:left;">
         <input type="checkbox" class="pm-email-check" checked data-i="${i}" onchange="updatePmEmailCount()" style="margin:0;justify-self:start;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.material)}</span>
         <span style="display:flex;gap:4px;align-items:center;">
           <input type="number" class="pm-item-sheets" data-i="${i}" value="${it.sheets || ''}" placeholder="φύλλα"
-            style="width:75px;padding:2px 6px;" title="Διόρθωσε τα φύλλα — ισχύει για email και παραγγελία"> φ.
+            style="width:70px;padding:2px 6px;" title="Διόρθωσε τα φύλλα — ισχύει για email και παραγγελία"> φ.
         </span>
+        <span style="display:flex;gap:5px;align-items:center;">${stockHtml}</span>
         <span class="empty-note" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.job)}</span>
-      </div>`).join('')
+      </div>`; }).join('')
     : '<div class="empty-note">Δεν υπάρχουν εκκρεμή υλικά — όλα έχουν παραγγελθεί ✓</div>';
   window.__pmEmailItems = items;
   updatePmEmailCount();
@@ -19601,6 +20209,70 @@ async function resetAllStock(){
 
 // What the jobs still on the board actually need, paper by paper. Archived and
 // How many sheets are already on order but not yet delivered. Without this, a
+// Συνολική εικόνα αποθήκης: ένα βλέμμα — ποια υλικά έχουν κάτι «εν κινήσει».
+// Μία γραμμή ανά υλικό με εκκρεμή παραγγελία ή δέσμευση: πόσα στο ράφι, πόσα
+// κρατημένα για δουλειές, πόσα ελεύθερα, πόσα έρχονται (μαζί με το για ποιον).
+// Τα υπόλοιπα υλικά δεν εμφανίζονται — γι' αυτά αρκεί η λίστα από κάτω.
+function renderStockOverview(record){
+  const card = document.getElementById('stockOverviewCard');
+  const body = document.getElementById('stockOverviewBody');
+  const countEl = document.getElementById('stockOverviewCount');
+  if(!card || !body) return;
+  try{
+    const info = {};   // name → { incoming, incomingJobs[], reserved, reservedJobs[] }
+    const get = n => info[n] || (info[n] = { incoming: 0, incomingJobs: [], reserved: 0, reservedJobs: [] });
+    Object.values(record.orders || {}).forEach(o => {
+      if(!o || o.status === 'received') return;
+      const name = String(o.material || '').trim();
+      if(!name) return;
+      const left = Math.max(0, num(o.sheets) - num(o.receivedQty || 0));
+      if(left <= 0) return;
+      const e = get(name);
+      e.incoming += left;
+      if(o.job) e.incomingJobs.push(o.job);
+    });
+    Object.values(record.reservations || {}).forEach(r => {
+      if(!r || !r.paper) return;
+      const e = get(r.paper);
+      e.reserved += num(r.qty);
+      if(r.job) e.reservedJobs.push(r.job);
+    });
+    const names = Object.keys(info).sort((a, b) => a.localeCompare(b, 'el'));
+    if(!names.length){ card.style.display = 'none'; body.innerHTML = ''; return; }
+    card.style.display = '';
+    if(countEl) countEl.textContent = `${names.length} υλικά σε κίνηση`;
+    body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Υλικό</th>
+          <th style="text-align:right;">Στο ράφι</th>
+          <th style="text-align:right;">🔒 Κρατημένα</th>
+          <th style="text-align:right;">Ελεύθερα</th>
+          <th style="text-align:right;">🚚 Σε παραγγελία</th>
+          <th style="text-align:right;" title="Ελεύθερα + όσα έρχονται">Σύνολο όταν έρθουν</th>
+        </tr></thead>
+        <tbody>${names.map(n => {
+          const e = info[n];
+          const st = stockOf(n);
+          const free = Math.max(0, st.qty - e.reserved);
+          return `<tr style="cursor:pointer;" title="Κλικ για το ιστορικό του υλικού${e.reservedJobs.length ? '\nΚρατημένα για: ' + esc(e.reservedJobs.join(' · ')) : ''}${e.incomingJobs.length ? '\nΈρχονται για: ' + esc(e.incomingJobs.join(' · ')) : ''}"
+              onclick="expandedStockPaper='${esc(n)}';document.getElementById('stockSearch').value='${esc(n)}';refreshStockList();">
+            <td style="font-weight:600;">${esc(n)}</td>
+            <td style="text-align:right;">${st.qty.toLocaleString('el-GR')} ${esc(st.unit)}</td>
+            <td style="text-align:right;${e.reserved ? 'color:#6b4fa3;font-weight:700;' : 'color:var(--muted);'}">${e.reserved ? e.reserved.toLocaleString('el-GR') : '—'}</td>
+            <td style="text-align:right;font-weight:700;${free <= 0 ? 'color:#a53125;' : ''}">${free.toLocaleString('el-GR')}</td>
+            <td style="text-align:right;${e.incoming ? 'color:#1f4f9e;font-weight:700;' : 'color:var(--muted);'}">${e.incoming ? e.incoming.toLocaleString('el-GR') : '—'}</td>
+            <td style="text-align:right;color:var(--muted);">${(free + e.incoming).toLocaleString('el-GR')}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      <div class="empty-note" style="margin-top:6px;">Κρατημένα = δεσμευμένα για συγκεκριμένες δουλειές (πέρνα το ποντίκι σε μια γραμμή για να δεις ποιες). Σε παραγγελία = ό,τι δεν έχει παραληφθεί ακόμα, με τις μερικές παραλαβές μετρημένες.</div>`;
+  }catch(e){
+    console.error('Stock overview:', e);
+    card.style.display = 'none';
+  }
+}
+
 async function refreshStockList(){
   const el = document.getElementById('stockList');
   const key = getJbKey(), bin = getJbBin();
@@ -19611,6 +20283,7 @@ async function refreshStockList(){
   try{
     const record = await jbGetRecord();
     stockRecordCache = record;
+    renderStockOverview(record);
     const search = (document.getElementById('stockSearch').value||'').toLowerCase().trim();
     // One list: the materials table is the whole truth now.
     if(!papersLoaded && !Object.keys(paperByName).length){
@@ -19656,7 +20329,8 @@ async function refreshStockList(){
             <input type="text" inputmode="decimal" class="stock-price" value="${p ? esc(String(p.priceSheet||'')) : ''}"
               placeholder="—" ${p ? '' : 'disabled'}
               onchange="savePaperPrice('${escPaper}','priceSheet',this.value)"></td>
-          <td style="text-align:right;font-weight:700;${d.qty<=0?'color:var(--muted);':''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}</td>
+          <td style="text-align:right;font-weight:700;${d.qty<=0?'color:var(--muted);':''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}${
+            reservedOf(record, paper) > 0 ? `<div style="font-size:10px;font-weight:700;color:#6b4fa3;" title="Δεσμευμένα για δουλειές — ελεύθερα: ${Math.max(0, d.qty - reservedOf(record, paper)).toLocaleString('el-GR')}">🔒 ${reservedOf(record, paper).toLocaleString('el-GR')} δεσμ.</div>` : ''}</td>
           <td style="text-align:right;">
             <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="quickStockAdjust('${escPaper}', '${d.unit}')">Γρήγορη κίνηση</button>
             <button class="rowdel" style="margin-left:6px;" title="Διαγραφή υλικού"
@@ -19665,6 +20339,26 @@ async function refreshStockList(){
         </tr>
       `;
       if(isExpanded){
+        // Οι ενεργές δεσμεύσεις πρώτα: ποια δουλειά κρατάει πόσα, από πότε —
+        // με χειροκίνητη αποδέσμευση αν η δουλειά τελικά δεν το χρειαστεί.
+        const resvEntries = Object.entries(record.reservations || {})
+          .filter(([, r]) => r && r.paper === paper)
+          .sort((a, b) => String(a[1].date).localeCompare(String(b[1].date)));
+        const resvHtml = resvEntries.length ? `
+          <div style="margin-bottom:8px;">
+            <div style="font-weight:700;font-size:11.5px;color:#6b4fa3;margin-bottom:3px;">🔒 Ενεργές δεσμεύσεις</div>
+            ${resvEntries.map(([rid, r]) => `
+              <div class="fc-job-row" style="background:#f7f3fc;box-shadow:inset 3px 0 0 #8e6cc8;">
+                <div>
+                  <div class="client">${esc(r.job || '(χωρίς δουλειά)')}</div>
+                  <div class="name">${esc(r.date ? fmtDate(String(r.date).slice(0,10)) : '')}</div>
+                </div>
+                <span style="display:flex;gap:8px;align-items:center;">
+                  <span class="order-badge" style="background:#ece3f8;color:#6b4fa3;">🔒 ${num(r.qty).toLocaleString('el-GR')} ${esc(stockOf(paper).unit)}</span>
+                  <button class="btn" style="padding:2px 9px;font-size:11px;" title="Η δουλειά δεν θα χρησιμοποιήσει τελικά αυτό το χαρτί — το απόθεμα ξαναγίνεται ελεύθερο" onclick="releaseReservation('${esc(rid)}')">Αποδέσμευση</button>
+                </span>
+              </div>`).join('')}
+          </div>` : '';
         const movements = (record.stockLog||[]).filter(l=>l.paper===paper);
         const movesHtml = movements.length===0
           ? '<div class="empty-note">Καμία κίνηση ακόμα για αυτό το χαρτί.</div>'
@@ -19674,10 +20368,10 @@ async function refreshStockList(){
                   <div class="name">${esc(fmtDate(l.date.slice(0,10)))}</div>
                   <div class="client">${l.note ? esc(l.note) : ''}</div>
                 </div>
-                <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':''}">${l.type==='add'?'+':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
+                <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':l.type==='reserve'?'background:#ece3f8;color:#6b4fa3;':l.type==='release'?'background:#e6f4ec;color:#0e6b3a;':''}">${l.type==='add'?'+':l.type==='reserve'?'🔒':l.type==='release'?'🔓':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
               </div>
             `).join('');
-        rows += `<tr><td colspan="7" style="background:var(--page);padding:0;"><div style="padding:6px 14px;">${movesHtml}</div></td></tr>`;
+        rows += `<tr><td colspan="7" style="background:var(--page);padding:0;"><div style="padding:6px 14px;">${resvHtml}${movesHtml}</div></td></tr>`;
       }
       return rows;
     }).join('');
@@ -20993,7 +21687,7 @@ async function refreshStockLogList(){
           <div class="name">${esc(l.paper)}</div>
           <div class="client">${esc(fmtDate(l.date.slice(0,10)))}${l.note ? ' — '+esc(l.note) : ''}</div>
         </div>
-        <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':''}">${l.type==='add'?'+':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
+        <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':l.type==='reserve'?'background:#ece3f8;color:#6b4fa3;':l.type==='release'?'background:#e6f4ec;color:#0e6b3a;':''}">${l.type==='add'?'+':l.type==='reserve'?'🔒':l.type==='release'?'🔓':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
       </div>
     `).join('');
   }catch(e){
