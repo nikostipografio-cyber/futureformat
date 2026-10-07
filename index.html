@@ -2168,7 +2168,9 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div class="field"><label>Προμηθευτής</label>
           <div style="display:flex;gap:6px;">
-            <input id="ordSupplier" list="supplierOptions" placeholder="-- Επιλέξτε ή γράψτε νέο --" style="flex:1;">
+            <select id="ordSupplier" style="flex:1;">
+              <option value="">— διάλεξε προμηθευτή —</option>
+            </select>
             <button class="btn" style="padding:6px 10px;font-size:12px;flex:none;" onclick="toggleNewSupplierPanel()">+ Νέος</button>
           </div>
           <datalist id="supplierOptions"></datalist>
@@ -2367,15 +2369,13 @@ function toggleMobileSidebar(forceClose){
       <div class="card-body" id="stockOverviewBody"></div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="title">🏬 Αποθήκη — Κίνηση Χαρτιού</div>
-        <div style="display:flex;gap:8px;">
+      <div class="card-head" style="flex-wrap:wrap;gap:10px;">
+        <div class="title">🏬 Αποθήκη</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="stockSearch" placeholder="Αναζήτηση χαρτιού..." style="width:250px;" oninput="stockPage=0;refreshStockList()">
+          <button class="btn solid" onclick="toggleStockMovementPanel()" title="Χειροκίνητη προσθήκη ή αφαίρεση αποθέματος">⇅ Κίνηση</button>
           <button class="btn" onclick="toggleStockNewPaperPanel()">+ Νέο χαρτί</button>
-          <button class="btn" onclick="toggleStockBulkImportPanel()">Μαζική Εισαγωγή</button>
-          <button class="btn" onclick="togglePaperPriceBulkPanel()">Νέες Τιμές</button>
-          <button class="btn" onclick="exportPapersTsv()">Εξαγωγή Χαρτιών</button>
-          <button class="btn" onclick="togglePapersImportPanel()">Εισαγωγή Χαρτιών</button>
-          <button class="btn" onclick="toggleDupCheckPanel()">Έλεγχος Διπλοτύπων</button>
-          <button class="btn" style="color:#c0392b;border-color:#c0392b;" onclick="resetAllStock()">Μηδενισμός Αποθήκης</button>
+          <button class="btn" onclick="toggleStockToolsMenu(event)" title="Εισαγωγές, εξαγωγές, τιμές, έλεγχοι">🧰 Εργαλεία ▾</button>
         </div>
       </div>
       <div id="stockBulkImportPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
@@ -2445,7 +2445,8 @@ function toggleMobileSidebar(forceClose){
         </div>
         <div class="empty-note" id="snpStatus" style="margin-top:8px;"></div>
       </div>
-      <div class="card-body">
+      <div id="stockMovementPanel" style="display:none;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--page);">
+        <div class="empty-note" style="margin-bottom:8px;">Χειροκίνητη κίνηση αποθέματος. Οι παραλαβές παραγγελιών και οι καταναλώσεις των tickets καταγράφονται αυτόματα — εδώ μόνο ό,τι γίνεται εκτός ροής (απογραφή, φύρα, επιστροφή).</div>
         <div class="fieldgrid c2">
           <div class="field"><label>Χαρτί</label><input id="stockPaperName" list="paperOptions" placeholder="-- Επίλεξε από τη βάση χαρτιών --"></div>
           <div class="field"><label>Ποσότητα</label><input id="stockQty" type="text" inputmode="decimal" placeholder="π.χ. 500 ή 8.937"></div>
@@ -2457,19 +2458,14 @@ function toggleMobileSidebar(forceClose){
               <option value="kg">Κιλά</option>
             </select>
           </div>
-          <div class="field"><label>Σημειώσεις (προαιρετικό)</label><input id="stockNote" placeholder="π.χ. Παραλαβή παραγγελίας, ή σε ποια δουλειά χρησιμοποιήθηκε"></div>
+          <div class="field"><label>Σημειώσεις (προαιρετικό)</label><input id="stockNote" placeholder="π.χ. Απογραφή, φύρα κοπής, επιστροφή από δουλειά"></div>
         </div>
-        <div style="display:flex;gap:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn solid" style="background:#4a9d6e;border-color:#4a9d6e;" onclick="submitStockMovement('add')">+ Προσθήκη Αποθέματος</button>
           <button class="btn solid" style="background:#c0392b;border-color:#c0392b;" onclick="submitStockMovement('remove')">− Αφαίρεση Αποθέματος</button>
+          <button class="btn" onclick="toggleStockMovementPanel()">Κλείσιμο</button>
         </div>
         <div class="empty-note" id="stockMovementStatus" style="margin-top:8px;"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><div class="title">Τρέχον Απόθεμα</div>
-        <input id="stockSearch" placeholder="Αναζήτηση χαρτιού..." style="max-width:260px;" oninput="stockPage=0;refreshStockList()">
       </div>
       <div class="card-body" id="stockList"></div>
     </div>
@@ -14229,13 +14225,16 @@ async function openOrderMiniMenu(ev, id){
   const m = document.createElement('div');
   m.id = 'ordMiniMenu';
   m.className = 'ost-menu';
+  // Το event.stopPropagation() σε κάθε στοιχείο: χωρίς αυτό, το κλικ φτάνει
+  // στον γενικό κανόνα «κλικ οπουδήποτε = κλείσιμο μενού» και σκοτώνει τη
+  // λίστα προμηθευτών τη στιγμή που ανοίγει (όταν τα δεδομένα είναι cached).
   m.innerHTML = `
-    ${hasEmail || hasFile || hasGraph ? `<div class="item" onclick="openOrderEmail('${esc(id)}');closeOrderMiniMenu();">📧 Άνοιγμα συνδεδεμένου email</div>` : ''}
-    <div class="item" onclick="pickOrderEmail('${esc(id)}');closeOrderMiniMenu();">${hasGraph ? '✏️ Αλλαγή δεμένου email (Outlook)…' : '📧 Σύνδεση email από το Outlook…'}</div>
-    ${hasGraph ? `<div class="item" onclick="unlinkOrderEmail('${esc(id)}');closeOrderMiniMenu();">✂ Αφαίρεση δεμένου email</div>` : ''}
-    <div class="item" onclick="pickOrderSupplier('${esc(id)}');closeOrderMiniMenu();">🏢 Αλλαγή προμηθευτή ▸</div>
-    <div class="item" onclick="editOrderSheetsPrompt('${esc(id)}');closeOrderMiniMenu();">🔢 Αλλαγή ποσότητας…</div>
-    <div class="item" style="color:#c0392b;" onclick="deleteOrder('${esc(id)}');closeOrderMiniMenu();">🗑 Διαγραφή παραγγελίας…</div>`;
+    ${hasEmail || hasFile || hasGraph ? `<div class="item" onclick="event.stopPropagation();closeOrderMiniMenu();openOrderEmail('${esc(id)}');">📧 Άνοιγμα συνδεδεμένου email</div>` : ''}
+    <div class="item" onclick="event.stopPropagation();closeOrderMiniMenu();pickOrderEmail('${esc(id)}');">${hasGraph ? '✏️ Αλλαγή δεμένου email (Outlook)…' : '📧 Σύνδεση email από το Outlook…'}</div>
+    ${hasGraph ? `<div class="item" onclick="event.stopPropagation();closeOrderMiniMenu();unlinkOrderEmail('${esc(id)}');">✂ Αφαίρεση δεμένου email</div>` : ''}
+    <div class="item" onclick="event.stopPropagation();closeOrderMiniMenu();pickOrderSupplier('${esc(id)}');">🏢 Αλλαγή προμηθευτή ▸</div>
+    <div class="item" onclick="event.stopPropagation();closeOrderMiniMenu();editOrderSheetsPrompt('${esc(id)}');">🔢 Αλλαγή ποσότητας…</div>
+    <div class="item" style="color:#c0392b;" onclick="event.stopPropagation();closeOrderMiniMenu();deleteOrder('${esc(id)}');">🗑 Διαγραφή παραγγελίας…</div>`;
   document.body.appendChild(m);
   const x = Math.min(ev.clientX, window.innerWidth - m.offsetWidth - 8);
   const y = Math.min(ev.clientY, window.innerHeight - m.offsetHeight - 8);
@@ -14688,6 +14687,28 @@ async function openOrderEmail(id){
   }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
 }
 
+// Όλοι οι γνωστοί προμηθευτές: η αποθηκευμένη λίστα ΚΑΙ όσοι γράφτηκαν
+// κατευθείαν πάνω σε παραγγελίες — ώστε κανένα όνομα να μη «χάνεται».
+function supplierChoicesFrom(record){
+  return [...new Set([
+    ...((record && record.suppliers) || []),
+    ...Object.values((record && record.orders) || {})
+      .map(o => String((o || {}).supplier || '').trim()).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b, 'el'));
+}
+
+// Επιλογή από το dropdown της κάρτας: κανονική τιμή ή «νέος προμηθευτής».
+async function onOrderSupplierSelect(id, sel){
+  const v = sel.value;
+  if(v === '__NEW__'){
+    const name = prompt('Όνομα νέου προμηθευτή:');
+    if(name === null || !name.trim()){ refreshOrdersList(); return; }
+    await updateOrderSupplier(id, name.trim());
+    return;
+  }
+  await updateOrderSupplier(id, v);
+}
+
 // Λίστα προμηθευτών ως μενού — ένα κλικ αντί για πληκτρολόγηση. Το «Άλλος/
 // νέος…» κρατά τον παλιό δρόμο για καινούργιο όνομα.
 async function pickOrderSupplier(id){
@@ -14695,16 +14716,16 @@ async function pickOrderSupplier(id){
     const record = await jbGetRecord();
     const o = record.orders[id];
     if(!o) return;
-    const suppliers = (record.suppliers || []).slice().sort((a,b)=>a.localeCompare(b,'el'));
+    const suppliers = supplierChoicesFrom(record);
     const m = document.createElement('div');
     m.id = 'ordMiniMenu';
     m.className = 'ost-menu';
     m.style.maxHeight = '320px';
     m.style.overflow = 'auto';
     m.innerHTML = (suppliers.length
-      ? suppliers.map(s => `<div class="item" data-sup="${esc(s)}" onclick="updateOrderSupplier('${esc(id)}', this.dataset.sup);closeOrderMiniMenu();">${s === o.supplier ? '✓ ' : ''}${esc(s)}</div>`).join('')
+      ? suppliers.map(s => `<div class="item" data-sup="${esc(s)}" onclick="event.stopPropagation();closeOrderMiniMenu();updateOrderSupplier('${esc(id)}', this.dataset.sup);">${s === o.supplier ? '✓ ' : ''}${esc(s)}</div>`).join('')
       : '<div class="note">Δεν υπάρχουν αποθηκευμένοι προμηθευτές ακόμα.</div>')
-      + `<div class="item" style="border-top:1px solid var(--line);" onclick="editOrderSupplierPrompt('${esc(id)}');closeOrderMiniMenu();">✏️ Άλλος / νέος…</div>`;
+      + `<div class="item" style="border-top:1px solid var(--line);" onclick="event.stopPropagation();closeOrderMiniMenu();editOrderSupplierPrompt('${esc(id)}');">✏️ Άλλος / νέος…</div>`;
     document.body.appendChild(m);
     const pos = window.__ordMenuPos || { x: 200, y: 200 };
     m.style.left = Math.min(pos.x, window.innerWidth - m.offsetWidth - 8) + 'px';
@@ -15112,6 +15133,16 @@ async function refreshOrdersList(){
       el.innerHTML = '<div class="empty-note">Δεν υπάρχουν παραγγελίες με αυτά τα κριτήρια.</div>';
       return;
     }
+    const supplierChoices = supplierChoicesFrom(record);
+    // Το dropdown της φόρμας «Νέα Παραγγελία» παίρνει την ίδια πλήρη λίστα,
+    // κρατώντας ό,τι είχε ήδη διαλέξει ο χρήστης.
+    const ordSel = document.getElementById('ordSupplier');
+    if(ordSel && ordSel.tagName === 'SELECT'){
+      const keep = ordSel.value;
+      ordSel.innerHTML = '<option value="">— διάλεξε προμηθευτή —</option>'
+        + supplierChoices.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+      if(keep && supplierChoices.includes(keep)) ordSel.value = keep;
+    }
     const buildOrderCard = (o) => {
       const received = o.status === 'received';
       const missingInfo = !received && !o.supplier;
@@ -15125,7 +15156,11 @@ async function refreshOrdersList(){
           <div class="job">${esc(o.job || '(χωρίς έργο)')} <span class="material">— ${esc(o.material)}</span></div>
           <div class="meta" style="margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
             <span><b>${esc(fmtDate(o.date))}</b>${received ? ' → <b>'+esc(fmtDate(o.receivedDate))+'</b>' : ''}</span>
-            <span style="display:flex;align-items:center;gap:4px;">Προμ.: <input list="supplierOptions" value="${esc(o.supplier||'')}" placeholder="-- συμπλήρωσε --" style="width:150px;font-size:11.5px;padding:2px 5px;${missingInfo?'border-color:#c0392b;':''}" onchange="updateOrderSupplier('${o.id}', this.value)"></span>
+            <span style="display:flex;align-items:center;gap:4px;">Προμ.: <select style="width:160px;font-size:11.5px;padding:2px 4px;${missingInfo?'border-color:#c0392b;':''}" onchange="onOrderSupplierSelect('${o.id}', this)" onclick="event.stopPropagation()">
+              <option value=""${(o.supplier||'')===''?' selected':''}>— διάλεξε —</option>
+              ${supplierChoices.map(s=>`<option value="${esc(s)}"${s===(o.supplier||'')?' selected':''}>${esc(s)}</option>`).join('')}
+              <option value="__NEW__">➕ Νέος προμηθευτής…</option>
+            </select></span>
             <span style="display:flex;align-items:center;gap:4px;">Ποσ.: <input type="number" min="0" value="${esc(o.sheets||'')}" placeholder="—" style="width:65px;font-size:11.5px;padding:2px 5px;" onchange="updateOrderSheets('${o.id}', this.value)" title="Αν διαφέρει η ποσότητα που ήρθε, διόρθωσέ την εδώ">
               <select style="font-size:11.5px;padding:2px 4px;width:78px;" onchange="updateOrderUnit('${o.id}', this.value)">
                 ${['φύλλα','μέτρα','τεμάχια'].map(u=>`<option value="${u}"${(o.unit||'φύλλα')===u?' selected':''}>${u}</option>`).join('')}
@@ -15178,6 +15213,13 @@ async function refreshOrdersList(){
               ${o.notes ? `<div class="jb" style="color:#8a6d3b;" title="${esc(o.notes)}">💬 ${esc(o.notes)}</div>` : ''}
             </div>
           </div>
+          ${!received && !o.supplier ? `<div style="margin-top:5px;">
+            <select style="width:100%;font-size:11px;padding:2px 4px;border-color:#c0392b;" onchange="onOrderSupplierSelect('${o.id}', this)" onclick="event.stopPropagation()">
+              <option value="" selected>— διάλεξε προμηθευτή —</option>
+              ${supplierChoices.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+              <option value="__NEW__">➕ Νέος προμηθευτής…</option>
+            </select>
+          </div>` : ''}
           <div class="foot">
             <span style="font-weight:700;">${o.sheets ? num(o.sheets).toLocaleString('el-GR') + ' ' + esc(o.unit || 'φύλλα') : '—'}</span>
             <span class="order-badge${received ? ' received' : ''}" style="font-size:9.5px;">${
@@ -21055,7 +21097,39 @@ async function savePaperPrice(name, field, value){
   }
 }
 
+function toggleStockMovementPanel(){
+  const p = document.getElementById('stockMovementPanel');
+  const open = p.style.display === 'none';
+  p.style.display = open ? 'block' : 'none';
+  if(open) document.getElementById('stockPaperName').focus();
+}
+
+function toggleStockToolsMenu(ev){
+  ev.stopPropagation();
+  const existing = document.getElementById('stockToolsMenu');
+  if(existing){ existing.remove(); return; }
+  const m = document.createElement('div');
+  m.id = 'stockToolsMenu';
+  m.className = 'ost-menu';
+  m.innerHTML = `
+    <div class="item" onclick="toggleStockBulkImportPanel()">📥 Μαζική Εισαγωγή αποθέματος</div>
+    <div class="item" onclick="togglePaperPriceBulkPanel()">💶 Νέες Τιμές (τιμοκατάλογος)</div>
+    <div class="item" onclick="exportPapersTsv()">📤 Εξαγωγή Χαρτιών</div>
+    <div class="item" onclick="togglePapersImportPanel()">📄 Εισαγωγή Χαρτιών</div>
+    <div class="item" onclick="toggleDupCheckPanel()">🔍 Έλεγχος Διπλοτύπων</div>
+    <div class="item" style="border-top:1px solid var(--line);color:#c0392b;" onclick="resetAllStock()">⚠ Μηδενισμός Αποθήκης…</div>`;
+  m.addEventListener('click', () => setTimeout(() => m.remove(), 0));
+  document.body.appendChild(m);
+  const r = ev.currentTarget.getBoundingClientRect();
+  m.style.left = Math.min(r.left, window.innerWidth - m.offsetWidth - 8) + 'px';
+  m.style.top = (r.bottom + 4) + 'px';
+  setTimeout(() => document.addEventListener('click', function close(){ m.remove(); document.removeEventListener('click', close); }), 0);
+}
+
 function quickStockAdjust(paper, unit, prefillQty){
+  // Η φόρμα κίνησης είναι πλέον αναδιπλούμενη — πρώτα ανοίγει, μετά γεμίζει.
+  const panel = document.getElementById('stockMovementPanel');
+  if(panel && panel.style.display === 'none') panel.style.display = 'block';
   document.getElementById('stockPaperName').value = paper;
   document.getElementById('stockUnit').value = unit;
   // When coming from a shortage, start with exactly the missing amount —
