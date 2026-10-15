@@ -704,7 +704,19 @@
   table{width:100%;border-collapse:collapse;background:#fff;table-layout:fixed;}
   thead th{font-size:9.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 4px;border-bottom:1px solid var(--line-strong);font-weight:700;overflow:hidden;}
   tbody td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle;}
-  .stock-table thead th{font-size:11.5px;padding:10px 8px;}
+  .stock-table thead th{font-size:11.5px;padding:10px 8px;position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 var(--line);}
+  .stock-table tbody tr.stock-row{cursor:pointer;}
+  .stock-table tbody tr.stock-row:hover td{background:#faf8f4;}
+  .qty-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-weight:800;font-size:13px;white-space:nowrap;
+    background:#e6f4ec;color:#0e6b3a;}
+  .qty-pill.zero{background:#f0eeea;color:#8a8578;font-weight:600;}
+  .stock-expand{background:#fff;border:1px solid var(--line);border-left:4px solid #c9b88a;border-radius:8px;
+    margin:4px 2px 10px;padding:10px 14px;}
+  .stock-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(140px,1fr);gap:10px;overflow-x:auto;margin-bottom:12px;}
+  .stock-tiles .totcard{cursor:pointer;}
+  .stock-tiles .totcard .fc-headsub{font-size:10px;color:#b9b9b5;margin-top:3px;}
+  tr.stock-zero td{opacity:0.55;}
+  tr.stock-zero .stock-name{color:var(--muted);}
   .offer-table thead th{font-size:12px;padding:10px 8px;}
   .offer-table tbody td{padding:13px 8px;font-size:14px;}
   .offer-table tbody tr:hover{background:var(--page);}
@@ -2361,6 +2373,7 @@ function toggleMobileSidebar(forceClose){
   </div>
 
   <div id="viewStock" style="display:none;">
+    <div id="stockConsumeAlerts"></div>
     <div class="card" id="stockOverviewCard" style="display:none;">
       <div class="card-head">
         <div class="title">📊 Συνολική εικόνα — τι έρχεται & τι είναι κρατημένο</div>
@@ -2372,7 +2385,7 @@ function toggleMobileSidebar(forceClose){
       <div class="card-head" style="flex-wrap:wrap;gap:10px;">
         <div class="title">🏬 Αποθήκη</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input id="stockSearch" placeholder="Αναζήτηση χαρτιού..." style="width:250px;" oninput="stockPage=0;refreshStockList()">
+          <input id="stockSearch" type="search" placeholder="Αναζήτηση σε όλη τη βάση..." style="width:250px;" oninput="stockPage=0;refreshStockList()">
           <button class="btn solid" onclick="toggleStockMovementPanel()" title="Χειροκίνητη προσθήκη ή αφαίρεση αποθέματος">⇅ Κίνηση</button>
           <button class="btn" onclick="toggleStockNewPaperPanel()">+ Νέο χαρτί</button>
           <button class="btn" onclick="toggleStockToolsMenu(event)" title="Εισαγωγές, εξαγωγές, τιμές, έλεγχοι">🧰 Εργαλεία ▾</button>
@@ -11331,11 +11344,17 @@ async function consumeTicketPaper(){
         ? Object.values(record.stockLog) : [];
     }
     const jobName = document.getElementById('tkInfo').value || 'Job Ticket';
+    // Δικλείδα: ό,τι δεν υπάρχει στο ράφι ΔΕΝ αφαιρείται. Η γραμμή μένει
+    // ανοιχτή (όχι «καταναλωμένη»), ώστε να ξαναφανεί όταν γίνει παραλαβή.
     const warnings = [];
+    const consumedRows = [];
     for(const r of pending){
       const paper = r.xarti.trim(), qty = num(r.fylla);
       const before = stockOf(paper).qty;
-      if(before < qty) warnings.push(`${paper} (είχε ${before.toLocaleString('el-GR')})`);
+      if(before < qty){
+        warnings.push(`${paper} (ζητούνται ${qty.toLocaleString('el-GR')}, υπάρχουν ${before.toLocaleString('el-GR')})`);
+        continue;
+      }
       await setStock(paper, before - qty);
       record.stockLog.unshift({
         id: 'stk'+Date.now()+Math.random().toString(36).slice(2,6),
@@ -11343,6 +11362,11 @@ async function consumeTicketPaper(){
         note: `Κατανάλωση από «${jobName}»`, date: new Date().toISOString()
       });
       r.consumed = true;
+      consumedRows.push(r);
+    }
+    if(!consumedRows.length){
+      statusMsg(`Δεν αφαιρέθηκε τίποτα — το απόθεμα δεν επαρκεί: ${warnings.join(', ')}. Κάνε πρώτα παραλαβή ή διόρθωσε την Αποθήκη.`);
+      return;
     }
     record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
@@ -11350,10 +11374,16 @@ async function consumeTicketPaper(){
     // ελευθερώνονται, αλλιώς θα κρατούσαν «πιασμένο» απόθεμα για πάντα.
     try{
       const tkOffer = document.getElementById('tkOfferId').value || '';
-      if(tkOffer && record.reservations){
-        const consumedPapers = new Set(pending.map(r => r.xarti.trim()));
+      if(record.reservations){
+        const consumedPapers = new Set(consumedRows.map(r => r.xarti.trim()));
+        const jn = String(jobName || '').trim().toLowerCase();
         for(const [rid, rv] of Object.entries(record.reservations)){
-          if(rv && rv.offerId === tkOffer && consumedPapers.has(rv.paper)){
+          if(!rv || !consumedPapers.has(rv.paper)) continue;
+          // Ταίριασμα είτε με την προσφορά του ticket είτε (για δεσμεύσεις από
+          // παραλαβή παραγγελίας χωρίς προσφορά) με το όνομα της δουλειάς.
+          const matchOffer = tkOffer && rv.offerId && rv.offerId === tkOffer;
+          const matchJob = !rv.offerId && rv.job && jn && String(rv.job).trim().toLowerCase() === jn;
+          if(matchOffer || matchJob){
             delete record.reservations[rid];
             await jbDeletePath(SLICE_MAIN, ['reservations', rid]);
           }
@@ -11363,8 +11393,8 @@ async function consumeTicketPaper(){
     renderTkPaper();
     markTicketDirty();
     statusMsg(warnings.length
-      ? `Καταχωρήθηκε ✓ — προσοχή, το απόθεμα δεν επαρκούσε για: ${warnings.join(', ')}. Μην ξεχάσεις να αποθηκεύσεις το ticket.`
-      : `Καταχωρήθηκε η κατανάλωση ${pending.length} χαρτ${pending.length===1?'ιού':'ιών'} ✓ — μην ξεχάσεις να αποθηκεύσεις το ticket`);
+      ? `Καταχωρήθηκε η κατανάλωση ${consumedRows.length} χαρτ${consumedRows.length===1?'ιού':'ιών'} ✓ — ΔΕΝ αφαιρέθηκαν όσα δεν επαρκούν: ${warnings.join(', ')}. Μην ξεχάσεις να αποθηκεύσεις το ticket.`
+      : `Καταχωρήθηκε η κατανάλωση ${consumedRows.length} χαρτ${consumedRows.length===1?'ιού':'ιών'} ✓ — μην ξεχάσεις να αποθηκεύσεις το ticket`);
   }catch(e){
     console.error('Consume paper error:', e);
     statusMsg('Σφάλμα: ' + e.message);
@@ -14296,6 +14326,96 @@ async function releaseReservation(rid){
   }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
 }
 
+// Χειροκίνητη δέσμευση από την Αποθήκη: για χαρτί που ήρθε για μια δουλειά
+// πριν υπάρξει η αυτόματη δέσμευση, ή που απλώς πρέπει να «φυλαχτεί».
+async function reserveStockManual(paper){
+  try{
+    const record = await jbGetRecord();
+    const unit = stockOf(paper).unit;
+    const free = Math.max(0, stockOf(paper).qty - reservedOf(record, paper));
+    const job = prompt(`Για ποια δουλειά κρατιέται το «${paper}»;`);
+    if(job === null || !job.trim()) return;
+    const ansQty = prompt(`Πόσα ${unit} να δεσμευτούν για «${job.trim()}»;\n(ελεύθερα τώρα: ${free.toLocaleString('el-GR')})`, free || '');
+    if(ansQty === null) return;
+    const qty = parseGreekAmount(ansQty);
+    if(!(qty > 0)){ statusMsg('Γράψε ποσότητα μεγαλύτερη από 0.'); return; }
+    if(qty > free && !confirm(`Ελεύθερα είναι μόνο ${free.toLocaleString('el-GR')} ${unit}.\nΝα δεσμευτούν ${qty.toLocaleString('el-GR')} παρόλα αυτά;`)) return;
+    record.reservations = record.reservations || {};
+    const rid = 'rsv' + Date.now() + Math.random().toString(36).slice(2,6);
+    const resv = { paper, qty, offerId: '', job: job.trim(), date: new Date().toISOString() };
+    record.reservations[rid] = resv;
+    await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+    record.stockLog = Array.isArray(record.stockLog) ? record.stockLog : [];
+    record.stockLog.unshift({ id: 'stk' + Date.now(), paper, type: 'reserve', qty, unit,
+      note: `Δέσμευση για «${job.trim()}»`, date: new Date().toISOString() });
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    statusMsg(`Δεσμεύτηκαν ${qty.toLocaleString('el-GR')} ${unit} για «${job.trim()}» 🔒`);
+    refreshStockList();
+  }catch(e){ console.error('Manual reserve:', e); statusMsg('Σφάλμα: ' + e.message); }
+}
+
+// Αναδρομική δέσμευση από το ιστορικό: παραλαβές που έγιναν ΓΙΑ δουλειά με
+// παλιότερη έκδοση (πριν την αυτόματη δέσμευση) μπήκαν ως ελεύθερο απόθεμα.
+// Εδώ ξαναδιαβάζονται οι παραγγελίες των τελευταίων 60 ημερών και ό,τι
+// παραλήφθηκε για δουλειά που δεν το έχει ακόμα καταναλώσει, δεσμεύεται.
+async function backfillReservationsFromHistory(){
+  try{
+    const record = await jbGetRecord();
+    const resvs = Object.values(record.reservations || {});
+    const log = Array.isArray(record.stockLog) ? record.stockLog : [];
+    const cutoff = Date.now() - 60*24*3600*1000;
+    const freeOf = {};
+    const proposals = [];
+    for(const [oid, o] of Object.entries(record.orders || {})){
+      if(!o || !o.job || !o.material) continue;
+      // Πλήρης παραλαβή = όλη η ποσότητα· μερική = ό,τι έχει ήδη έρθει.
+      const want = o.status === 'received' ? num(o.sheets) : num(o.receivedQty || 0);
+      if(!(want > 0)) continue;
+      const paper = String(o.material).trim();
+      if(!findPaper(paper)) continue;
+      const when = Date.parse(o.receivedDate || o.date || '') || 0;
+      if(when < cutoff) continue;
+      const jn = String(o.job).trim().toLowerCase();
+      // Υπάρχει ήδη δέσμευση από αυτή την παραγγελία ή για ίδια δουλειά+χαρτί;
+      if(resvs.some(r => r && (r.fromOrder === oid ||
+        (r.paper === paper && String(r.job||'').trim().toLowerCase() === jn)))) continue;
+      // Η δουλειά το πήρε ήδη; (κίνηση αφαίρεσης που αναφέρει το όνομά της)
+      if(log.some(l => l && l.type === 'remove' && l.paper === paper &&
+        String(l.note || '').toLowerCase().includes(jn))) continue;
+      if(!(paper in freeOf)) freeOf[paper] = Math.max(0, stockOf(paper).qty - reservedOf(record, paper));
+      const qty = Math.min(want, freeOf[paper]);
+      if(qty <= 0) continue;
+      freeOf[paper] -= qty;
+      proposals.push({ oid, paper, qty, job: String(o.job).trim(),
+                       unit: o.unit || stockOf(paper).unit,
+                       offerId: o.offerId || '' });
+    }
+    if(!proposals.length){
+      alert('Δεν βρέθηκε τίποτα για δέσμευση: οι παραλαβές των τελευταίων 60 ημερών για δουλειές είναι ήδη δεσμευμένες, καταναλωμένες ή χωρίς ελεύθερο απόθεμα.');
+      return;
+    }
+    const listTxt = proposals.map(p => `• ${p.paper}: ${p.qty.toLocaleString('el-GR')} ${p.unit} → «${p.job}»`).join('\n');
+    if(!confirm(`Βρέθηκαν ${proposals.length} παραλαβές (τελευταίες 60 ημέρες) που έγιναν ΓΙΑ δουλειά αλλά μπήκαν ως ελεύθερο απόθεμα:\n\n${listTxt}\n\nΝα δεσμευτούν για τις δουλειές τους;`)) return;
+    record.reservations = record.reservations || {};
+    record.stockLog = log;
+    for(const pr of proposals){
+      const rid = 'rsv' + Date.now() + Math.random().toString(36).slice(2,6);
+      const resv = { paper: pr.paper, qty: pr.qty, offerId: pr.offerId, job: pr.job,
+                     date: new Date().toISOString(), fromOrder: pr.oid };
+      record.reservations[rid] = resv;
+      await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+      record.stockLog.unshift({ id: 'stk' + Date.now() + Math.random().toString(36).slice(2,4),
+        paper: pr.paper, type: 'reserve', qty: pr.qty, unit: pr.unit,
+        note: `Δέσμευση από το ιστορικό — «${pr.job}»`, date: new Date().toISOString() });
+    }
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    statusMsg(`Δεσμεύτηκαν ${proposals.length} παραλαβές για τις δουλειές τους 🔒`);
+    refreshStockList();
+  }catch(e){ console.error('Backfill reservations:', e); statusMsg('Σφάλμα: ' + e.message); }
+}
+
 async function reserveFromStock(i){
   try{
     const items = window.__pmEmailItems || [];
@@ -14826,6 +14946,15 @@ async function receiveOrderPartial(id){
         date: new Date().toISOString()
       });
       record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+      // Και η μερική παραλαβή δεσμεύεται για τη δουλειά της παραγγελίας.
+      if(order.job || order.offerId){
+        record.reservations = record.reservations || {};
+        const rid = 'rsv' + Date.now() + Math.random().toString(36).slice(2,6);
+        const resv = { paper: order.material, qty: got, offerId: order.offerId || '',
+                       job: order.job || '', date: new Date().toISOString(), fromOrder: id };
+        record.reservations[rid] = resv;
+        await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+      }
     }
     await jbMergePath(SLICE_MAIN, ['orders', id], order);
     await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog || []);
@@ -14878,7 +15007,20 @@ async function markOrderReceived(id){
         });
         record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
         window.__recvLogChanged = true;
-        statusMsg(`Παραλήφθηκε ✓ — προστέθηκαν ${sheets} φύλλα στο απόθεμα του "${order.material}"`);
+        // Η παραγγελία έγινε ΓΙΑ μια δουλειά — άρα ό,τι ήρθε δεν είναι ελεύθερο
+        // απόθεμα: δεσμεύεται αυτόματα για εκείνη τη δουλειά και ελευθερώνεται
+        // μόνο της όταν το ticket καταχωρήσει την κατανάλωση.
+        if(order.job || order.offerId){
+          record.reservations = record.reservations || {};
+          const rid = 'rsv' + Date.now() + Math.random().toString(36).slice(2,6);
+          const resv = { paper: order.material, qty: sheets, offerId: order.offerId || '',
+                         job: order.job || '', date: new Date().toISOString(), fromOrder: id };
+          record.reservations[rid] = resv;
+          await jbMergePath(SLICE_MAIN, ['reservations', rid], resv);
+          statusMsg(`Παραλήφθηκε ✓ — ${sheets.toLocaleString('el-GR')} ${unit} στο απόθεμα, δεσμευμένα για «${order.job || 'τη δουλειά'}»`);
+        } else {
+          statusMsg(`Παραλήφθηκε ✓ — προστέθηκαν ${sheets} φύλλα στο απόθεμα του "${order.material}"`);
+        }
       } else {
         statusMsg('Παραλήφθηκε ✓');
       }
@@ -17324,6 +17466,8 @@ async function sendToInvoicing(id){
     const stages = record.invoicingStages || [];
     t.invoiceStage = stages[0] || 'ΠΡΟΣ ΤΙΜΟΛΟΓΗΣΗ';
     t.invoicedAt = new Date().toISOString();
+    // Ό,τι μπαίνει στην Τιμολόγηση πάει πάνω πάνω στη στήλη του.
+    t.invoiceStageAt = t.invoicedAt;
     await jbMergePath(SLICE_MAIN, ['tickets', id], t);
     statusMsg('Πέρασε στην Τιμολόγηση ✓');
     // Μία κίνηση αντί για δύο: αν η δουλειά έχει δεμένη εκκρεμή καταχώρηση
@@ -17355,6 +17499,8 @@ async function moveInvoiceCardTo(id, stage){
     const record = await jbGetRecord();
     if(record.tickets[id]){
       record.tickets[id].invoiceStage = stage;
+      // Η πιο πρόσφατη μετακίνηση ανεβαίνει πάνω πάνω στη νέα στήλη.
+      record.tickets[id].invoiceStageAt = new Date().toISOString();
       await jbMergePath(SLICE_MAIN, ['tickets', id], record.tickets[id]);
     }
   }catch(e){
@@ -17462,7 +17608,11 @@ async function refreshInvoicingBoard(){
     applyBoardColour('invoicing', invColour);
     cacheBoardColour('invoicing', invColour);
     stages.forEach((stage, idx)=>{
-      const inStage = tickets.filter(t => t.invoiceStage === stage);
+      const inStage = tickets.filter(t => t.invoiceStage === stage)
+        // Νεότερη άφιξη στη στήλη πρώτη· όσες δεν έχουν χρονοσφραγίδα
+        // (παλιές κάρτες) μένουν από κάτω με τη σειρά που είχαν.
+        .sort((a, b) => String(b.invoiceStageAt || b.invoicedAt || '')
+          .localeCompare(String(a.invoiceStageAt || a.invoicedAt || '')));
       const col = document.createElement('div');
       col.className = 'kanban-col';
       col.innerHTML = `
@@ -17528,7 +17678,7 @@ async function refreshInvoicingBoard(){
         const id = e.dataTransfer.getData('text/plain');
         if(!id) return;
         const dragged = boardEl.querySelector(`.kanban-card[data-id="${id}"]`);
-        if(dragged) cardsEl.appendChild(dragged);
+        if(dragged) cardsEl.insertBefore(dragged, cardsEl.firstChild);
         boardEl.querySelectorAll('.kanban-col').forEach(col2=>{
           const cnt = col2.querySelector('.kanban-col-head .count');
           if(cnt) cnt.textContent = col2.querySelectorAll('.kanban-card').length;
@@ -20200,7 +20350,8 @@ async function submitStockMovement(type){
     const record = await jbGetRecord();
     const current = stockOf(paper);
     if(type==='remove' && qty>current.qty){
-      statusEl.textContent = `Προσοχή: ζητάς αφαίρεση ${qty} ${unit}, αλλά υπάρχουν μόνο ${current.qty} ${current.unit} σε απόθεμα. Καταχωρήθηκε ως 0.`;
+      statusEl.textContent = `Δεν έγινε η αφαίρεση: ζητάς ${qty.toLocaleString('el-GR')} ${unit}, αλλά υπάρχουν μόνο ${current.qty.toLocaleString('el-GR')} ${current.unit} σε απόθεμα. Έλεγξε την ποσότητα ή κάνε πρώτα παραλαβή/προσθήκη.`;
+      return;
     }
     // `current` is a copy, so changing it changes nothing — the new figure has to
     // be written back to the material row.
@@ -20255,6 +20406,130 @@ async function resetAllStock(){
 // Μία γραμμή ανά υλικό με εκκρεμή παραγγελία ή δέσμευση: πόσα στο ράφι, πόσα
 // κρατημένα για δουλειές, πόσα ελεύθερα, πόσα έρχονται (μαζί με το για ποιον).
 // Τα υπόλοιπα υλικά δεν εμφανίζονται — γι' αυτά αρκεί η λίστα από κάτω.
+// ===== Υπενθύμιση: δουλειές που ολοκληρώθηκαν χωρίς αφαίρεση χαρτιού =====
+// Η Παραγωγή ξέρει πότε μια δουλειά έφτασε στο «Ολοκληρώθηκε»· αν το ticket
+// της έχει χαρτιά που δεν «καταναλώθηκαν» ποτέ, η Αποθήκη δείχνει λάθος
+// απόθεμα. Εδώ βγαίνει κόκκινη λίστα με κουμπί αφαίρεσης επί τόπου.
+function ticketPendingPaperRows(t){
+  return ((t && t.data && t.data.paperRows) || []).filter(r => r && (r.xarti||'').trim()
+    && num(r.fylla) > 0 && !r.consumed && !r.movedToChild && !(r.gangWith && !r.gangHost));
+}
+
+function renderStockConsumeAlerts(record){
+  const el = document.getElementById('stockConsumeAlerts');
+  if(!el) return;
+  const stages = record.productionStages || ['Νέο','Μοντάζ','Έλεγχος/Έγκριση','CTP','Εκτύπωση','Βιβλιοδεσία','Postpress','Ολοκληρώθηκε'];
+  const doneStage = stages[stages.length-1];
+  const cutoff = Date.now() - 90*24*3600*1000;
+  const items = Object.entries(record.tickets || {})
+    .filter(([, t]) => t && t.stage === doneStage && !t.archived
+      && !(t.data && t.data.stockConsumeIgnored))
+    .map(([tid, t]) => ({ tid, t, rows: ticketPendingPaperRows(t) }))
+    .filter(x => x.rows.length)
+    .filter(x => { const dl = Date.parse((x.t.data||{}).deadline || ''); return !dl || dl >= cutoff; })
+    .sort((a, b) => String((b.t.data||{}).deadline||'').localeCompare(String((a.t.data||{}).deadline||'')))
+    .slice(0, 10);
+  if(!items.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="card" style="border:1px solid #e8b9b4;background:#fdf6f5;">
+      <div class="card-head" style="border-color:#f2d7d4;">
+        <div class="title" style="color:#a53125;">⚠️ Τελείωσαν χωρίς αφαίρεση χαρτιού (${items.length})</div>
+        <span class="empty-note">το απόθεμα δείχνει ακόμα χαρτί που τυπώθηκε</span>
+      </div>
+      <div class="card-body">
+        ${items.map(x => `
+          <div class="fc-job-row" style="background:#fff;box-shadow:inset 3px 0 0 #c0392b;">
+            <div>
+              <div class="client">${esc((x.t.data||{}).info || x.t.label || '(χωρίς όνομα)')}</div>
+              <div class="name">${x.rows.map(r => `${esc(r.xarti)}: ${num(r.fylla).toLocaleString('el-GR')} φύλλα`).join(' · ')}</div>
+            </div>
+            <span style="display:flex;gap:8px;align-items:center;">
+              <button class="btn solid" style="padding:3px 12px;font-size:12px;" title="Αφαιρεί τα φύλλα από την Αποθήκη και το σημειώνει στο ticket"
+                onclick="consumeFinishedTicketPaper('${esc(x.tid)}')">Αφαίρεση τώρα</button>
+              <button class="btn" style="padding:3px 10px;font-size:12px;" title="Το χαρτί δεν βγήκε από αυτή την Αποθήκη (π.χ. ήρθε απευθείας από τον προμηθευτή) — η δουλειά δεν θα ξαναεμφανιστεί εδώ"
+                onclick="ignoreFinishedTicketPaper('${esc(x.tid)}')">Αγνόηση</button>
+            </span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+async function consumeFinishedTicketPaper(tid){
+  try{
+    const record = await jbGetRecord();
+    const t = (record.tickets || {})[tid];
+    if(!t) return;
+    const rows = (t.data && t.data.paperRows) || [];
+    const pending = ticketPendingPaperRows(t);
+    if(!pending.length){ refreshStockList(); return; }
+    const jobName = (t.data||{}).info || t.label || 'Job Ticket';
+    const summary = pending.map(r => `• ${r.xarti}: ${num(r.fylla).toLocaleString('el-GR')} φύλλα`).join('\n');
+    if(!confirm(`Αφαίρεση από την Αποθήκη για «${jobName}»:\n\n${summary}\n\nΘα καταγραφεί ως κατανάλωση της δουλειάς. Συνέχεια;`)) return;
+    if(!Array.isArray(record.stockLog)){
+      record.stockLog = record.stockLog && typeof record.stockLog === 'object'
+        ? Object.values(record.stockLog) : [];
+    }
+    const warnings = [];
+    const consumedRows = [];
+    for(const r of pending){
+      const paper = r.xarti.trim(), qty = num(r.fylla);
+      const before = stockOf(paper).qty;
+      if(before < qty){
+        warnings.push(`${paper} (ζητούνται ${qty.toLocaleString('el-GR')}, υπάρχουν ${before.toLocaleString('el-GR')})`);
+        continue;
+      }
+      await setStock(paper, before - qty);
+      record.stockLog.unshift({
+        id: 'stk'+Date.now()+Math.random().toString(36).slice(2,6),
+        paper, type:'remove', qty, unit: stockOf(paper).unit,
+        note: `Κατανάλωση από «${jobName}»`, date: new Date().toISOString()
+      });
+      r.consumed = true;
+      consumedRows.push(r);
+    }
+    if(!consumedRows.length){
+      alert(`Δεν αφαιρέθηκε τίποτα — το απόθεμα δεν επαρκεί:\n${warnings.join('\n')}\n\nΚάνε πρώτα παραλαβή ή διόρθωσε την Αποθήκη (ή πάτα «Αγνόηση» αν το χαρτί δεν βγήκε από εδώ).`);
+      return;
+    }
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['tickets', tid, 'data', 'paperRows'], rows);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    // Οι δεσμεύσεις αυτής της δουλειάς ελευθερώνονται — το χαρτί πήρε τον δρόμο του.
+    try{
+      const tkOffer = (t.data||{}).offerId || '';
+      const jn = String(jobName).trim().toLowerCase();
+      const consumedPapers = new Set(consumedRows.map(r => r.xarti.trim()));
+      for(const [rid, rv] of Object.entries(record.reservations || {})){
+        if(!rv || !consumedPapers.has(rv.paper)) continue;
+        const matchOffer = tkOffer && rv.offerId && rv.offerId === tkOffer;
+        const matchJob = !rv.offerId && rv.job && jn && String(rv.job).trim().toLowerCase() === jn;
+        if(matchOffer || matchJob){
+          delete record.reservations[rid];
+          await jbDeletePath(SLICE_MAIN, ['reservations', rid]);
+        }
+      }
+    }catch(e){ console.error('Release reservations:', e); }
+    statusMsg(warnings.length
+      ? `Αφαιρέθηκαν ${consumedRows.length} χαρτιά ✓ — ΔΕΝ αφαιρέθηκαν όσα δεν επαρκούν: ${warnings.join(', ')}`
+      : `Αφαιρέθηκε το χαρτί της «${jobName}» από την Αποθήκη ✓`);
+    refreshStockList();
+  }catch(e){ console.error('Consume finished ticket:', e); statusMsg('Σφάλμα: ' + e.message); }
+}
+
+async function ignoreFinishedTicketPaper(tid){
+  try{
+    const record = await jbGetRecord();
+    const t = (record.tickets || {})[tid];
+    if(!t) return;
+    const jobName = (t.data||{}).info || t.label || 'η δουλειά';
+    if(!confirm(`Η «${jobName}» δεν θα ξαναεμφανιστεί στη λίστα — το χαρτί της δεν θα αφαιρεθεί από την Αποθήκη. Σίγουρα;`)) return;
+    t.data = t.data || {};
+    t.data.stockConsumeIgnored = true;
+    await jbMergePath(SLICE_MAIN, ['tickets', tid, 'data', 'stockConsumeIgnored'], true);
+    refreshStockList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
 function renderStockOverview(record){
   const card = document.getElementById('stockOverviewCard');
   const body = document.getElementById('stockOverviewBody');
@@ -20326,18 +20601,64 @@ async function refreshStockList(){
     const record = await jbGetRecord();
     stockRecordCache = record;
     renderStockOverview(record);
+    renderStockConsumeAlerts(record);
     const search = (document.getElementById('stockSearch').value||'').toLowerCase().trim();
     // One list: the materials table is the whole truth now.
     if(!papersLoaded && !Object.keys(paperByName).length){
       el.innerHTML = '<div class="empty-note">Φόρτωση χαρτιών…</div>';
       return;
     }
-    let entries = Object.keys(paperByName)
-      .filter(paper => !search || searchMatch(paper, search))
-      .map(paper => [paper, stockOf(paper)]);
+    const allEntries = Object.keys(paperByName).map(paper => [paper, stockOf(paper)]);
+    // Δύο ξεχωριστές έννοιες: ό,τι έρχεται με παραγγελία ≠ ό,τι είναι κρατημένο στο ράφι.
+    const incomingNames = new Set();
+    Object.values(record.orders || {}).forEach(o => { if(o && o.status !== 'received' && o.material) incomingNames.add(String(o.material).trim()); });
+    const reservedNames = new Set();
+    Object.values(record.reservations || {}).forEach(r => { if(r && r.paper) reservedNames.add(r.paper); });
+    const counts = {
+      all: allEntries.length,
+      stocked: allEntries.filter(([, d]) => d.qty > 0).length,
+      zero: allEntries.filter(([, d]) => d.qty <= 0).length,
+      incoming: allEntries.filter(([p]) => incomingNames.has(p)).length,
+      reserved: allEntries.filter(([p]) => reservedNames.has(p)).length,
+    };
+    let entries = allEntries.filter(([paper]) => !search || searchMatch(paper, search));
+    if(!search){
+      if(stockFilter === 'stocked') entries = entries.filter(([, d]) => d.qty > 0);
+      else if(stockFilter === 'zero') entries = entries.filter(([, d]) => d.qty <= 0);
+      else if(stockFilter === 'incoming') entries = entries.filter(([p]) => incomingNames.has(p));
+      else if(stockFilter === 'reserved') entries = entries.filter(([p]) => reservedNames.has(p));
+      else if(stockFilter === 'moving') entries = entries.filter(([p]) => incomingNames.has(p) || reservedNames.has(p));
+    }
     entries.sort((a,b)=>a[0].localeCompare(b[0],'el'));
+    // Τέσσερις ζωντανοί αριθμοί-πυξίδα, κλικ = το αντίστοιχο φίλτρο.
+    const totalSheets = allEntries.reduce((s, [, d]) => s + (d.unit === 'φύλλα' ? d.qty : 0), 0);
+    const reservedTotal = Object.values(record.reservations || {}).reduce((s, r) => s + num(r && r.qty), 0);
+    const incomingTotal = Object.values(record.orders || {})
+      .filter(o => o && o.status !== 'received' && o.material && paperByName[String(o.material).trim()])
+      .reduce((s, o) => s + Math.max(0, num(o.sheets) - num(o.receivedQty || 0)), 0);
+    const tile = (key, lbl, val, sub) => `
+      <div class="totcard" title="Κλικ: φίλτρο «${lbl}»" onclick="setStockFilter('${key}')">
+        <div class="lbl">${lbl}</div><div class="val">${val}</div>${sub ? `<div class="fc-headsub">${sub}</div>` : ''}</div>`;
+    const tilesHtml = `<div class="stock-tiles">
+      ${tile('stocked', '📦 Στο ράφι', counts.stocked + ' είδη', totalSheets ? totalSheets.toLocaleString('el-GR') + ' φύλλα συνολικά' : '')}
+      ${tile('reserved', '🔒 Δεσμευμένα', reservedTotal ? reservedTotal.toLocaleString('el-GR') + ' φύλλα' : '—', counts.reserved ? counts.reserved + ' είδη κρατημένα' : '')}
+      ${tile('incoming', '🚚 Αναμένονται', incomingTotal ? incomingTotal.toLocaleString('el-GR') + ' φύλλα' : '—', counts.incoming ? counts.incoming + ' είδη έρχονται' : '')}
+      ${tile('all', '📚 Όλη η βάση', counts.all + ' είδη', counts.zero + ' χωρίς απόθεμα')}
+    </div>`;
+    const chip = (key, label, count) => `<button class="btn${(!search && stockFilter === key) ? ' solid' : ''}"
+      style="padding:4px 12px;font-size:12px;" onclick="setStockFilter('${key}')">${label} (${count})</button>`;
+    const chipsHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+      ${chip('stocked', '📦 Με απόθεμα', counts.stocked)}
+      ${chip('incoming', '🚚 Έρχονται', counts.incoming)}
+      ${chip('reserved', '🔒 Δεσμευμένα', counts.reserved)}
+      ${chip('zero', 'Μηδενικά', counts.zero)}
+      ${chip('all', 'Όλη η βάση', counts.all)}
+      ${search ? '<span class="empty-note" style="margin:0;">— η αναζήτηση ψάχνει σε όλη τη βάση</span>' : ''}
+    </div>`;
     if(entries.length===0){
-      el.innerHTML = '<div class="empty-note">Καμία αντιστοιχία.</div>';
+      el.innerHTML = tilesHtml + chipsHtml + `<div class="empty-note">${search
+        ? 'Καμία αντιστοιχία για την αναζήτηση.'
+        : 'Τίποτα σε αυτή την κατηγορία — δοκίμασε «Όλη η βάση».'}</div>`;
       return;
     }
     const totalPages = Math.max(1, Math.ceil(entries.length/STOCK_PAGE_SIZE));
@@ -20345,15 +20666,24 @@ async function refreshStockList(){
     if(stockPage<0) stockPage = 0;
     const pageEntries = entries.slice(stockPage*STOCK_PAGE_SIZE, stockPage*STOCK_PAGE_SIZE+STOCK_PAGE_SIZE);
 
+    // Πόσα έρχονται ανά χαρτί (εκκρεμείς παραγγελίες, μείον ό,τι έχει ήδη παραληφθεί)
+    const incomingByPaper = {};
+    Object.values(record.orders || {}).forEach(o => {
+      if(!o || o.status === 'received' || !o.material) return;
+      const name = String(o.material).trim();
+      const left = Math.max(0, num(o.sheets) - num(o.receivedQty || 0));
+      if(left > 0) incomingByPaper[name] = (incomingByPaper[name] || 0) + left;
+    });
+
     const rowsHtml = pageEntries.map(([paper, d])=>{
       const isExpanded = expandedStockPaper===paper;
       const escPaper = esc(paper).replace(/'/g,"\\'");
       const p = paperByName[paper] || null;   // may be stock-only, with no paper record
       let rows = `
-        <tr>
+        <tr class="stock-row${d.qty <= 0 ? ' stock-zero' : ''}" onclick="toggleStockPaperExpand('${escPaper}')" title="Κλικ: δεσμεύσεις & ιστορικό του χαρτιού">
           <td style="width:24px;"><input type="checkbox" ${selectedStockPapers.has(paper)?'checked ':''}onclick="event.stopPropagation();toggleStockSel('${escPaper}', this.checked)"></td>
           <td style="white-space:nowrap;">
-            <a href="javascript:void(0)" onclick="toggleStockPaperExpand('${escPaper}')"
+            <a href="javascript:void(0)" onclick="event.stopPropagation();toggleStockPaperExpand('${escPaper}')"
                class="stock-caret" title="Ιστορικό κινήσεων">${isExpanded?'▾':'▸'}</a>
             <input class="stock-name" value="${esc(paper)}"
               onchange="renamePaper('${escPaper}', this.value)"
@@ -20371,12 +20701,15 @@ async function refreshStockList(){
             <input type="text" inputmode="decimal" class="stock-price" value="${p ? esc(String(p.priceSheet||'')) : ''}"
               placeholder="—" ${p ? '' : 'disabled'}
               onchange="savePaperPrice('${escPaper}','priceSheet',this.value)"></td>
-          <td style="text-align:right;font-weight:700;${d.qty<=0?'color:var(--muted);':''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}${
-            reservedOf(record, paper) > 0 ? `<div style="font-size:10px;font-weight:700;color:#6b4fa3;" title="Δεσμευμένα για δουλειές — ελεύθερα: ${Math.max(0, d.qty - reservedOf(record, paper)).toLocaleString('el-GR')}">🔒 ${reservedOf(record, paper).toLocaleString('el-GR')} δεσμ.</div>` : ''}</td>
+          <td style="text-align:right;"><span class="qty-pill${d.qty <= 0 ? ' zero' : ''}">${d.qty.toLocaleString('el-GR')} ${esc(d.unit)}</span>${
+            reservedOf(record, paper) > 0 ? `<div style="font-size:10px;font-weight:700;color:#6b4fa3;margin-top:3px;" title="Δεσμευμένα για δουλειές">🔒 ${reservedOf(record, paper).toLocaleString('el-GR')} δεσμ. · ελεύθερα ${Math.max(0, d.qty - reservedOf(record, paper)).toLocaleString('el-GR')}</div>` : ''}${
+            incomingByPaper[paper] > 0 ? `<div style="font-size:10px;font-weight:700;color:#b06c00;margin-top:3px;" title="Εκκρεμείς παραγγελίες που δεν έχουν παραληφθεί ακόμα">🚚 έρχονται ${incomingByPaper[paper].toLocaleString('el-GR')} ${esc(d.unit)}</div>` : ''}</td>
           <td style="text-align:right;">
-            <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="quickStockAdjust('${escPaper}', '${d.unit}')">Γρήγορη κίνηση</button>
+            <button class="btn" title="Γρήγορη προσθήκη αποθέματος" style="padding:6px 11px;font-size:13.5px;font-weight:700;color:#0e6b3a;border-color:#c9e6d6;" onclick="event.stopPropagation();quickStockDelta('${escPaper}', '${d.unit}', 1)">＋</button>
+            <button class="btn" title="Γρήγορη αφαίρεση αποθέματος" style="padding:6px 11px;font-size:13.5px;font-weight:700;color:#a53125;border-color:#f2c9c5;" onclick="event.stopPropagation();quickStockDelta('${escPaper}', '${d.unit}', -1)">−</button>
+            <button class="btn" title="Κίνηση με σημείωση (ανοίγει τη φόρμα)" style="padding:6px 10px;font-size:12px;" onclick="event.stopPropagation();quickStockAdjust('${escPaper}', '${d.unit}')">✎</button>
             <button class="rowdel" style="margin-left:6px;" title="Διαγραφή υλικού"
-              onclick="deletePaper('${escPaper}')">×</button>
+              onclick="event.stopPropagation();deletePaper('${escPaper}')">×</button>
           </td>
         </tr>
       `;
@@ -20413,7 +20746,14 @@ async function refreshStockList(){
                 <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':l.type==='reserve'?'background:#ece3f8;color:#6b4fa3;':l.type==='release'?'background:#e6f4ec;color:#0e6b3a;':''}">${l.type==='add'?'+':l.type==='reserve'?'🔒':l.type==='release'?'🔓':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
               </div>
             `).join('');
-        rows += `<tr><td colspan="7" style="background:var(--page);padding:0;"><div style="padding:6px 14px;">${resvHtml}${movesHtml}</div></td></tr>`;
+        const freeNow = Math.max(0, stockOf(paper).qty - reservedOf(record, paper));
+        const reserveBtnHtml = `<div style="margin-bottom:8px;">
+          <button class="btn" style="font-size:11.5px;padding:3px 10px;color:#6b4fa3;border-color:#d8cbee;"
+            title="Κράτησε απόθεμα από το ράφι για συγκεκριμένη δουλειά — δεν θα φαίνεται ελεύθερο"
+            onclick="reserveStockManual('${escPaper}')">🔒 Δέσμευση για δουλειά…</button>
+          ${freeNow > 0 ? `<span class="empty-note" style="margin-left:8px;">ελεύθερα τώρα: ${freeNow.toLocaleString('el-GR')} ${esc(stockOf(paper).unit)}</span>` : ''}
+        </div>`;
+        rows += `<tr onclick="event.stopPropagation()"><td colspan="7" style="background:var(--page);padding:4px 10px;"><div class="stock-expand">${resvHtml}${reserveBtnHtml}${movesHtml}</div></td></tr>`;
       }
       return rows;
     }).join('');
@@ -20423,9 +20763,9 @@ async function refreshStockList(){
 
     stockPagePapers = pageEntries.map(([paper]) => paper);
     const selCount = selectedStockPapers.size;
-    el.innerHTML = `
+    el.innerHTML = tilesHtml + chipsHtml + `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-        <span class="empty-note" style="margin:0;">${entries.length} χαρτιά${search?' (φιλτραρισμένα)':' — όλη η βάση'} — κλικ σε ένα χαρτί για το ιστορικό του</span>
+        <span class="empty-note" style="margin:0;">Κλικ στο ▸ ενός χαρτιού για δεσμεύσεις & ιστορικό — τα ονόματα, οι διαστάσεις και οι τιμές διορθώνονται πάνω στη γραμμή</span>
         ${selCount ? `<span style="display:flex;gap:8px;align-items:center;">
           <button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b;" onclick="deleteSelectedPapers()">Διαγραφή επιλεγμένων (${selCount})</button>
           <a href="javascript:void(0)" style="font-size:12px;" onclick="selectedStockPapers.clear();refreshStockList();">καθαρισμός</a>
@@ -20441,13 +20781,13 @@ async function refreshStockList(){
       </table>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;">
         <span>${startIdx} - ${endIdx} από ${entries.length}</span>
-        <div style="display:flex;gap:6px;">
+        ${totalPages > 1 ? `<div style="display:flex;gap:6px;">
           <button class="btn" onclick="stockPage=0;refreshStockList();" ${stockPage===0?'disabled':''}>Πρώτη</button>
           <button class="btn" onclick="stockPage=Math.max(0,stockPage-1);refreshStockList();" ${stockPage===0?'disabled':''}>Προηγούμενη</button>
           <span style="padding:6px 10px;">${stockPage+1} / ${totalPages}</span>
           <button class="btn" onclick="stockPage=Math.min(${totalPages-1},stockPage+1);refreshStockList();" ${stockPage>=totalPages-1?'disabled':''}>Επόμενη</button>
           <button class="btn" onclick="stockPage=${totalPages-1};refreshStockList();" ${stockPage>=totalPages-1?'disabled':''}>Τελευταία</button>
-        </div>
+        </div>` : ''}
       </div>
     `;
   }catch(e){
@@ -21097,6 +21437,43 @@ async function savePaperPrice(name, field, value){
   }
 }
 
+// Φίλτρο της λίστας: «Με απόθεμα» είναι η καθημερινή αποθήκη· «Όλη η βάση»
+// είναι ο τιμοκατάλογος. Η αναζήτηση ψάχνει ΠΑΝΤΑ σε όλη τη βάση.
+let stockFilter = (function(){ try{ const f = localStorage.getItem('ff_stock_filter') || 'stocked'; return f === 'moving' ? 'incoming' : f; }catch(e){ return 'stocked'; } })();
+function setStockFilter(f){
+  stockFilter = f;
+  try{ localStorage.setItem('ff_stock_filter', f); }catch(e){}
+  stockPage = 0;
+  refreshStockList();
+}
+
+// Προσθήκη/αφαίρεση με ένα κλικ πάνω στη γραμμή — ρωτά μόνο την ποσότητα.
+async function quickStockDelta(paper, unit, dir){
+  const cur = stockOf(paper);
+  const ans = prompt((dir > 0 ? 'Προσθήκη στο' : 'Αφαίρεση από το') + ' «' + paper + '»\n'
+    + '(τώρα: ' + cur.qty.toLocaleString('el-GR') + ' ' + cur.unit + ')\n\nΠοσότητα:');
+  if(ans === null) return;
+  const qty = parseGreekAmount(ans);
+  if(!(qty > 0)){ statusMsg('Γράψε ποσότητα μεγαλύτερη από 0.'); return; }
+  try{
+    if(dir < 0 && qty > cur.qty){
+      alert(`Δεν έγινε η αφαίρεση: στο «${paper}» υπάρχουν μόνο ${cur.qty.toLocaleString('el-GR')} ${cur.unit} και ζήτησες ${qty.toLocaleString('el-GR')}.\n\nΈλεγξε την ποσότητα ή κάνε πρώτα παραλαβή/προσθήκη.`);
+      return;
+    }
+    const record = await jbGetRecord();
+    await setStock(paper, dir > 0 ? cur.qty + qty : Math.max(0, cur.qty - qty), cur.unit);
+    record.stockLog = Array.isArray(record.stockLog) ? record.stockLog
+      : (record.stockLog && typeof record.stockLog === 'object' ? Object.values(record.stockLog) : []);
+    record.stockLog.unshift({ id: 'stk' + Date.now(), paper, type: dir > 0 ? 'add' : 'remove', qty,
+      unit: cur.unit, note: 'Γρήγορη κίνηση από τη λίστα', date: new Date().toISOString() });
+    record.stockLog = record.stockLog.slice(0, STOCK_LOG_MAX);
+    await jbMergePath(SLICE_MAIN, ['stockLog'], record.stockLog);
+    statusMsg((dir > 0 ? '+' : '−') + qty.toLocaleString('el-GR') + ' ' + cur.unit + ' στο «' + paper + '» ✓');
+    refreshStockList();
+    if(typeof refreshStockLogList === 'function') refreshStockLogList();
+  }catch(e){ statusMsg('Σφάλμα: ' + e.message); }
+}
+
 function toggleStockMovementPanel(){
   const p = document.getElementById('stockMovementPanel');
   const open = p.style.display === 'none';
@@ -21117,6 +21494,7 @@ function toggleStockToolsMenu(ev){
     <div class="item" onclick="exportPapersTsv()">📤 Εξαγωγή Χαρτιών</div>
     <div class="item" onclick="togglePapersImportPanel()">📄 Εισαγωγή Χαρτιών</div>
     <div class="item" onclick="toggleDupCheckPanel()">🔍 Έλεγχος Διπλοτύπων</div>
+    <div class="item" style="border-top:1px solid var(--line);color:#6b4fa3;" onclick="backfillReservationsFromHistory()">🔒 Δέσμευση από το ιστορικό…</div>
     <div class="item" style="border-top:1px solid var(--line);color:#c0392b;" onclick="resetAllStock()">⚠ Μηδενισμός Αποθήκης…</div>`;
   m.addEventListener('click', () => setTimeout(() => m.remove(), 0));
   document.body.appendChild(m);
@@ -21264,9 +21642,20 @@ async function refreshStockReport(){
     const years = Object.keys(byYear).sort().reverse();
     const prevYearSel = yearSel.value;
     yearSel.innerHTML = '<option value="">Όλα τα έτη</option>' + years.map(y=>`<option value="${y}" ${y===prevYearSel?'selected':''}>${y}</option>`).join('');
-    yearSummaryEl.innerHTML = years.map(y=>`
-      <div class="totcard"><div class="lbl">${esc(y)}</div><div class="val">${byYear[y].toLocaleString('el-GR')} φύλλα</div></div>
-    `).join('');
+    const totalAll = Object.values(byYear).reduce((s, v) => s + v, 0);
+    const selYear = yearSel.value;
+    yearSummaryEl.innerHTML = `
+      <div class="totcard" style="cursor:pointer;${!selYear ? 'outline:2px solid #4a9d6e;outline-offset:2px;' : ''}"
+        title="Όλα τα έτη" onclick="document.getElementById('stockReportYear').value='';refreshStockReport();">
+        <div class="lbl">Σύνολο</div><div class="val">${totalAll.toLocaleString('el-GR')} φύλλα</div></div>`
+      + years.map(y => {
+        const warn = y.startsWith('⚠');
+        return `<div class="totcard" style="cursor:pointer;${warn ? 'background:#fbe9cf;' : ''}${selYear === y ? 'outline:2px solid #4a9d6e;outline-offset:2px;' : ''}"
+          title="${warn ? 'Παραγγελίες χωρίς ημερομηνία' : 'Κλικ για μόνο το ' + esc(y)}"
+          onclick="document.getElementById('stockReportYear').value='${warn ? '' : esc(y)}';refreshStockReport();">
+          <div class="lbl" style="${warn ? 'color:#8a5a12;' : ''}">${esc(y)}</div>
+          <div class="val" style="${warn ? 'color:#8a5a12;' : ''}">${byYear[y].toLocaleString('el-GR')} φύλλα</div></div>`;
+      }).join('');
 
     const yearFilter = yearSel.value;
     const filtered = yearFilter ? paperOrders.filter(o=>(o.date||'').slice(0,4)===yearFilter) : paperOrders;
@@ -21280,12 +21669,15 @@ async function refreshStockReport(){
       byMonth[month].count += 1;
     });
     const months = Object.keys(byMonth).sort().reverse();
+    const mTotS = months.reduce((s, m) => s + byMonth[m].sheets, 0);
+    const mTotC = months.reduce((s, m) => s + byMonth[m].count, 0);
     monthEl.innerHTML = `
       <table>
         <thead><tr><th>Μήνας</th><th style="text-align:right;">Φύλλα</th><th style="text-align:right;">Παραγγελίες</th></tr></thead>
         <tbody>${months.map(m=>`
           <tr><td>${esc(m==='⚠ Χωρίς μήνα' ? m : monthLabel(m))}</td><td style="text-align:right;font-weight:700;">${byMonth[m].sheets.toLocaleString('el-GR')}</td><td style="text-align:right;">${byMonth[m].count}</td></tr>
         `).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--line);"><td style="font-weight:800;">Σύνολο</td><td style="text-align:right;font-weight:800;">${mTotS.toLocaleString('el-GR')}</td><td style="text-align:right;font-weight:800;">${mTotC}</td></tr></tfoot>
       </table>
     `;
 
@@ -21311,8 +21703,8 @@ async function refreshStockReport(){
             const pct = maxSheets>0 ? (byPaper[p].sheets/maxSheets*100) : 0;
             const barColor = i===0 ? '#4a9d6e' : '#7ea6dd';
             return `
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:220px;flex:none;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p)}">${esc(p)}</div>
+              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" title="${esc(p)} — ${byPaper[p].count} παραγγελίες · κλικ για εμφάνιση στη λίστα" onclick="focusStockPaper('${esc(p).replace(/'/g, "\\'")}')">
+                <div style="width:220px;flex:none;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p)}</div>
                 <div style="flex:1;background:var(--page);border-radius:4px;height:22px;position:relative;">
                   <div style="width:${pct}%;background:${barColor};height:100%;border-radius:4px;"></div>
                 </div>
@@ -21324,13 +21716,21 @@ async function refreshStockReport(){
       `;
     }
 
+    const pTotS = papers.reduce((s, p) => s + byPaper[p].sheets, 0);
+    const pTotC = papers.reduce((s, p) => s + byPaper[p].count, 0);
+    const shownPapers = window.__repAllPapers ? papers : papers.slice(0, 12);
     paperEl.innerHTML = `
       <table>
         <thead><tr><th>Χαρτί</th><th style="text-align:right;">Φύλλα</th><th style="text-align:right;">Παραγγελίες</th></tr></thead>
-        <tbody>${papers.map(p=>`
-          <tr><td>${esc(p)}</td><td style="text-align:right;font-weight:700;">${byPaper[p].sheets.toLocaleString('el-GR')}</td><td style="text-align:right;">${byPaper[p].count}</td></tr>
+        <tbody>${shownPapers.map(p=>`
+          <tr style="cursor:pointer;" title="Κλικ: εμφάνιση στη λίστα αποθέματος" onclick="focusStockPaper('${esc(p).replace(/'/g, "\\'")}')">
+            <td>${esc(p)}</td><td style="text-align:right;font-weight:700;">${byPaper[p].sheets.toLocaleString('el-GR')}</td><td style="text-align:right;">${byPaper[p].count}</td></tr>
         `).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--line);"><td style="font-weight:800;">Σύνολο (${papers.length} χαρτιά)</td><td style="text-align:right;font-weight:800;">${pTotS.toLocaleString('el-GR')}</td><td style="text-align:right;font-weight:800;">${pTotC}</td></tr></tfoot>
       </table>
+      ${papers.length > shownPapers.length
+        ? `<div style="text-align:center;margin-top:6px;"><button class="btn" style="padding:3px 12px;font-size:11.5px;" onclick="window.__repAllPapers=true;refreshStockReport();">Εμφάνιση όλων — ακόμα ${papers.length - shownPapers.length}</button></div>`
+        : (window.__repAllPapers && papers.length > 12 ? `<div style="text-align:center;margin-top:6px;"><button class="btn" style="padding:3px 12px;font-size:11.5px;" onclick="window.__repAllPapers=false;refreshStockReport();">Εμφάνιση μόνο των πρώτων 12</button></div>` : '')}
     `;
   }catch(e){
     console.error('Stock report error:', e);
@@ -21733,41 +22133,129 @@ function clearStockLogFilter(){
   refreshStockLogList();
 }
 
+// Το Ιστορικό ως ημερολόγιο: ομαδοποίηση ανά μέρα (Σήμερα/Χθες/ημερομηνία),
+// φίλτρα τύπου, αναζήτηση σε χαρτί & σημείωση, και «Εμφάνιση περισσότερων».
+// Το κλικ σε όνομα χαρτιού ανεβάζει τη λίστα αποθέματος εστιασμένη εκεί.
+let stockLogTypeFilter = 'all';
+let stockLogSearchTerm = '';
+let stockLogShown = 25;
+
+function setStockLogType(t){ stockLogTypeFilter = t; stockLogShown = 25; renderStockLogEntries(); }
+function stockLogShowMore(){ stockLogShown += 50; renderStockLogEntries(); }
+function onStockLogSearch(v){ stockLogSearchTerm = v; stockLogShown = 25; renderStockLogEntries(); }
+
+function focusStockPaper(name){
+  document.getElementById('stockSearch').value = name;
+  expandedStockPaper = name;
+  stockPage = 0;
+  refreshStockList();
+  const list = document.getElementById('stockList');
+  if(list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function stockLogDayLabel(iso){
+  const d = String(iso || '').slice(0, 10);
+  if(d === todayISO()) return 'Σήμερα';
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const pad = n => String(n).padStart(2, '0');
+  if(d === `${y.getFullYear()}-${pad(y.getMonth()+1)}-${pad(y.getDate())}`) return 'Χθες';
+  return fmtDate(d);
+}
+
 async function refreshStockLogList(){
   const el = document.getElementById('stockLogList');
-  const titleEl = document.getElementById('stockLogTitle');
   const key = getJbKey(), bin = getJbBin();
   if(!key || !bin){ el.innerHTML = ''; return; }
   try{
     const record = await jbGetRecord();
-    // Παλιές βάσεις κρατούσαν το ιστορικό ως αντικείμενο· χωρίς αυτό η Αποθήκη
-    // έσκαγε με «log.slice is not a function» και δεν έδειχνε τίποτα.
     const raw = record.stockLog;
-    let log = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.values(raw) : []);
-    if(stockLogFilterPaper){
-      log = log.filter(l=>l.paper===stockLogFilterPaper);
-      titleEl.innerHTML = `Ιστορικό Κινήσεων — ${esc(stockLogFilterPaper)} <a href="javascript:void(0)" onclick="clearStockLogFilter()" style="font-size:11.5px;color:var(--muted);font-weight:400;margin-left:8px;">× Όλα τα χαρτιά</a>`;
-    } else {
-      log = log.slice(0, 30);
-      titleEl.textContent = 'Ιστορικό Κινήσεων';
-    }
-    if(log.length===0){
-      el.innerHTML = '<div class="empty-note">Καμία κίνηση ακόμα.</div>';
-      return;
-    }
-    el.innerHTML = log.map(l=>`
-      <div class="fc-job-row">
-        <div>
-          <div class="name">${esc(l.paper)}</div>
-          <div class="client">${esc(fmtDate(l.date.slice(0,10)))}${l.note ? ' — '+esc(l.note) : ''}</div>
+    window.__stockLogCache = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.values(raw) : []);
+    // Ο σκελετός (φίλτρα + αναζήτηση) χτίζεται μία φορά, ώστε η πληκτρολόγηση
+    // στην αναζήτηση να μη χάνει την εστίασή της σε κάθε ανανέωση.
+    if(!document.getElementById('stockLogEntries')){
+      el.innerHTML = `
+        <div id="stockLogToolbar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+          <span id="stockLogChips" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+          <input id="stockLogSearch" type="search" placeholder="Αναζήτηση σε χαρτί ή σημείωση..."
+            style="flex:1;min-width:200px;font-size:12px;padding:5px 8px;" oninput="onStockLogSearch(this.value)">
+          <span class="empty-note" id="stockLogFresh" style="margin:0;white-space:nowrap;"></span>
         </div>
-        <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':l.type==='reserve'?'background:#ece3f8;color:#6b4fa3;':l.type==='release'?'background:#e6f4ec;color:#0e6b3a;':''}">${l.type==='add'?'+':l.type==='reserve'?'🔒':l.type==='release'?'🔓':'−'} ${l.qty.toLocaleString('el-GR')} ${esc(l.unit)}</span>
-      </div>
-    `).join('');
+        <div id="stockLogEntries"></div>`;
+    }
+    renderStockLogEntries();
   }catch(e){
     console.error('Stock log error:', e);
     el.innerHTML = '<div class="empty-note">Σφάλμα: ' + esc(e.message) + '</div>';
   }
+}
+
+function renderStockLogEntries(){
+  const entriesEl = document.getElementById('stockLogEntries');
+  const titleEl = document.getElementById('stockLogTitle');
+  if(!entriesEl) return;
+  let log = (window.__stockLogCache || []).slice();
+
+  if(stockLogFilterPaper){
+    log = log.filter(l => l.paper === stockLogFilterPaper);
+    titleEl.innerHTML = `Ιστορικό Κινήσεων — ${esc(stockLogFilterPaper)} <a href="javascript:void(0)" onclick="clearStockLogFilter()" style="font-size:11.5px;color:var(--muted);font-weight:400;margin-left:8px;">× Όλα τα χαρτιά</a>`;
+  } else {
+    titleEl.textContent = 'Ιστορικό Κινήσεων';
+  }
+
+  // Φρεσκάδα: πότε έγινε η τελευταία κίνηση — υπενθύμιση να μένει ενήμερο.
+  const freshEl = document.getElementById('stockLogFresh');
+  if(freshEl){
+    const last = (window.__stockLogCache || [])[0];
+    freshEl.textContent = last ? 'τελευταία κίνηση: ' + stockLogDayLabel(last.date)
+      + (String(last.date).slice(0,10) === todayISO() ? ' ' + String(last.date).slice(11,16) : '') : '';
+  }
+
+  // Σύνοψη ημέρας + chips τύπου με μετρητές
+  const todays = (window.__stockLogCache || []).filter(l => String(l.date || '').slice(0,10) === todayISO());
+  const cnt = t => log.filter(l => t === 'all' ? true : (t === 'reserve' ? (l.type === 'reserve' || l.type === 'release') : l.type === t)).length;
+  const chipsEl = document.getElementById('stockLogChips');
+  if(chipsEl){
+    const chip = (key, label) => `<button class="btn${stockLogTypeFilter === key ? ' solid' : ''}"
+      style="padding:3px 10px;font-size:11.5px;" onclick="setStockLogType('${key}')">${label} (${cnt(key)})</button>`;
+    chipsEl.innerHTML = chip('all', 'Όλες') + chip('add', '➕ Προσθήκες') + chip('remove', '➖ Αφαιρέσεις') + chip('reserve', '🔒 Δεσμεύσεις');
+  }
+
+  if(stockLogTypeFilter !== 'all'){
+    log = log.filter(l => stockLogTypeFilter === 'reserve' ? (l.type === 'reserve' || l.type === 'release') : l.type === stockLogTypeFilter);
+  }
+  const q = stockLogSearchTerm.trim();
+  if(q) log = log.filter(l => searchMatch([l.paper, l.note].join(' '), q));
+
+  if(!log.length){
+    entriesEl.innerHTML = '<div class="empty-note">Καμία κίνηση εδώ' + (q || stockLogTypeFilter !== 'all' ? ' — δοκίμασε άλλο φίλτρο ή αναζήτηση.' : ' ακόμα.') + '</div>';
+    return;
+  }
+
+  const shown = log.slice(0, stockLogShown);
+  let prevDay = null;
+  const todayStrip = todays.length
+    ? `<div class="empty-note" style="margin:0 0 6px;">Σήμερα: ${todays.filter(l=>l.type==='add').length} προσθήκες · ${todays.filter(l=>l.type==='remove').length} αφαιρέσεις${todays.some(l=>l.type==='reserve') ? ' · ' + todays.filter(l=>l.type==='reserve').length + ' δεσμεύσεις' : ''}</div>`
+    : '';
+  entriesEl.innerHTML = todayStrip + shown.map(l => {
+    const day = String(l.date || '').slice(0, 10);
+    let head = '';
+    if(day !== prevDay){
+      head = `<div style="font-weight:800;font-size:11px;color:var(--muted);letter-spacing:0.03em;padding:10px 0 4px;border-bottom:1px solid var(--line);margin-bottom:2px;">${esc(stockLogDayLabel(l.date))}</div>`;
+      prevDay = day;
+    }
+    const time = String(l.date || '').slice(11, 16);
+    return head + `
+      <div class="fc-job-row">
+        <div>
+          <div class="name"><a href="javascript:void(0)" style="color:inherit;font-weight:700;text-decoration:none;" title="Εμφάνιση στη λίστα αποθέματος" onclick="focusStockPaper(this.textContent)">${esc(l.paper)}</a></div>
+          <div class="client" style="font-weight:400;color:var(--muted);">${time ? time + (l.note ? ' — ' : '') : ''}${l.note ? esc(l.note) : ''}</div>
+        </div>
+        <span class="order-badge${l.type==='add'?' received':''}" style="${l.type==='remove'?'background:#fbe0de;color:#a53125;':l.type==='reserve'?'background:#ece3f8;color:#6b4fa3;':l.type==='release'?'background:#e6f4ec;color:#0e6b3a;':''}">${l.type==='add'?'+':l.type==='reserve'?'🔒':l.type==='release'?'🔓':'−'} ${num(l.qty).toLocaleString('el-GR')} ${esc(l.unit)}</span>
+      </div>`;
+  }).join('')
+  + (log.length > shown.length
+      ? `<div style="text-align:center;margin-top:8px;"><button class="btn" style="padding:4px 14px;font-size:12px;" onclick="stockLogShowMore()">Εμφάνιση περισσότερων — ακόμα ${log.length - shown.length}</button></div>`
+      : '');
 }
 
 (function setupProductionBoardPan(){
